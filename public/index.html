@@ -17,6 +17,8 @@
 
 <!-- Chart.js pour les graphiques -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Leaflet.js pour la carte choroplèthe -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
 <link rel="stylesheet" href="css/styles.css" />
 </head>
@@ -70,6 +72,14 @@
     <button class="tab" data-tab="series">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
       Fiche série
+    </button>
+    <button class="tab" data-tab="history">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 2 5-5"/></svg>
+      Historique
+    </button>
+    <button class="tab" data-tab="map">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+      Carte
     </button>
   </nav>
 </header>
@@ -269,6 +279,66 @@
     </div>
   </section>
 
+  <!-- ============ TAB: HISTORY ============ -->
+  <section class="tab-panel" id="panel-history">
+
+    <div class="history-banner" id="historyBanner" style="display:none">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      <span>Historique en cours — <strong id="historyDaysCount">0</strong> jours disponibles sur 30</span>
+    </div>
+
+    <div class="panel chart-panel">
+      <div class="panel-head">
+        <div>
+          <h2>Score & Rang · 30 derniers jours</h2>
+          <p class="panel-sub">Évolution quotidienne · Source FlixPatrol</p>
+        </div>
+        <div class="chart-legend">
+          <span class="legend-item"><span class="legend-dot" style="background:#CE1126;"></span>Score</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#009739;"></span>Rang (inversé)</span>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="historyChart"></canvas>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Performance par pays</h2>
+          <p class="panel-sub">Rang actuel vs moyenne semaine précédente · δ positif = progression</p>
+        </div>
+        <div class="region-filters" id="historyRegionFilters"></div>
+      </div>
+      <div id="countryPerfList"></div>
+    </div>
+
+  </section>
+
+  <!-- ============ TAB: MAP ============ -->
+  <section class="tab-panel" id="panel-map">
+
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Présence mondiale de Bandi</h2>
+          <p class="panel-sub">Carte choroplèthe · Cliquer sur un pays pour les détails</p>
+        </div>
+        <div class="chart-legend map-legend">
+          <span class="legend-item"><span class="legend-dot" style="background:#CE1126;"></span>#1</span>
+          <span class="legend-item"><span class="legend-dot" style="background:rgba(206,17,38,0.75);"></span>#2–3</span>
+          <span class="legend-item"><span class="legend-dot" style="background:rgba(206,17,38,0.55);"></span>#4–5</span>
+          <span class="legend-item"><span class="legend-dot" style="background:rgba(206,17,38,0.35);"></span>#6–10</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#1E1E1E; border:1px solid #444;"></span>Absent</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="leafletMap"></div>
+
+  </section>
+
   <!-- ============ TAB: SERIES ============ -->
   <section class="tab-panel" id="panel-series">
     <div class="series-hero">
@@ -391,8 +461,17 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
     <span>Série</span>
   </button>
+  <button class="bnav-item" data-tab="history" aria-label="Historique">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 2 5-5"/></svg>
+    <span>Historique</span>
+  </button>
+  <button class="bnav-item" data-tab="map" aria-label="Carte">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+    <span>Carte</span>
+  </button>
 </nav>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="js/data-fallback.js"></script>
 <script src="js/config.js"></script>
 <script src="js/app.js"></script>
