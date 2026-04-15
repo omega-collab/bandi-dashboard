@@ -156,7 +156,9 @@ async function scrapeWorldTop10() {
 
     if (!tvHeader) return [];
 
-    const table = tvHeader.nextAll('table').first();
+    // La table est dans le div.content parent du h2 (2 niveaux au-dessus)
+    const container = tvHeader.parent().parent();
+    const table = container.find('table').first();
     table.find('tr').each((_, row) => {
       const cells = $(row).find('td').map((_, c) => $(c).text().trim()).get();
       if (cells.length < 3) return;
