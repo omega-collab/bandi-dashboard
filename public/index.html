@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+<!-- Garde d'accès : redirige vers login si non authentifié -->
+<script>
+  if (sessionStorage.getItem('bandi_auth') !== 'ok') {
+    window.location.replace('login.html');
+  }
+</script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="theme-color" content="#0D0D0D" />
@@ -52,6 +58,13 @@
       <span class="live-text">LIVE</span>
       <span class="live-time" id="liveTime">—</span>
       <span class="sources-badge" id="sourcesBadge" title="" style="display:none"></span>
+      <button class="logout-btn" id="logoutBtn" type="button" title="Se déconnecter" aria-label="Se déconnecter">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+      </button>
     </div>
   </div>
 
@@ -773,8 +786,15 @@
 </nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/auth.js"></script>
 <script src="js/data-fallback.js"></script>
 <script src="js/config.js"></script>
 <script src="js/app.js"></script>
+<script>
+  // Câblage bouton logout
+  document.getElementById('logoutBtn')?.addEventListener('click', () => {
+    if (typeof logout === 'function') logout();
+  });
+</script>
 </body>
 </html>

@@ -2,6 +2,14 @@
   publish = "public"
   command = "echo 'Static site, no build needed'"
 
+# Redirection : la racine pointe vers login.html (page d'accueil)
+# Le dashboard (index.html) reste accessible après authentification
+[[redirects]]
+  from = "/"
+  to = "/login.html"
+  status = 200
+  force = true
+
 [[headers]]
   for = "/*"
   [headers.values]

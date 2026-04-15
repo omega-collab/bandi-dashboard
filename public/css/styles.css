@@ -208,6 +208,26 @@ body::before {
 .sources-badge.warning   { color: var(--gold);  background: var(--gold-soft);  border-color: rgba(228,184,77,0.28); }
 .sources-badge.divergent { color: var(--rouge); background: var(--rouge-soft); border-color: var(--border-red); }
 
+/* Logout button — discret dans live-indicator */
+.logout-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 3px 5px;
+  margin-left: 2px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.logout-btn:hover {
+  color: var(--rouge);
+  background: rgba(206, 17, 38, 0.12);
+}
+.logout-btn svg { display: block; }
+
 /* Tab nav — Netflix style */
 .tabs {
   max-width: var(--max-w); margin: 0 auto;
