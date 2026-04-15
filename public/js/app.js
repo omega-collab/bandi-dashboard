@@ -2048,8 +2048,8 @@ function renderForecastS2() {
       if (idx === 0) {
         return {
           label: 'Taux de complétion estimé',
-          valeur: `${compScore.score}/100`,
-          seuil: `≥ ${seuil}`,
+          valeur: `${compScore.score}%`,
+          seuil: `≥ ${seuil}%`,
           ok,
           tooltip: tooltipText,
           hasTooltip: true
