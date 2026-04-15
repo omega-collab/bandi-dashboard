@@ -254,14 +254,24 @@ async function loadLiveData() {
       .sort((a, b) => (a.date < b.date ? -1 : 1))
       .map(r => ({ date: r.date.slice(5).replace('-', '/'), rang: r.rang }));
 
+    // ── Cohérence forcée : recalcul des agrégats à partir de enrichedPays ──
+    // bandi_snapshots peut diverger légèrement de bandi_country_rankings (timing
+    // entre l'insert du snapshot et l'insert des pays par le scraper). On force
+    // la source de vérité unique côté frontend : la liste de pays réelle.
+    const enrichedPaysN1 = enrichedPays.filter(p => p.rang === 1).length;
+    const enrichedPaysTop10 = enrichedPays.length;
+    const enrichedRangMoyen = enrichedPays.length
+      ? Math.round((enrichedPays.reduce((s, p) => s + p.rang, 0) / enrichedPays.length) * 10) / 10
+      : null;
+
     // Override BANDI (Object.assign pour muter la const déclarée dans data-fallback.js)
     Object.assign(BANDI, {
       current: {
         score: current.score_monde,
         rang: current.rang_monde,
-        paysN1: current.pays_n1,
-        paysTop10: current.pays_top10,
-        rangMoyen: parseFloat(current.rang_moyen) || null
+        paysN1: enrichedPaysN1,
+        paysTop10: enrichedPaysTop10,
+        rangMoyen: enrichedRangMoyen
       },
       previous: {
         score: previous.score_monde,
@@ -1931,6 +1941,7 @@ function renderForecastS2() {
   }
 
   // Indicateurs — remplace le 1er indicateur (Taux de complétion) par le score calculé
+  // et le 2e (Top 10 USA) par le rang live depuis bandi_country_rankings
   const indEl = document.getElementById('forecastIndicators');
   if (indEl && fc.indicateurs) {
     // Calcul du Completion Score estimé
@@ -1939,7 +1950,16 @@ function renderForecastS2() {
     const ok = compScore.score >= seuil;
     const tooltipText = formatCompletionTooltip(compScore);
 
-    // Construction du tableau d'indicateurs : on remplace le premier
+    // Rang USA live (même source que le module Breakthrough USA pour cohérence)
+    const usaPaysLive = BANDI.pays.find(p =>
+      p.code === 'US' || p.pays === 'États-Unis' || p.pays === 'United States'
+    );
+    const usaRangLive = usaPaysLive?.rang || BANDI.strategique?.usaRang || null;
+
+    // Nombre de pays #1 live (même source que zones-module + KPI pour cohérence)
+    const paysN1Live = BANDI.current?.paysN1 ?? BANDI.pays.filter(p => p.rang === 1).length;
+
+    // Construction du tableau d'indicateurs : on remplace les 3 premiers pour cohérence
     const indicateurs = fc.indicateurs.map((ind, idx) => {
       if (idx === 0) {
         return {
@@ -1949,6 +1969,22 @@ function renderForecastS2() {
           ok,
           tooltip: tooltipText,
           hasTooltip: true
+        };
+      }
+      if (idx === 1 && usaRangLive != null) {
+        return {
+          label: 'Top 10 USA atteint',
+          valeur: `#${usaRangLive}`,
+          seuil: '~3%',
+          ok: usaRangLive <= 10
+        };
+      }
+      if (idx === 2 && paysN1Live != null) {
+        return {
+          label: `#1 dans ${paysN1Live} pays`,
+          valeur: `${paysN1Live}`,
+          seuil: '≥ 10',
+          ok: paysN1Live >= 10
         };
       }
       return ind;

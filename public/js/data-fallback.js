@@ -101,7 +101,7 @@ const BANDI = {
     { pays: "Roumanie",          code: "RO", flag: "🇷🇴", region: "Europe",             rang: 9,  entree: "11/04", historique: [null, 8, 9, 9], trend: "down" },
     { pays: "Italie",            code: "IT", flag: "🇮🇹", region: "Europe",             rang: 10, entree: "12/04", historique: [null, null, 10, 10], trend: "stable" },
     { pays: "Salvador",          code: "SV", flag: "🇸🇻", region: "Amérique Centrale",  rang: 10, entree: "12/04", historique: [null, null, 10, 10], trend: "stable" },
-    { pays: "États-Unis",        code: "US", flag: "🇺🇸", region: "Amérique du Nord",   rang: 7,  entree: "12/04", historique: [null, null, 10, 7],  trend: "up" }
+    { pays: "États-Unis",        code: "US", flag: "🇺🇸", region: "Amérique du Nord",   rang: 8,  entree: "12/04", historique: [null, null, 10, 8],  trend: "up" }
   ],
 
   // Top TV Shows Netflix Monde au 13/04
@@ -121,10 +121,12 @@ const BANDI = {
   // ── Données stratégiques B2B ──────────────────────────────────────────
   // Hardcodées · À valider manuellement par la production
   strategique: {
-    // #7 USA Top 10 Netflix · FlixPatrol 14/04/2026
-    // Rang live prioritaire si disponible dans bandi_country_rankings WHERE pays='United States'
-    usaRang: 7,
-    usaDate: '14/04/2026',
+    // Rang USA Top 10 Netflix — valeur de fallback uniquement.
+    // Le rang live prioritaire provient de bandi_country_rankings WHERE pays='États-Unis'
+    // et est lu à la fois par renderBreakthroughUSA() et renderForecastS2()
+    // pour garantir la cohérence entre les deux modules.
+    usaRang: 8,
+    usaDate: '15/04/2026',
     usaEntry: true,
     usaNote: 'First French-Caribbean series to break US Top 10',
 
@@ -147,7 +149,8 @@ const BANDI = {
         // Taux de complétion estimé — remplacé dynamiquement par computeCompletionScore() au rendu
         // Le fallback ci-dessous ne s'affiche que si tout le calcul échoue
         { label: 'Taux de complétion estimé', valeur: '—/100', seuil: '≥ 70',  ok: false },
-        { label: 'Top 10 USA atteint',      valeur: '#7',    seuil: '~3%',    ok: true  },
+        // Rang USA remplacé dynamiquement par renderForecastS2() depuis BANDI.pays
+        { label: 'Top 10 USA atteint',      valeur: '#8',    seuil: '~3%',    ok: true  },
         { label: '#1 dans 13+ pays',        valeur: '13+',   seuil: 'signal', ok: true  },
         { label: 'Score popularité',        valeur: '+108%', seuil: '4 jours',ok: true  },
         { label: 'Renouvellement officiel', valeur: '—',     seuil: 'Netflix',ok: false }
