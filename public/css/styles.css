@@ -2269,3 +2269,73 @@ button, .tab, .bnav-item, .region-btn, .country-row, .kpi-card, .highlight, .buz
   .methodologie-sources { padding: 24px 20px; }
   .ms-title { font-size: 26px; }
 }
+
+/* ── Sources simplifiées (version publique grand public) ── */
+.ms-simple-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-bottom: 28px;
+}
+@media (max-width: 700px) { .ms-simple-grid { grid-template-columns: 1fr; } }
+
+.ms-simple-group {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  transition: border-color 0.15s;
+}
+.ms-simple-group:hover { border-color: rgba(228,184,77,0.4); }
+
+.ms-simple-group-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.ms-simple-icon { font-size: 22px; flex-shrink: 0; margin-top: 1px; }
+.ms-simple-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+.ms-simple-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.ms-simple-srcs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ms-simple-src {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 11px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-sub);
+  text-decoration: none;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+.ms-simple-src:hover {
+  border-color: var(--rouge);
+  color: var(--text);
+  background: rgba(206,17,38,0.08);
+}
+.ms-simple-src-more {
+  color: var(--dim);
+  border-style: dashed;
+  cursor: default;
+}
+.ms-simple-src-more:hover {
+  border-color: var(--border);
+  color: var(--dim);
+  background: var(--surface-3);
+}

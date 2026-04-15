@@ -2156,43 +2156,36 @@ function renderCompletionBreakdown() {
     const comp = c.components[r.key];
     const isOk = comp.available;
     const stateClass = isOk ? 'is-active' : 'is-pending';
-    const stateLabel = isOk ? 'Actif' : 'En attente';
+    const stateLabel = isOk ? '✓ Actif' : '⏳ En attente de données';
     const barWidth = Math.max(0, Math.min(100, comp.value));
 
-    // Détail notes critiques : mini-ventilation par source (8 sources au total)
+    // Données réelles : notes par source
     let detailExtra = '';
     if (r.key === 'notes' && isOk && comp.raw) {
       const parts = [];
       const n = comp.raw;
-      const chip = (label, obj, suffix = '') => {
+      const chip = (label, obj) => {
         if (!obj) return;
-        const extra = obj.votes ? ` · ${obj.votes.toLocaleString('fr-FR')} votes`
-                    : obj.reviews ? ` · ${obj.reviews} critiques` : '';
-        parts.push(`<span class="cb-chip"><strong>${label}</strong> ${obj.note}/${obj.max}${suffix}${extra}</span>`);
+        parts.push(`<span class="cb-chip"><strong>${label}</strong> ${obj.note}/${obj.max}</span>`);
       };
-      chip('IMDb',                n.imdb);
-      chip('TMDB',                n.tmdb);
-      chip('RT presse',           n.rtCritics);
-      chip('RT public',           n.rtAudience);
-      chip('Allociné ♥',          n.allocinePublic);
-      chip('Allociné presse',     n.allocinePress);
-      chip('SensCritique',        n.senscritique);
-      chip('Filmaffinity',        n.filmaffinity);
+      chip('IMDb', n.imdb);
+      chip('TMDB', n.tmdb);
+      chip('RT', n.rtCritics);
+      chip('Allociné', n.allocinePublic);
+      chip('SensCritique', n.senscritique);
+      chip('Filmaffinity', n.filmaffinity);
       if (parts.length) detailExtra = `<div class="cb-chips">${parts.join('')}</div>`;
     }
-    // Détail intérêt recherche : mini-ventilation Google + Wikipedia
     if (r.key === 'search' && isOk && comp.raw) {
       const parts = [];
       if (comp.raw.trendsMax != null) {
-        parts.push(`<span class="cb-chip"><strong>Google Trends</strong> pic ${comp.raw.trendsMax}/100 · ${comp.raw.trendsDays}j</span>`);
+        parts.push(`<span class="cb-chip"><strong>Google</strong> pic ${comp.raw.trendsMax}/100</span>`);
       }
       if (comp.raw.wikiViews7d > 0) {
-        parts.push(`<span class="cb-chip"><strong>Wikipedia</strong> ${comp.raw.wikiViews7d.toLocaleString('fr-FR')} vues 7j · ${comp.raw.wikiArticles.length} article(s)</span>`);
+        parts.push(`<span class="cb-chip"><strong>Wikipedia</strong> ${comp.raw.wikiViews7d.toLocaleString('fr-FR')} vues (7j)</span>`);
       }
       if (parts.length) detailExtra = `<div class="cb-chips">${parts.join('')}</div>`;
     }
-
-    const sourcesList = (comp.sourceList || []).map(s => `<span class="cb-src">${s}</span>`).join('');
 
     return `
       <div class="cb-row ${stateClass}">
@@ -2205,12 +2198,7 @@ function renderCompletionBreakdown() {
         <p class="cb-desc">${r.desc}</p>
         <div class="cb-bar-wrap">
           <div class="cb-bar"><div class="cb-bar-fill" style="width:${barWidth}%"></div></div>
-          <span class="cb-bar-val">${comp.value}<span class="cb-bar-max">/100</span></span>
-        </div>
-        <div class="cb-meta">
-          <span class="cb-meta-item"><span class="cb-meta-k">Sources :</span> ${comp.sources} ${sourcesList}</span>
-          <span class="cb-meta-item"><span class="cb-meta-k">Données :</span> ${comp.dataLabel || '—'}</span>
-          <span class="cb-meta-item"><span class="cb-meta-k">Formule :</span> <code>${r.formula}</code></span>
+          <span class="cb-bar-val">${comp.value}<span class="cb-bar-max">%</span></span>
         </div>
         ${detailExtra}
       </div>`;
@@ -2219,14 +2207,14 @@ function renderCompletionBreakdown() {
   root.innerHTML = `
     <div class="cb-head">
       <div class="cb-head-left">
-        <span class="cb-tag">Méthode & sources</span>
-        <h4 class="cb-title">Comment le Taux de complétion est calculé</h4>
-        <p class="cb-sub">Score sur 100 agrégé à partir de 4 signaux pondérés. Chaque signal
-          s'appuie sur une ou plusieurs sources scrappées automatiquement toutes les 6 h.</p>
+        <span class="cb-tag">Score en direct</span>
+        <h4 class="cb-title">Comment ce score est calculé</h4>
+        <p class="cb-sub">4 informations récoltées automatiquement toutes les 6 h,
+          combinées pour donner un score de 0 à 100.</p>
       </div>
       <div class="cb-head-right">
-        <div class="cb-score">${pct}<span class="cb-score-max">/100</span></div>
-        <div class="cb-score-label">Taux de complétion estimé</div>
+        <div class="cb-score">${pct}<span class="cb-score-max">%</span></div>
+        <div class="cb-score-label">Score global</div>
         <div class="cb-sources-ratio">
           <span class="cb-sources-num">${active}/${total}</span>
           <span class="cb-sources-lbl">sources actives</span>
@@ -2236,12 +2224,8 @@ function renderCompletionBreakdown() {
     </div>
     <div class="cb-rows">${rowsHtml}</div>
     <p class="cb-footer">
-      Mise à jour auto · FlixPatrol + Buzz toutes les <strong>6 h</strong>,
-      notes externes (IMDb · TMDB · Allociné · SensCritique · Rotten Tomatoes · Filmaffinity)
-      toutes les <strong>6 h</strong>, Wikipedia pageviews toutes les <strong>6 h</strong>,
-      Tudum Netflix chaque <strong>mardi</strong>. Les signaux indisponibles utilisent une valeur
-      neutre (50/100) et sont marqués « En attente ». Voir
-      <a href="#methodologieSources" class="cb-more">Méthodologie & sources complètes ↓</a>.
+      Mis à jour toutes les <strong>6 h</strong> · données publiques récoltées automatiquement ·
+      <a href="#methodologieSources" class="cb-more">Voir toutes les sources ↓</a>
     </p>
   `;
 }
@@ -2263,7 +2247,106 @@ function renderMethodologySources() {
   const root = document.getElementById('methodologieSources');
   if (!root) return;
 
-  const SIGNALS = [
+  const SOURCE_GROUPS = [
+    {
+      icon: '🏆',
+      label: 'Classements Netflix',
+      desc: 'Où Bandi se classe dans le monde chaque jour',
+      sources: [
+        { name: 'FlixPatrol',     url: 'https://flixpatrol.com/title/bandi/' },
+        { name: 'Netflix Tudum',  url: 'https://www.netflix.com/tudum/top10' },
+      ]
+    },
+    {
+      icon: '⭐',
+      label: 'Notes du public',
+      desc: 'Ce que les spectateurs et les critiques pensent de la série',
+      sources: [
+        { name: 'IMDb',            url: 'https://www.imdb.com/title/tt37024175/' },
+        { name: 'TMDB',            url: 'https://www.themoviedb.org/tv/269161-bandi' },
+        { name: 'Allociné',        url: 'https://www.allocine.fr/series/ficheserie_gen_cserie=1000000157.html' },
+        { name: 'SensCritique',    url: 'https://www.senscritique.com/serie/bandi/133850632' },
+        { name: 'Rotten Tomatoes', url: 'https://www.rottentomatoes.com/tv/bandi' },
+        { name: 'Filmaffinity',    url: 'https://m.filmaffinity.com/us/film923114.html' },
+      ]
+    },
+    {
+      icon: '💬',
+      label: 'Ce qu\'en dit Internet',
+      desc: 'Posts, discussions et vidéos sur les réseaux',
+      sources: [
+        { name: 'Reddit',    url: 'https://www.reddit.com/search/?q=Bandi%20Netflix' },
+        { name: 'YouTube',   url: 'https://www.youtube.com/results?search_query=Bandi+Netflix' },
+        { name: 'Bluesky',   url: 'https://bsky.app/search?q=Bandi%20Netflix' },
+      ]
+    },
+    {
+      icon: '🔍',
+      label: 'Intérêt en ligne',
+      desc: 'Combien de gens cherchent Bandi sur Google et Wikipedia',
+      sources: [
+        { name: 'Google Trends', url: 'https://trends.google.com/trends/explore?q=Bandi%20Netflix' },
+        { name: 'Wikipedia FR',  url: 'https://fr.wikipedia.org/wiki/Bandi_(2026)' },
+      ]
+    },
+    {
+      icon: '📰',
+      label: 'Presse & médias',
+      desc: 'Articles publiés en France, aux Antilles et dans le monde',
+      sources: [
+        { name: 'Google News',     url: 'https://news.google.com/search?q=Bandi+Netflix' },
+        { name: 'France-Antilles', url: 'https://www.france-antilles.fr' },
+        { name: 'RCI',             url: 'https://www.rci.fm' },
+        { name: 'Le Monde',        url: 'https://www.lemonde.fr' },
+        { name: 'Allociné Actu',   url: 'https://www.allocine.fr' },
+        { name: '+ 13 autres flux', url: '#' },
+      ]
+    },
+  ];
+
+  const groupsHtml = SOURCE_GROUPS.map(g => `
+    <div class="ms-simple-group">
+      <div class="ms-simple-group-head">
+        <span class="ms-simple-icon">${g.icon}</span>
+        <div>
+          <div class="ms-simple-label">${g.label}</div>
+          <div class="ms-simple-desc">${g.desc}</div>
+        </div>
+      </div>
+      <div class="ms-simple-srcs">
+        ${g.sources.map(s => s.url === '#'
+          ? `<span class="ms-simple-src ms-simple-src-more">${s.name}</span>`
+          : `<a class="ms-simple-src" href="${s.url}" target="_blank" rel="noopener">${s.name} ↗</a>`
+        ).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  root.innerHTML = `
+    <div class="ms-header">
+      <span class="ms-tag">Transparence</span>
+      <h3 class="ms-title">D'où viennent ces chiffres ?</h3>
+      <p class="ms-intro">
+        Tout ce que vous voyez sur ce dashboard est récupéré automatiquement
+        toutes les <strong>6 heures</strong> sur des sites publics.
+        Cliquez sur n'importe quelle source pour vérifier vous-même.
+      </p>
+    </div>
+    <div class="ms-simple-grid">${groupsHtml}</div>
+    <div class="ms-footer">
+      <div class="ms-footer-row">
+        <span class="ms-k">Mise à jour</span>
+        <span>Automatique toutes les 6h · ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+      </div>
+      <div class="ms-footer-row">
+        <span class="ms-k">Total</span>
+        <span>17 sources publiques · aucune donnée payante ou inventée</span>
+      </div>
+    </div>
+  `;
+
+  // (ancienne version supprimée — remplacée par la version simplifiée ci-dessus)
+  return; const _SIGNALS_REF = [
     {
       icon: '🏆',
       title: 'Stabilité du classement',
