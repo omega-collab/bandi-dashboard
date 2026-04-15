@@ -23,11 +23,17 @@ jobs:
       - name: Install dependencies
         run: npm install --omit=dev
 
-      - name: Run scraper
+      - name: Run scraper FlixPatrol
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: node scripts/scraper.js
+
+      - name: Run scraper Tudum
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/scraper-tudum.mjs
 
       - name: Log execution
         if: always()

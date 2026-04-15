@@ -109,9 +109,8 @@ async function loadLiveData() {
       };
     });
 
-    // Override BANDI
-    window.BANDI = {
-      ...BANDI,
+    // Override BANDI (Object.assign pour muter la const déclarée dans data-fallback.js)
+    Object.assign(BANDI, {
       current: {
         score: current.score_monde,
         rang: current.rang_monde,
@@ -146,7 +145,10 @@ async function loadLiveData() {
             isBandi: t.titre.toLowerCase().includes('bandi')
           }))
         : BANDI.rivals
-    };
+    });
+
+    // Badge sources croisées
+    await renderSourcesBadge(cfg, headers);
 
     console.log('✅ Données live chargées depuis Supabase');
     console.log(`   Date: ${today} | Score: ${current.score_monde} | Rang: #${current.rang_monde}`);
@@ -156,6 +158,53 @@ async function loadLiveData() {
     if (liveEl) liveEl.textContent = 'LIVE';
   } catch (err) {
     console.error('❌ Erreur fetch Supabase, fallback :', err);
+  }
+}
+
+async function renderSourcesBadge(cfg, headers) {
+  try {
+    const [fpRes, tdRes] = await Promise.all([
+      fetch(`${cfg.url}/rest/v1/bandi_snapshots?order=date.desc&limit=2`, { headers }),
+      fetch(`${cfg.url}/rest/v1/bandi_tudum_weekly?order=week.desc&limit=2`, { headers })
+    ]);
+    const fp = await fpRes.json();
+    const td = await tdRes.json();
+
+    const badge = document.getElementById('sourcesBadge');
+    if (!badge || !fp?.length || !td?.length) return;
+
+    const fpRang = fp[0]?.rang_monde;
+    const tdRang = td[0]?.rank_noneng;
+    const fpPrev = fp[1]?.rang_monde;
+    const tdPrev = td[1]?.rank_noneng;
+
+    const fpInTop10 = fpRang <= 10;
+    const tdInTop10 = tdRang !== null && tdRang <= 10;
+    const fpTrend = fpPrev ? Math.sign(fpPrev - fpRang) : 0;
+    const tdTrend = (tdPrev && tdRang) ? Math.sign(tdPrev - tdRang) : 0;
+    const trendsOpposed = fpTrend !== 0 && tdTrend !== 0 && fpTrend !== tdTrend;
+
+    let status, label, tooltip;
+    if (!tdInTop10 || !fpInTop10) {
+      status = 'divergent';
+      label = '⚠ Divergence';
+      tooltip = `FlixPatrol #${fpRang} mondial · Tudum ${tdRang ? '#' + tdRang + ' TV Non-Eng' : 'absent'}`;
+    } else if (trendsOpposed) {
+      status = 'warning';
+      label = '⚡ Vérifier';
+      tooltip = `Tendances opposées — FlixPatrol ${fpTrend > 0 ? '↑' : '↓'} / Tudum ${tdTrend > 0 ? '↑' : '↓'}`;
+    } else {
+      status = 'coherent';
+      label = '✓ Croisé';
+      tooltip = `FlixPatrol #${fpRang} mondial · Tudum #${tdRang} TV Non-Eng · ${(td[0].weekly_hours_viewed / 1e6).toFixed(1)}M h vues`;
+    }
+
+    badge.textContent = label;
+    badge.className = `sources-badge ${status}`;
+    badge.title = tooltip;
+    badge.style.display = '';
+  } catch (e) {
+    // badge silencieux si erreur
   }
 }
 

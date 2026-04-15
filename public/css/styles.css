@@ -155,6 +155,34 @@ body::before {
   color: var(--rouge);
   letter-spacing: 0.1em;
 }
+/* Badge sources croisées */
+.sources-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  cursor: default;
+  border: 1px solid transparent;
+  transition: opacity 0.3s;
+}
+.sources-badge.coherent {
+  color: var(--vert);
+  background: rgba(0, 151, 57, 0.12);
+  border-color: rgba(0, 151, 57, 0.25);
+}
+.sources-badge.warning {
+  color: var(--gold);
+  background: rgba(212, 160, 23, 0.12);
+  border-color: rgba(212, 160, 23, 0.25);
+}
+.sources-badge.divergent {
+  color: var(--rouge);
+  background: rgba(206, 17, 38, 0.12);
+  border-color: rgba(206, 17, 38, 0.25);
+}
+
 .live-time {
   font-family: var(--font-mono);
   font-size: 10px;
