@@ -2386,6 +2386,51 @@ let monitoringLoaded = false;
 function initMonitoringTab() {
   if (monitoringLoaded) return;
   monitoringLoaded = true;
+
+  // ── Adaptateur données pour BANDI_MONITORING ──────────────
+  // Le module monitoring.js lit des champs spécifiques sur BANDI
+  // On les crée ici à partir des données live déjà chargées
+  try {
+    // score_monde : score FlixPatrol normalisé (déjà dans BANDI.current.score)
+    if (BANDI.current && BANDI.current.score_monde == null) {
+      BANDI.current.score_monde = BANDI.current.score ?? 0;
+    }
+    // history : tableau de snapshots pour la timeline 14j
+    if (!BANDI.history || BANDI.history.length === 0) {
+      BANDI.history = (BANDI.historique || []).map(h => ({
+        date: h.jour,
+        score_monde:  h.score,
+        rang_monde:   h.rang,
+        pays_n1:      h.paysN1,
+        pays_top10:   h.paysTop10
+      }));
+    }
+    // buzz : score de la dernière journée dans buzzTrends7d
+    if (!BANDI.buzz) {
+      const lastBuzz = (BANDI.buzzTrends7d || []).slice(-1)[0];
+      BANDI.buzz = { score: lastBuzz?.score ?? 0 };
+    }
+    // ratings : moyenne normalisée des notes externes
+    if (!BANDI.ratings) {
+      const norms = Object.values(BANDI.externalRatings ?? {})
+        .map(r => r?.rating_norm)
+        .filter(v => v != null && !isNaN(v));
+      BANDI.ratings = {
+        average: norms.length
+          ? +(norms.reduce((s, v) => s + v, 0) / norms.length).toFixed(1)
+          : 0
+      };
+    }
+  } catch (e) {
+    console.warn('[monitoring] adaptateur données:', e);
+  }
+
+  // ── Module analytique (cohérence, confiance, timeline) ────
+  if (window.BANDI_MONITORING) {
+    try { BANDI_MONITORING.renderMonitoringTab(); } catch (e) { console.warn('[BANDI_MONITORING]', e); }
+  }
+
+  // ── Sections opérationnelles ──────────────────────────────
   const btn = document.getElementById('monRefreshBtn');
   if (btn) btn.addEventListener('click', () => { monitoringLoaded = false; initMonitoringTab(); });
   renderMonScrapers();
