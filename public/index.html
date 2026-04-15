@@ -76,6 +76,10 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 12l4-4 4 4 5-5"/></svg>
       Vue d'ensemble
     </button>
+    <button class="tab" data-tab="monitoring">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      Monitoring
+    </button>
     <button class="tab" data-tab="countries">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
       Pays (<span id="tabCountCountries">—</span>)
@@ -351,6 +355,55 @@
       <div class="visual-overlay">
         <p class="visual-quote">« La Martinique n'est pas un décor, c'est le terrain du récit »</p>
       </div>
+    </div>
+
+  </section>
+
+  <!-- ============ TAB: MONITORING ============ -->
+  <section class="tab-panel" id="panel-monitoring">
+
+    <!-- Bannière connexion -->
+    <div class="mon-connection" id="monConnection">
+      <div class="mon-conn-dot mon-warn" id="monConnDot"></div>
+      <span class="mon-conn-label" id="monConnLabel">Vérification…</span>
+      <span class="mon-conn-time" id="monConnTime"></span>
+      <button class="mon-refresh-btn" id="monRefreshBtn" title="Actualiser les données">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+      </button>
+    </div>
+
+    <!-- Fraîcheur des données -->
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Fraîcheur des données</h2>
+        <span class="panel-sub">8 tables · mise à jour automatique</span>
+      </div>
+      <div class="mon-grid" id="monGrid">
+        <div class="mon-skeleton"></div><div class="mon-skeleton"></div>
+        <div class="mon-skeleton"></div><div class="mon-skeleton"></div>
+        <div class="mon-skeleton"></div><div class="mon-skeleton"></div>
+        <div class="mon-skeleton"></div><div class="mon-skeleton"></div>
+      </div>
+    </div>
+
+    <!-- Notes & avis -->
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Notes &amp; avis du public</h2>
+        <span class="panel-sub">8 sources · scraping toutes les 6h</span>
+      </div>
+      <div class="mon-ratings" id="monRatings">
+        <p class="mon-loading-inline">Chargement…</p>
+      </div>
+    </div>
+
+    <!-- Scrapers GitHub Actions -->
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Scrapers</h2>
+        <span class="panel-sub">5 workflows GitHub Actions · cliquez pour voir les logs</span>
+      </div>
+      <div class="mon-scrapers" id="monScrapers"></div>
     </div>
 
   </section>
@@ -774,6 +827,10 @@
   <button class="bnav-item active" data-tab="overview" aria-label="Vue d'ensemble">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 12l4-4 4 4 5-5"/></svg>
     <span>Live</span>
+  </button>
+  <button class="bnav-item" data-tab="monitoring" aria-label="Monitoring">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    <span>Stats</span>
   </button>
   <button class="bnav-item" data-tab="countries" aria-label="Pays">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20"/><path d="M12 2a15 15 0 0 0 0 20"/></svg>

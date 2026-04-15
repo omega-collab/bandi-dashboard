@@ -2339,3 +2339,184 @@ button, .tab, .bnav-item, .region-btn, .country-row, .kpi-card, .highlight, .buz
   color: var(--dim);
   background: var(--surface-3);
 }
+
+/* ================================================
+   MONITORING TAB
+   ================================================ */
+
+/* Bannière connexion */
+.mon-connection {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+.mon-conn-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.mon-conn-label { flex: 1; font-weight: 600; color: var(--text); }
+.mon-conn-time  { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+.mon-refresh-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 8px;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s, border-color 0.15s;
+}
+.mon-refresh-btn:hover { color: var(--text); border-color: var(--rouge); }
+
+/* Pastilles statut */
+.mon-ok    { background: #009739; box-shadow: 0 0 7px rgba(0,151,57,0.5); }
+.mon-warn  { background: #D4A017; box-shadow: 0 0 7px rgba(212,160,23,0.5); }
+.mon-stale { background: #CE1126; box-shadow: 0 0 7px rgba(206,17,38,0.5); }
+
+/* Grid fraîcheur — 4 colonnes */
+.mon-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+@media (max-width: 900px) { .mon-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .mon-grid { grid-template-columns: 1fr 1fr; } }
+
+/* Skeleton loading */
+.mon-skeleton {
+  height: 128px;
+  border-radius: 12px;
+  background: linear-gradient(90deg,
+    var(--surface-2) 0%,
+    var(--surface-3) 50%,
+    var(--surface-2) 100%);
+  background-size: 200% 100%;
+  animation: monSkel 1.4s ease infinite;
+}
+@keyframes monSkel {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Cartes fraîcheur */
+.mon-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.mon-card:hover { border-color: rgba(206,17,38,0.35); transform: translateY(-1px); }
+.mon-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.mon-card-icon { font-size: 20px; }
+.mon-card-dot  { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.mon-card-label { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.3; }
+.mon-card-sub   { font-size: 11px; color: var(--text-sub); font-family: var(--font-mono); }
+.mon-card-date  { font-size: 11px; color: var(--muted); margin-top: 5px; }
+.mon-card-age   { font-size: 12px; font-weight: 700; font-family: var(--font-mono); }
+.mon-card-age.mon-ok    { color: #009739; }
+.mon-card-age.mon-warn  { color: #D4A017; }
+.mon-card-age.mon-stale { color: #CE1126; }
+.mon-card-detail {
+  font-size: 10px;
+  color: var(--dim);
+  margin-top: 5px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  line-height: 1.5;
+}
+
+/* Notes & avis */
+.mon-ratings { display: flex; flex-direction: column; }
+.mon-rating-row {
+  display: grid;
+  grid-template-columns: 10px 140px 68px 1fr 40px 88px auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 12px;
+}
+.mon-rating-row:last-child { border-bottom: none; }
+.mon-rating-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.mon-rating-name { font-weight: 600; color: var(--text-sub); white-space: nowrap; }
+.mon-rating-val  { font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--text); }
+.mon-no-data     { color: var(--dim) !important; font-size: 12px !important; font-weight: 400 !important; }
+.mon-rating-bar-wrap {
+  height: 5px;
+  background: var(--surface-3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.mon-rating-bar  { height: 100%; border-radius: 3px; transition: width 0.8s var(--ease); }
+.mon-rating-pct  { font-family: var(--font-mono); font-size: 11px; color: var(--muted); text-align: right; }
+.mon-rating-age  { font-size: 10px; font-family: var(--font-mono); white-space: nowrap; }
+.mon-rating-age.mon-ok    { color: #009739; }
+.mon-rating-age.mon-warn  { color: #D4A017; }
+.mon-rating-age.mon-stale { color: #CE1126; }
+.mon-rating-votes { font-size: 10px; color: var(--dim); white-space: nowrap; }
+@media (max-width: 720px) {
+  .mon-rating-row {
+    grid-template-columns: 10px 1fr 60px auto 60px;
+  }
+  .mon-rating-bar-wrap,
+  .mon-rating-pct,
+  .mon-rating-votes { display: none; }
+}
+
+/* Scrapers */
+.mon-scrapers { display: flex; flex-direction: column; }
+.mon-scraper-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 150px 80px;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 8px;
+  border-radius: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  text-decoration: none;
+  color: var(--text);
+  transition: background 0.15s;
+}
+.mon-scraper-row:last-child { border-bottom: none; }
+.mon-scraper-row:hover { background: var(--surface-2); }
+.mon-scraper-icon  { font-size: 17px; text-align: center; }
+.mon-scraper-info  { display: flex; flex-direction: column; gap: 2px; }
+.mon-scraper-name  { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+.mon-scraper-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.mon-scraper-freq  { font-size: 11px; color: var(--text-sub); font-family: var(--font-mono); }
+.mon-scraper-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+}
+.mon-scraper-status.mon-ok   { color: #009739; }
+.mon-scraper-status.mon-warn { color: #D4A017; }
+@media (max-width: 600px) {
+  .mon-scraper-row { grid-template-columns: 28px 1fr 70px; }
+  .mon-scraper-freq { display: none; }
+}
+
+/* Utilitaires */
+.mon-empty         { color: var(--dim); font-size: 13px; padding: 16px 0; }
+.mon-loading-inline { color: var(--muted); font-size: 13px; padding: 12px 0; }

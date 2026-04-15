@@ -508,9 +508,10 @@ function initTabs() {
     // Vibration tactile si supportée
     if (navigator.vibrate) navigator.vibrate(8);
     // Init lazy des onglets lourds
-    if (target === 'history') renderHistoryTab();
-    if (target === 'map')     initMapTab();
-    if (target === 'buzz')    initBuzzTab();
+    if (target === 'history')    renderHistoryTab();
+    if (target === 'map')        initMapTab();
+    if (target === 'buzz')       initBuzzTab();
+    if (target === 'monitoring') initMonitoringTab();
   }
 
   allTabs.forEach(tab => {
@@ -2374,6 +2375,220 @@ function renderMethodologySources() {
       </div>
     </div>
   `;
+}
+
+// ============================================================
+// MONITORING TAB
+// Fraîcheur des données · Notes externes · Scrapers GitHub Actions
+// ============================================================
+let monitoringLoaded = false;
+
+function initMonitoringTab() {
+  if (monitoringLoaded) return;
+  monitoringLoaded = true;
+  const btn = document.getElementById('monRefreshBtn');
+  if (btn) btn.addEventListener('click', () => { monitoringLoaded = false; initMonitoringTab(); });
+  renderMonScrapers();
+  renderMonRatings();
+  loadMonFreshness();
+}
+
+// ── Helpers fraîcheur ──────────────────────────────────────
+function monTimeAgo(dateStr) {
+  if (!dateStr) return { label: '—', hours: Infinity };
+  const d = new Date(String(dateStr).includes('T') ? dateStr : dateStr + 'T12:00:00Z');
+  const h = (Date.now() - d.getTime()) / 3600000;
+  if (h < 1)  return { label: `il y a ${Math.round(h * 60)} min`, hours: h };
+  if (h < 24) return { label: `il y a ${Math.round(h)}h`, hours: h };
+  return { label: `il y a ${Math.round(h / 24)}j`, hours: h };
+}
+function monFreshCls(h, weekly = false) {
+  if (!isFinite(h)) return 'mon-stale';
+  if (weekly)  return h < 192 ? 'mon-ok' : h < 240 ? 'mon-warn' : 'mon-stale';
+  return h < 8 ? 'mon-ok' : h < 36 ? 'mon-warn' : 'mon-stale';
+}
+function monFmtDate(str) {
+  if (!str) return '—';
+  return new Date(String(str).includes('T') ? str : str + 'T12:00:00Z')
+    .toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// ── Fraîcheur des 8 tables ─────────────────────────────────
+async function loadMonFreshness() {
+  const cfg = window.SUPABASE_CONFIG;
+  const live = cfg && !cfg.url.includes('PLACEHOLDER');
+
+  // Bannière connexion
+  const dot   = document.getElementById('monConnDot');
+  const label = document.getElementById('monConnLabel');
+  const time  = document.getElementById('monConnTime');
+  if (dot)   { dot.className = 'mon-conn-dot ' + (live ? 'mon-ok' : 'mon-warn'); }
+  if (label) label.textContent = live ? 'Supabase connecté · données live' : 'Mode fallback statique · données de démonstration';
+  if (time)  time.textContent  = `Chargé le ${new Date().toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`;
+
+  // Dates déjà disponibles depuis loadLiveData()
+  const snapDate    = BANDI.snapshots30?.[0]?.date;
+  const tudumDate   = BANDI.tudumWeekly?.[0]?.week_start;
+  const ratingsDate = Object.values(BANDI.externalRatings ?? {}).find(r => r?.date)?.date;
+
+  // Fetch buzz + wiki (non chargés par loadLiveData)
+  let buzzArtDate = null, buzzSocDate = null, wikiDate = null;
+  let buzzArtCount = '—', buzzSocCount = '—';
+
+  if (live) {
+    const h = { 'apikey': cfg.anonKey, 'Authorization': `Bearer ${cfg.anonKey}` };
+    const hc = { ...h, 'Prefer': 'count=exact', 'Range': '0-0' };
+    const [artR, socR, wkR, artC, socC] = await Promise.allSettled([
+      fetch(`${cfg.url}/rest/v1/buzz_articles?order=date_pub.desc&limit=1&select=date_pub`, { headers: h }),
+      fetch(`${cfg.url}/rest/v1/buzz_social?order=date_pub.desc&limit=1&select=date_pub`,   { headers: h }),
+      fetch(`${cfg.url}/rest/v1/wikipedia_pageviews?order=date.desc&limit=1&select=date`,   { headers: h }),
+      fetch(`${cfg.url}/rest/v1/buzz_articles?select=id`, { headers: hc }),
+      fetch(`${cfg.url}/rest/v1/buzz_social?select=id`,   { headers: hc }),
+    ]);
+    const pj = async r => (r.status === 'fulfilled' && r.value.ok) ? r.value.json() : null;
+    const [artD, socD, wkD] = await Promise.all([pj(artR), pj(socR), pj(wkR)]);
+    buzzArtDate  = artD?.[0]?.date_pub;
+    buzzSocDate  = socD?.[0]?.date_pub;
+    wikiDate     = wkD?.[0]?.date;
+    if (artC.status === 'fulfilled') buzzArtCount = parseInt(artC.value.headers.get('content-range')?.split('/')[1]) || '—';
+    if (socC.status === 'fulfilled') buzzSocCount = parseInt(socC.value.headers.get('content-range')?.split('/')[1]) || '—';
+  }
+
+  const CARDS = [
+    {
+      icon: '📊', label: 'Classements',       sub: 'FlixPatrol · Monde',
+      date: snapDate, weekly: false,
+      detail: `Score ${BANDI.current?.score ?? '—'} pts · Rang mondial #${BANDI.current?.rang ?? '—'}`
+    },
+    {
+      icon: '🌍', label: 'Pays',              sub: `${BANDI.pays?.length ?? '—'} pays actifs`,
+      date: snapDate, weekly: false,
+      detail: `#1 dans ${BANDI.current?.paysN1 ?? '—'} pays · ${BANDI.current?.paysTop10 ?? '—'} top 10`
+    },
+    {
+      icon: '📺', label: 'Top 10 TV Shows',   sub: 'Netflix Monde',
+      date: snapDate, weekly: false,
+      detail: `${BANDI.rivals?.length ?? '—'} titres scrappés · Bandi #${BANDI.current?.rang ?? '—'}`
+    },
+    {
+      icon: '✅', label: 'Tudum officiel',    sub: 'Netflix hebdo',
+      date: tudumDate, weekly: true,
+      detail: tudumDate
+        ? `Semaine du ${monFmtDate(tudumDate)}`
+        : 'En attente · mardi 15h UTC'
+    },
+    {
+      icon: '📰', label: 'Presse & médias',   sub: `${buzzArtCount} articles`,
+      date: buzzArtDate, weekly: false,
+      detail: '23 flux RSS · Google News · GDELT'
+    },
+    {
+      icon: '💬', label: 'Réseaux sociaux',   sub: `${buzzSocCount} posts`,
+      date: buzzSocDate, weekly: false,
+      detail: 'Reddit · YouTube · Bluesky'
+    },
+    {
+      icon: '⭐', label: 'Notes externes',    sub: '8 sources',
+      date: ratingsDate, weekly: false,
+      detail: 'IMDb · TMDB · RT · Allociné · SensCritique · Filmaffinity'
+    },
+    {
+      icon: '📖', label: 'Wikipedia',         sub: 'Pageviews FR + EN',
+      date: wikiDate, weekly: false,
+      detail: (() => {
+        const v = (BANDI.wikipediaPageviews ?? []).slice(-7).reduce((s, r) => s + (r.views || 0), 0);
+        return v ? `${v.toLocaleString('fr-FR')} vues sur 7j` : 'Aucune donnée récente';
+      })()
+    },
+  ];
+
+  const grid = document.getElementById('monGrid');
+  if (!grid) return;
+  grid.innerHTML = CARDS.map(c => {
+    const { label: age, hours } = monTimeAgo(c.date);
+    const cls = monFreshCls(hours, c.weekly);
+    return `
+      <div class="mon-card">
+        <div class="mon-card-head">
+          <span class="mon-card-icon">${c.icon}</span>
+          <div class="mon-card-dot ${cls}"></div>
+        </div>
+        <div class="mon-card-label">${c.label}</div>
+        <div class="mon-card-sub">${c.sub}</div>
+        <div class="mon-card-date">${monFmtDate(c.date)}</div>
+        <div class="mon-card-age ${cls}">${age}</div>
+        <div class="mon-card-detail">${c.detail}</div>
+      </div>`;
+  }).join('');
+}
+
+// ── Notes par source ───────────────────────────────────────
+function renderMonRatings() {
+  const root = document.getElementById('monRatings');
+  if (!root) return;
+  const R = BANDI.externalRatings ?? {};
+
+  const SOURCES = [
+    { key: 'imdb',            label: 'IMDb',            max: 10,  unit: '/10', color: '#F5C518' },
+    { key: 'tmdb',            label: 'TMDB',            max: 10,  unit: '/10', color: '#01B4E4' },
+    { key: 'rt_critics',      label: 'RT Presse',       max: 100, unit: '%',   color: '#FA320A' },
+    { key: 'rt_audience',     label: 'RT Public',       max: 100, unit: '%',   color: '#FA320A' },
+    { key: 'allocine_public', label: 'Allociné Public', max: 5,   unit: '/5',  color: '#FECC00' },
+    { key: 'allocine_press',  label: 'Allociné Presse', max: 5,   unit: '/5',  color: '#FECC00' },
+    { key: 'senscritique',    label: 'SensCritique',    max: 10,  unit: '/10', color: '#FFAD00' },
+    { key: 'filmaffinity',    label: 'Filmaffinity',    max: 10,  unit: '/10', color: '#C0392B' },
+  ];
+
+  const rows = SOURCES.map(src => {
+    const r = R[src.key];
+    const has = r?.note != null;
+    const pct = has ? Math.round((r.note / src.max) * 100) : 0;
+    const { label: age, hours } = monTimeAgo(r?.date);
+    const cls = has ? monFreshCls(hours) : 'mon-stale';
+    const votes = r?.votes   ? `${r.votes.toLocaleString('fr-FR')} votes`
+                : r?.reviews ? `${r.reviews} critiques` : '';
+    return `
+      <div class="mon-rating-row">
+        <div class="mon-rating-dot ${cls}"></div>
+        <span class="mon-rating-name">${src.label}</span>
+        <span class="mon-rating-val ${has ? '' : 'mon-no-data'}">${has ? r.note + src.unit : '—'}</span>
+        <div class="mon-rating-bar-wrap">
+          <div class="mon-rating-bar" style="width:${pct}%;background:${src.color}33;border-right:2px solid ${src.color}99;"></div>
+        </div>
+        <span class="mon-rating-pct">${has ? pct + '%' : ''}</span>
+        <span class="mon-rating-age ${cls}">${has ? age : 'En attente'}</span>
+        <span class="mon-rating-votes">${votes}</span>
+      </div>`;
+  }).join('');
+
+  root.innerHTML = rows || '<p class="mon-empty">Notes non disponibles · scraper en attente de données</p>';
+}
+
+// ── Scrapers GitHub Actions ────────────────────────────────
+function renderMonScrapers() {
+  const root = document.getElementById('monScrapers');
+  if (!root) return;
+
+  const WF = [
+    { name: 'scrape.yml',             label: 'Classements FlixPatrol',      freq: 'Toutes les 6h',  icon: '📊', cls: 'mon-ok',   badge: 'Actif',  url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/scrape.yml' },
+    { name: 'tudum-scrape.yml',       label: 'Netflix Tudum officiel',      freq: 'Mardi 15h UTC',  icon: '✅', cls: 'mon-warn', badge: 'Hebdo',  url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/tudum-scrape.yml' },
+    { name: 'buzz-scrape.yml',        label: 'Presse + GDELT (23 flux)',    freq: 'Toutes les 6h',  icon: '📰', cls: 'mon-ok',   badge: 'Actif',  url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/buzz-scrape.yml' },
+    { name: 'buzz-social-scrape.yml', label: 'Reddit · YouTube · Bluesky', freq: 'Toutes les 6h',  icon: '💬', cls: 'mon-ok',   badge: 'Actif',  url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/buzz-social-scrape.yml' },
+    { name: 'ratings-scrape.yml',     label: '8 sources notes + Wikipedia', freq: 'Toutes les 6h', icon: '⭐', cls: 'mon-ok',   badge: 'Actif',  url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/ratings-scrape.yml' },
+  ];
+
+  root.innerHTML = WF.map(w => `
+    <a class="mon-scraper-row" href="${w.url}" target="_blank" rel="noopener">
+      <span class="mon-scraper-icon">${w.icon}</span>
+      <div class="mon-scraper-info">
+        <span class="mon-scraper-name">${w.name}</span>
+        <span class="mon-scraper-label">${w.label}</span>
+      </div>
+      <span class="mon-scraper-freq">↻ ${w.freq}</span>
+      <div class="mon-scraper-status ${w.cls}">
+        <div class="mon-card-dot ${w.cls}"></div>${w.badge}
+      </div>
+    </a>`).join('');
 }
 
 // ============ SCROLL HEADER ============
