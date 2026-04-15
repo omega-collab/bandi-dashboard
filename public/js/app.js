@@ -131,6 +131,16 @@ async function loadLiveData() {
     );
     const paysHist = await paysHistRes.json();
 
+    // 5. Tudum officiel — dernière semaine disponible (toutes catégories)
+    let tudumData = [];
+    try {
+      const tudumRes = await fetch(
+        `${cfg.url}/rest/v1/tudum_global_weekly?order=week_start.desc%2Crang.asc&limit=40`,
+        { headers }
+      );
+      if (tudumRes.ok) tudumData = await tudumRes.json();
+    } catch (_) { /* table absente ou réseau, pas critique */ }
+
     // Construction de l'historique par pays (4 derniers jours)
     const historyByCountry = {};
     const datesDesc = [...new Set(paysHist.map(r => r.date))].sort().reverse().slice(0, 4).reverse();
@@ -240,7 +250,8 @@ async function loadLiveData() {
             score: t.score,
             isBandi: t.titre.toLowerCase().includes('bandi')
           }))
-        : BANDI.rivals
+        : BANDI.rivals,
+      tudumWeekly: Array.isArray(tudumData) ? tudumData : []
     });
 
     // Badge sources croisées
@@ -697,6 +708,131 @@ function renderRivals() {
   }).join("");
 }
 
+// ============ RIVALS TOGGLE ============
+function initRivalsToggle() {
+  const stogFlix  = document.getElementById('stogFlix');
+  const stogTudum = document.getElementById('stogTudum');
+  const viewFlix  = document.getElementById('rivalsViewFlix');
+  const viewTudum = document.getElementById('rivalsViewTudum');
+  const rivalsSub = document.getElementById('rivalsSub');
+  if (!stogFlix || !stogTudum) return;
+
+  stogFlix.addEventListener('click', () => {
+    stogFlix.classList.add('active');
+    stogTudum.classList.remove('active');
+    viewFlix.style.display = '';
+    viewTudum.style.display = 'none';
+    if (rivalsSub) rivalsSub.textContent = 'Position de Bandi face aux autres séries du classement mondial';
+  });
+
+  stogTudum.addEventListener('click', () => {
+    stogTudum.classList.add('active');
+    stogFlix.classList.remove('active');
+    viewFlix.style.display = 'none';
+    viewTudum.style.display = '';
+    if (rivalsSub) rivalsSub.textContent = 'Heures de visionnage officielles Netflix · Mise à jour chaque mardi';
+    renderRivalsTudum();
+  });
+}
+
+// ============ RIVALS TUDUM ============
+let rivalsTudumRendered = false;
+
+function renderRivalsTudum() {
+  if (rivalsTudumRendered) return;
+  rivalsTudumRendered = true;
+
+  const list      = document.getElementById('rivalsTudumList');
+  const weekBadge = document.getElementById('tudumWeekBadge');
+  if (!list) return;
+
+  const data = BANDI.tudumWeekly || [];
+  if (data.length === 0) {
+    list.innerHTML = '<div class="tudum-empty">Données Tudum non disponibles. Le scraper s\'exécute chaque mardi.</div>';
+    return;
+  }
+
+  const latestWeek = data[0].week_start;
+  const weekRows   = data.filter(r => r.week_start === latestWeek);
+
+  if (weekBadge) {
+    const d1 = new Date(latestWeek);
+    const d2 = new Date(latestWeek);
+    d2.setUTCDate(d2.getUTCDate() + 6);
+    const fmt = d => `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}`;
+    weekBadge.textContent = `semaine ${fmt(d1)} → ${fmt(d2)}`;
+  }
+
+  const tvEn = weekRows.filter(r => r.categorie === 'tv_english').sort((a,b) => a.rang - b.rang);
+  if (tvEn.length === 0) {
+    list.innerHTML = '<div class="tudum-empty">Données TV English non disponibles pour cette semaine.</div>';
+    return;
+  }
+
+  const maxH = Math.max(...tvEn.map(r => parseFloat(r.heures_vues) || 0));
+
+  list.innerHTML = tvEn.map(r => {
+    const h       = parseFloat(r.heures_vues) || 0;
+    const pct     = maxH > 0 ? (h / maxH) * 100 : 0;
+    const isBandi = r.titre.toLowerCase().includes('bandi');
+    const heuresStr = h > 0 ? `${h.toFixed(1)}M h` : '—';
+
+    return `<div class="rival-row ${isBandi ? 'is-bandi' : ''}">
+      <span class="rival-rank">#${r.rang}</span>
+      <div>
+        <div class="rival-title-row">
+          <div>
+            <span class="rival-name">${r.titre}</span>
+            ${r.saison ? `<span class="rival-saison"> · ${r.saison}</span>` : ''}
+            ${isBandi ? '<span class="rival-badge">BANDI</span>' : ''}
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${r.semaines_top10 > 1 ? `<span class="rival-weeks">${r.semaines_top10} sem.</span>` : ''}
+            <span class="rival-score">${heuresStr}</span>
+          </div>
+        </div>
+        <div class="rival-bar"><div class="rival-bar-fill" style="width:${pct.toFixed(1)}%;"></div></div>
+      </div>
+      <span></span>
+    </div>`;
+  }).join('');
+}
+
+// ============ TUDUM MINI (Overview) ============
+function renderTudumMini() {
+  const panel = document.getElementById('tudumPanel');
+  const list  = document.getElementById('tudumMiniList');
+  if (!panel || !list) return;
+
+  const data = BANDI.tudumWeekly || [];
+  if (!data.length) return; // panel reste hidden
+
+  const latestWeek = data[0].week_start;
+  const tvEn = data
+    .filter(r => r.week_start === latestWeek && r.categorie === 'tv_english')
+    .sort((a, b) => a.rang - b.rang)
+    .slice(0, 5);
+
+  if (!tvEn.length) return;
+  panel.style.display = '';
+
+  const maxH = Math.max(...tvEn.map(r => parseFloat(r.heures_vues) || 0));
+
+  list.innerHTML = tvEn.map(r => {
+    const h       = parseFloat(r.heures_vues) || 0;
+    const pct     = maxH > 0 ? Math.round((h / maxH) * 100) : 0;
+    const isBandi = r.titre.toLowerCase().includes('bandi');
+    return `<div class="tudum-mini-row${isBandi ? ' is-bandi' : ''}">
+      <span class="tudum-mini-rank">${r.rang}</span>
+      <span class="tudum-mini-title">${r.titre}</span>
+      <div class="tudum-mini-bar-wrap">
+        <div class="tudum-mini-bar" style="width:${pct}%;background:${isBandi?'var(--rouge)':'var(--dim)'};"></div>
+      </div>
+      <span class="tudum-mini-hours">${h > 0 ? h.toFixed(1)+'M' : '—'}</span>
+    </div>`;
+  }).join('');
+}
+
 // ============ SERIES ============
 function renderSeriesTab() {
   $("castTags").innerHTML = BANDI.casting.map(a => `<span class="cast-tag">${a}</span>`).join("");
@@ -876,6 +1012,9 @@ function renderCountryPerfTable() {
 
 // ============ CARTE LEAFLET ============
 let mapInitialized = false;
+let mapMode = 'rang';        // 'rang' | 'progression'
+let geojsonLayer = null;
+let leafletMap = null;
 
 async function initMapTab() {
   if (mapInitialized) return;
@@ -884,42 +1023,84 @@ async function initMapTab() {
   const mapEl = document.getElementById('leafletMap');
   if (!mapEl || typeof L === 'undefined') return;
 
-  // Lookup rang par pays (FlixPatrol name → data)
-  const rankByCountry = {};
-  BANDI.pays.forEach(p => { rankByCountry[p.pays] = p; });
+  // ── Lookup données par pays ──────────────────────────────────
+  // rankByCountry : paysEn → { rang, pays, flag, historique }
+  const rankByCountry  = {};
+  const deltaByCountry = {};
+  BANDI.pays.forEach(p => { rankByCountry[p.paysEn || p.pays] = p; });
+  (BANDI.countryPerf || []).forEach(p => { deltaByCountry[p.paysEn || p.pays] = p.delta; });
 
-  // Correspondances noms FlixPatrol → noms GeoJSON (property: "name")
+  // Correspondances noms FlixPatrol (EN) → noms GeoJSON
   const NAME_MAP = {
-    'United States':    'United States of America',
-    'Czech Republic':   'Czechia',
-    'Salvador':         'El Salvador',
-    'Bahamas':          'The Bahamas',
-    'Serbia':           'Republic of Serbia',
-    'Ivory Coast':      "Côte d'Ivoire",
-    'Cape Verde':       'Cabo Verde',
-    'Swaziland':        'Eswatini',
-    'Macedonia':        'North Macedonia',
+    'United States':      'United States of America',
+    'Czech Republic':     'Czechia',
+    'Salvador':           'El Salvador',
+    'Bahamas':            'The Bahamas',
+    'Serbia':             'Republic of Serbia',
+    'Ivory Coast':        "Côte d'Ivoire",
+    'Cape Verde':         'Cabo Verde',
+    'Swaziland':          'Eswatini',
+    'Macedonia':          'North Macedonia',
     'Bosnia-Herzegovina': 'Bosnia and Herz.',
-    'New Caledonia':    'New Caledonia',
+    'New Caledonia':      'New Caledonia',
   };
-  // Reverse : GeoJSON ADMIN → FlixPatrol name
   const reverseMap = {};
   Object.entries(NAME_MAP).forEach(([fp, geo]) => { reverseMap[geo] = fp; });
 
-  function getData(geoName) {
+  function getCountryData(geoName) {
     return rankByCountry[reverseMap[geoName] || geoName] || null;
   }
+  function getCountryDelta(geoName) {
+    const key = reverseMap[geoName] || geoName;
+    return deltaByCountry[key] ?? null;
+  }
 
+  // ── Fonctions couleur ────────────────────────────────────────
   function rankColor(rang) {
     if (!rang) return '#1A1A1A';
     if (rang === 1) return '#CE1126';
-    if (rang <= 3) return 'rgba(206,17,38,0.75)';
-    if (rang <= 5) return 'rgba(206,17,38,0.55)';
+    if (rang <= 3)  return 'rgba(206,17,38,0.75)';
+    if (rang <= 5)  return 'rgba(206,17,38,0.55)';
     return 'rgba(206,17,38,0.35)';
   }
 
-  // Init Leaflet
-  const map = L.map('leafletMap', {
+  // delta > 0 = monte dans le classement (meilleur)
+  function perfColor(delta) {
+    if (delta === null) return '#2A2A2A'; // Présent mais pas de historique
+    if (delta >= 3)     return '#009739'; // Forte progression verte
+    if (delta >= 1)     return 'rgba(0,151,57,0.65)';
+    if (delta > -1)     return 'rgba(200,200,200,0.35)'; // Stable
+    if (delta >= -2)    return 'rgba(206,17,38,0.55)';
+    return '#CE1126'; // Fort recul
+  }
+
+  // ── Légende dynamique ────────────────────────────────────────
+  const legends = {
+    rang: `
+      <span class="legend-item"><span class="legend-dot" style="background:#CE1126;"></span>#1</span>
+      <span class="legend-item"><span class="legend-dot" style="background:rgba(206,17,38,0.75);"></span>#2–3</span>
+      <span class="legend-item"><span class="legend-dot" style="background:rgba(206,17,38,0.55);"></span>#4–5</span>
+      <span class="legend-item"><span class="legend-dot" style="background:rgba(206,17,38,0.35);"></span>#6–10</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#1E1E1E; border:1px solid #444;"></span>Absent</span>`,
+    progression: `
+      <span class="legend-item"><span class="legend-dot" style="background:#009739;"></span>↑ +3 rangs</span>
+      <span class="legend-item"><span class="legend-dot" style="background:rgba(0,151,57,0.65);"></span>↑ +1–2</span>
+      <span class="legend-item"><span class="legend-dot" style="background:rgba(200,200,200,0.35);"></span>Stable</span>
+      <span class="legend-item"><span class="legend-dot" style="background:rgba(206,17,38,0.55);"></span>↓ -1–2</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#CE1126;"></span>↓ Fort recul</span>`
+  };
+
+  function updateLegend(mode) {
+    const leg = document.getElementById('mapLegend');
+    if (leg) leg.innerHTML = legends[mode];
+    const sub = document.getElementById('mapSub');
+    if (sub) sub.textContent = mode === 'rang'
+      ? 'Carte choroplèthe · Cliquer sur un pays pour les détails'
+      : 'Progression vs semaine précédente · Vert = monte · Rouge = recule';
+  }
+
+  // ── Init Leaflet ─────────────────────────────────────────────
+  leafletMap = L.map('leafletMap', {
     center: [15, 10], zoom: 2, minZoom: 1, maxZoom: 6,
     zoomControl: true, attributionControl: true
   });
@@ -927,52 +1108,83 @@ async function initMapTab() {
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com">CARTO</a>',
     subdomains: 'abcd', maxZoom: 20
-  }).addTo(map);
+  }).addTo(leafletMap);
 
-  // Chargement GeoJSON pays
+  // ── GeoJSON ──────────────────────────────────────────────────
   try {
     const res = await fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson');
     if (!res.ok) throw new Error('GeoJSON fetch failed');
     const geojson = await res.json();
 
-    L.geoJSON(geojson, {
+    geojsonLayer = L.geoJSON(geojson, {
       style: (feature) => {
-        const data = getData(feature.properties.name);
+        const data  = getCountryData(feature.properties.name);
+        const delta = getCountryDelta(feature.properties.name);
         return {
-          fillColor: data ? rankColor(data.rang) : '#1A1A1A',
-          fillOpacity: data ? 0.85 : 0.25,
-          color: '#2A2A2A',
-          weight: 0.8,
-          opacity: 0.6
+          fillColor: data
+            ? (mapMode === 'rang' ? rankColor(data.rang) : perfColor(delta))
+            : '#1A1A1A',
+          fillOpacity: data ? 0.85 : 0.2,
+          color: '#2A2A2A', weight: 0.8, opacity: 0.6
         };
       },
       onEachFeature: (feature, layer) => {
-        const name = feature.properties.name;
-        const data = getData(name);
+        const name  = feature.properties.name;
+        const data  = getCountryData(name);
         if (!data) return;
 
         const histStr = (data.historique || []).map(h => h === null ? '—' : `#${h}`).join(' · ');
-        const flag = data.flag || '';
+        const delta   = getCountryDelta(name);
+        const deltaStr = delta === null ? '—'
+          : (delta > 0 ? `<span style="color:#009739">↑ +${delta.toFixed(1)}</span>`
+          : delta < 0  ? `<span style="color:#CE1126">↓ ${delta.toFixed(1)}</span>`
+          : '<span style="color:#888">Stable</span>');
 
         layer.bindPopup(`
-          <div class="map-popup-header">${flag} ${name}</div>
-          <div class="map-popup-rank">#${data.rang} mondial</div>
-          ${data.entree ? `<div class="map-popup-meta">Entré le ${data.entree}</div>` : ''}
-          <div class="map-popup-hist">Historique 4j : ${histStr}</div>
-        `, { className: 'bandi-popup', maxWidth: 220 });
+          <div class="map-popup-header">${data.flag || ''} ${data.pays || name}</div>
+          <div class="map-popup-rank">#${data.rang} aujourd'hui</div>
+          <div class="map-popup-hist">7j : ${deltaStr} · 4j : ${histStr}</div>
+        `, { className: 'bandi-popup', maxWidth: 240 });
 
         layer.on('mouseover', function() { this.setStyle({ fillOpacity: 1, weight: 1.5 }); });
         layer.on('mouseout',  function() { this.setStyle({ fillOpacity: 0.85, weight: 0.8 }); });
       }
-    }).addTo(map);
+    }).addTo(leafletMap);
 
-    // Forcer le redimensionnement (le panel était caché au chargement)
-    setTimeout(() => map.invalidateSize(), 100);
+    setTimeout(() => leafletMap.invalidateSize(), 100);
 
   } catch (err) {
     console.error('Erreur carte:', err);
     mapEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#8A8A8A;">Carte non disponible (erreur réseau)</div>`;
   }
+
+  // ── Toggle mode ──────────────────────────────────────────────
+  document.getElementById('mtogRang')?.addEventListener('click', () => {
+    mapMode = 'rang';
+    document.getElementById('mtogRang')?.classList.add('active');
+    document.getElementById('mtogPerf')?.classList.remove('active');
+    updateLegend('rang');
+    if (geojsonLayer) {
+      geojsonLayer.setStyle(feature => {
+        const data = getCountryData(feature.properties.name);
+        return { fillColor: data ? rankColor(data.rang) : '#1A1A1A', fillOpacity: data ? 0.85 : 0.2 };
+      });
+    }
+  });
+
+  document.getElementById('mtogPerf')?.addEventListener('click', () => {
+    mapMode = 'progression';
+    document.getElementById('mtogPerf')?.classList.add('active');
+    document.getElementById('mtogRang')?.classList.remove('active');
+    updateLegend('progression');
+    if (geojsonLayer) {
+      geojsonLayer.setStyle(feature => {
+        const data  = getCountryData(feature.properties.name);
+        const delta = getCountryDelta(feature.properties.name);
+        return { fillColor: data ? perfColor(delta) : '#1A1A1A', fillOpacity: data ? 0.85 : 0.2 };
+      });
+    }
+  });
 }
 
 // ============ BUZZ ============
@@ -1232,6 +1444,12 @@ async function initBuzzTab() {
   }
 }
 
+// ============ SCROLL HEADER ============
+window.addEventListener('scroll', () => {
+  const header = document.querySelector('.header');
+  if (header) header.classList.toggle('scrolled', window.scrollY > 20);
+}, { passive: true });
+
 // ============ INIT ============
 document.addEventListener("DOMContentLoaded", async () => {
   // Chaque call isolé pour qu'une erreur n'empêche pas les suivants
@@ -1244,6 +1462,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   try { renderCountries(); }   catch (e) { console.error('[BANDI] renderCountries:', e); }
   try { initCountrySearch(); } catch (e) { console.error('[BANDI] initCountrySearch:', e); }
   try { renderMartiniqueChart(); } catch (e) { console.error('[BANDI] renderMartiniqueChart:', e); }
+  try { renderTudumMini(); }       catch (e) { console.error('[BANDI] renderTudumMini:', e); }
   try { renderRivals(); }          catch (e) { console.error('[BANDI] renderRivals:', e); }
+  try { initRivalsToggle(); }      catch (e) { console.error('[BANDI] initRivalsToggle:', e); }
   try { renderSeriesTab(); }       catch (e) { console.error('[BANDI] renderSeriesTab:', e); }
 });
