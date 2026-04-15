@@ -1,4 +1,4 @@
-name: Scrape Ratings (IMDb + Allociné)
+name: Scrape Ratings (IMDb · TMDB · Allociné · SensCritique · RT · Filmaffinity · Wikipedia)
 
 on:
   schedule:
@@ -10,7 +10,11 @@ on:
 jobs:
   scrape-ratings:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
 
     steps:
       - uses: actions/checkout@v4
@@ -22,17 +26,47 @@ jobs:
       - name: Install deps
         run: npm ci || npm install
 
+      # ─── Notes /10 (IMDb + TMDB + SensCritique + Filmaffinity) ────────
       - name: Scrape IMDb (aggregateRating)
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           IMDB_TITLE_ID: tt37024175
         run: node scripts/scrape-imdb.js
-        continue-on-error: true   # si IMDb change son layout, ne bloque pas Allociné
+        continue-on-error: true
 
+      - name: Scrape TMDB (API officielle)
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          TMDB_TV_ID: '269161'
+        run: node scripts/scrape-tmdb.js
+        continue-on-error: true
+
+      - name: Scrape SensCritique (communauté FR)
+        env:
+          SENSCRITIQUE_ID: '133850632'
+          SENSCRITIQUE_SLUG: 'bandi'
+        run: node scripts/scrape-senscritique.js
+        continue-on-error: true
+
+      - name: Scrape Filmaffinity (communauté ES)
+        env:
+          FILMAFFINITY_ID: '923114'
+        run: node scripts/scrape-filmaffinity.js
+        continue-on-error: true
+
+      # ─── Notes /5 ou /100 ──────────────────────────────────────────────
       - name: Scrape Allociné (public + presse)
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           ALLOCINE_SERIE_ID: '1000000157'
         run: node scripts/scrape-allocine.js
+        continue-on-error: true
+
+      - name: Scrape Rotten Tomatoes (tomatometer + audience)
+        env:
+          RT_TV_SLUG: 'bandi'
+        run: node scripts/scrape-rottentomatoes.js
+        continue-on-error: true
+
+      # ─── Signal d'intérêt (Wikipedia pageviews) ───────────────────────
+      - name: Scrape Wikipedia pageviews (FR + EN)
+        run: node scripts/scrape-wikipedia.js
+        continue-on-error: true
