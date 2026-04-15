@@ -142,6 +142,39 @@ async function loadLiveData() {
       if (tudumRes.ok) tudumData = await tudumRes.json();
     } catch (_) { /* table absente ou réseau, pas critique */ }
 
+    // 6. Google Trends (7 derniers jours) — pour Completion Score
+    let buzzTrends7d = [];
+    try {
+      const tRes = await fetch(
+        `${cfg.url}/rest/v1/buzz_trends?order=date.desc&limit=7`,
+        { headers }
+      );
+      if (tRes.ok) buzzTrends7d = await tRes.json();
+    } catch (_) { /* table absente, pas critique */ }
+
+    // 7. Buzz social récent (100 derniers posts) — pour Completion Score
+    let buzzSocialRecent = [];
+    try {
+      const sRes = await fetch(
+        `${cfg.url}/rest/v1/buzz_social?order=published_at.desc&limit=100`,
+        { headers }
+      );
+      if (sRes.ok) buzzSocialRecent = await sRes.json();
+    } catch (_) { /* table absente, pas critique */ }
+
+    // 8. IMDb rating (dernière entrée) — pour Completion Score
+    let imdbRating = null;
+    try {
+      const iRes = await fetch(
+        `${cfg.url}/rest/v1/imdb_ratings?order=date.desc&limit=1`,
+        { headers }
+      );
+      if (iRes.ok) {
+        const arr = await iRes.json();
+        if (Array.isArray(arr) && arr.length > 0) imdbRating = arr[0];
+      }
+    } catch (_) { /* table absente, pas critique */ }
+
     // Construction de l'historique par pays (4 derniers jours)
     const historyByCountry = {};
     const datesDesc = [...new Set(paysHist.map(r => r.date))].sort().reverse().slice(0, 4).reverse();
@@ -252,7 +285,11 @@ async function loadLiveData() {
             isBandi: t.titre.toLowerCase().includes('bandi')
           }))
         : BANDI.rivals,
-      tudumWeekly: Array.isArray(tudumData) ? tudumData : []
+      tudumWeekly: Array.isArray(tudumData) ? tudumData : [],
+      // Données pour Completion Score estimé
+      buzzTrends7d: Array.isArray(buzzTrends7d) ? buzzTrends7d : [],
+      buzzSocialRecent: Array.isArray(buzzSocialRecent) ? buzzSocialRecent : [],
+      imdb: imdbRating
     });
 
     // Badge sources croisées
@@ -1641,6 +1678,122 @@ function renderZonesDomination() {
 }
 
 // ── Forecast S2 ───────────────────────────────────────────────
+// ============================================================
+// Completion Score (estimation) — modèle pondéré
+// Remplace l'ancien "Taux de complétion" simulé (string "84%")
+//
+// Formule :
+//   Score = 0.4·S_rank + 0.3·S_engagement + 0.2·S_notes + 0.1·S_search
+//
+// Chaque signal est normalisé dans [0, 100].
+// Si un signal est absent, on retombe sur une valeur neutre (50)
+// et on diminue le "poids réel" dans le disclaimer.
+// ============================================================
+function computeCompletionScore() {
+  const out = {
+    score: null,
+    components: {},
+    signalsAvailable: [],
+    signalsMissing: [],
+    formula: 'Score = 0.4·Stabilité + 0.3·Engagement + 0.2·Notes + 0.1·Recherche'
+  };
+
+  // ── S_rank : stabilité du classement FlixPatrol (rang moyen 7 derniers jours)
+  // Formule : 100 - (rang_moyen × 10), clampée [0, 100]
+  // Rang 1 → 90 · Rang 5 → 50 · Rang ≥ 10 → 0
+  let sRank = 50, rankAvail = false, rangMoyen7d = null;
+  const hist = Array.isArray(BANDI.historique) ? BANDI.historique : [];
+  const rangs = hist.map(h => h.rang).filter(r => typeof r === 'number' && r > 0).slice(-7);
+  if (rangs.length >= 3) {
+    rangMoyen7d = rangs.reduce((s, r) => s + r, 0) / rangs.length;
+    sRank = Math.max(0, Math.min(100, Math.round(100 - rangMoyen7d * 10)));
+    rankAvail = true;
+    out.signalsAvailable.push('Stabilité classement');
+  } else {
+    out.signalsMissing.push('Stabilité classement');
+  }
+  out.components.rank = { value: sRank, weight: 0.4, available: rankAvail, raw: rangMoyen7d };
+
+  // ── S_engagement : activité sociale récente (Reddit, YouTube, Bluesky)
+  // On compte les posts des 7 derniers jours et on moyenne leur engagement
+  // Formule : clamp(log₁₀(totalEngagement + 1) × 20, 0, 100)
+  //   0 engagement → 0 · 100 → 40 · 1000 → 60 · 10k → 80 · 100k → 100
+  let sEng = 50, engAvail = false, totalEng = 0, recentCount = 0;
+  const social = Array.isArray(BANDI.buzzSocialRecent) ? BANDI.buzzSocialRecent : [];
+  if (social.length > 0) {
+    const cutoff = Date.now() - 7 * 24 * 3600 * 1000;
+    const recent = social.filter(p => {
+      const t = p.published_at ? new Date(p.published_at).getTime() : 0;
+      return t >= cutoff;
+    });
+    recentCount = recent.length;
+    totalEng = recent.reduce((s, p) => s + (Number(p.engagement_score) || 0), 0);
+    sEng = Math.max(0, Math.min(100, Math.round(Math.log10(totalEng + 1) * 20)));
+    engAvail = recentCount > 0;
+    if (engAvail) out.signalsAvailable.push('Engagement social');
+    else out.signalsMissing.push('Engagement social');
+  } else {
+    out.signalsMissing.push('Engagement social');
+  }
+  out.components.engagement = { value: sEng, weight: 0.3, available: engAvail, raw: { count: recentCount, total: totalEng } };
+
+  // ── S_notes : note IMDb (0-10) × 10
+  // Si note absente → valeur neutre 50/100 avec disclaimer
+  let sNotes = 50, notesAvail = false, imdbRating = null;
+  const imdb = BANDI.imdb;
+  if (imdb && typeof imdb.rating === 'number' && imdb.rating > 0) {
+    imdbRating = imdb.rating;
+    sNotes = Math.max(0, Math.min(100, Math.round(imdb.rating * 10)));
+    notesAvail = true;
+    out.signalsAvailable.push('Note IMDb');
+  } else {
+    out.signalsMissing.push('Note IMDb');
+  }
+  out.components.notes = { value: sNotes, weight: 0.2, available: notesAvail, raw: imdbRating };
+
+  // ── S_search : tendance Google Trends (déjà 0-100)
+  // On prend le max des 7 derniers jours (pic d'intérêt)
+  let sSearch = 50, searchAvail = false, trendsMax = null;
+  const trends = Array.isArray(BANDI.buzzTrends7d) ? BANDI.buzzTrends7d : [];
+  if (trends.length > 0) {
+    const scores = trends.map(t => Number(t.score) || 0).filter(s => s > 0);
+    if (scores.length > 0) {
+      trendsMax = Math.max(...scores);
+      sSearch = Math.max(0, Math.min(100, Math.round(trendsMax)));
+      searchAvail = true;
+      out.signalsAvailable.push('Recherche Google');
+    } else {
+      out.signalsMissing.push('Recherche Google');
+    }
+  } else {
+    out.signalsMissing.push('Recherche Google');
+  }
+  out.components.search = { value: sSearch, weight: 0.1, available: searchAvail, raw: trendsMax };
+
+  // ── Score final (somme pondérée)
+  out.score = Math.round(
+    0.4 * sRank +
+    0.3 * sEng +
+    0.2 * sNotes +
+    0.1 * sSearch
+  );
+
+  return out;
+}
+
+// Formate une ligne d'explication pour le tooltip
+function formatCompletionTooltip(c) {
+  const lines = [];
+  lines.push('Formule pondérée sur 100 :');
+  lines.push(`• Stabilité du classement (40 %) — ${c.components.rank.value}${c.components.rank.available && c.components.rank.raw != null ? ` (rang moyen 7j : ${c.components.rank.raw.toFixed(1)})` : ' (données insuffisantes)'}`);
+  lines.push(`• Engagement social (30 %) — ${c.components.engagement.value}${c.components.engagement.available ? ` (${c.components.engagement.raw.count} posts récents)` : ' (estimation neutre)'}`);
+  lines.push(`• Note IMDb (20 %) — ${c.components.notes.value}${c.components.notes.available ? ` (${c.components.notes.raw}/10)` : ' (non disponible, valeur neutre)'}`);
+  lines.push(`• Tendance Google (10 %) — ${c.components.search.value}${c.components.search.available ? ` (pic 7j : ${c.components.search.raw})` : ' (non disponible)'}`);
+  lines.push('');
+  lines.push('Plus de signaux = score plus fiable. Les signaux manquants utilisent une valeur neutre de 50/100.');
+  return lines.join('\n');
+}
+
 function renderForecastS2() {
   const fc = BANDI.strategique?.forecastS2;
   if (!fc) return;
@@ -1665,16 +1818,45 @@ function renderForecastS2() {
     });
   }
 
-  // Indicateurs
+  // Indicateurs — remplace le 1er indicateur (Taux de complétion) par le score calculé
   const indEl = document.getElementById('forecastIndicators');
   if (indEl && fc.indicateurs) {
-    indEl.innerHTML = fc.indicateurs.map(ind => `
-      <div class="forecast-ind-row">
+    // Calcul du Completion Score estimé
+    const compScore = computeCompletionScore();
+    const seuil = 70;
+    const ok = compScore.score >= seuil;
+    const tooltipText = formatCompletionTooltip(compScore);
+
+    // Construction du tableau d'indicateurs : on remplace le premier
+    const indicateurs = fc.indicateurs.map((ind, idx) => {
+      if (idx === 0) {
+        return {
+          label: 'Taux de complétion estimé',
+          valeur: `${compScore.score}/100`,
+          seuil: `≥ ${seuil}`,
+          ok,
+          tooltip: tooltipText,
+          hasTooltip: true
+        };
+      }
+      return ind;
+    });
+
+    indEl.innerHTML = indicateurs.map(ind => {
+      const tooltipAttrs = ind.hasTooltip
+        ? ` data-tooltip="${ind.tooltip.replace(/"/g, '&quot;').replace(/\n/g, '&#10;')}" tabindex="0"`
+        : '';
+      const helpIcon = ind.hasTooltip
+        ? '<span class="forecast-ind-help" aria-hidden="true">ⓘ</span>'
+        : '';
+      return `
+      <div class="forecast-ind-row${ind.hasTooltip ? ' has-tooltip' : ''}"${tooltipAttrs}>
         <span class="forecast-ind-icon">${ind.ok ? '✅' : '⚠️'}</span>
-        <span class="forecast-ind-label">${ind.label}</span>
+        <span class="forecast-ind-label">${ind.label}${helpIcon}</span>
         <span class="forecast-ind-val">${ind.valeur}</span>
         <span class="forecast-ind-seuil">seuil : ${ind.seuil}</span>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
 
   // Disclaimer

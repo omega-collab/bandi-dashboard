@@ -144,7 +144,9 @@ const BANDI = {
     forecastS2: {
       probabilite: 85,
       indicateurs: [
-        { label: 'Taux de complétion',      valeur: '84%',   seuil: '70%',    ok: true  },
+        // Taux de complétion estimé — remplacé dynamiquement par computeCompletionScore() au rendu
+        // Le fallback ci-dessous ne s'affiche que si tout le calcul échoue
+        { label: 'Taux de complétion estimé', valeur: '—/100', seuil: '≥ 70',  ok: false },
         { label: 'Top 10 USA atteint',      valeur: '#7',    seuil: '~3%',    ok: true  },
         { label: '#1 dans 13+ pays',        valeur: '13+',   seuil: 'signal', ok: true  },
         { label: 'Score popularité',        valeur: '+108%', seuil: '4 jours',ok: true  },

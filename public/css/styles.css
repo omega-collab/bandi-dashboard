@@ -1559,13 +1559,89 @@ button, .tab, .bnav-item, .region-btn, .country-row, .kpi-card, .highlight, .buz
 .forecast-main-pct   { font-family: var(--font-display); font-size: 32px; white-space: nowrap; }
 .forecast-main-label { font-size: 13px; color: #009739; font-weight: 700; }
 .forecast-indicators { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-.forecast-ind-row    { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.forecast-ind-row    { display: flex; align-items: center; gap: 12px; font-size: 13px; position: relative; }
 .forecast-ind-icon   { font-size: 16px; flex-shrink: 0; }
-.forecast-ind-label  { flex: 1; color: var(--text-sub, #8A8A8A); }
+.forecast-ind-label  { flex: 1; color: var(--text-sub, #8A8A8A); display: flex; align-items: center; gap: 6px; }
 .forecast-ind-val    { font-family: var(--font-mono); font-size: 12px; color: var(--text); }
 .forecast-ind-seuil  { font-size: 11px; color: var(--dim, #555); }
 .forecast-method     { font-size: 11px; color: var(--muted); font-style: italic; margin-bottom: 8px; line-height: 1.5; }
 .forecast-disclaimer { font-size: 11px; color: var(--rouge); font-weight: 600; }
+
+/* Icône d'aide et tooltip (Completion Score estimé) */
+.forecast-ind-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(228, 184, 77, 0.18);
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: help;
+  transition: background 0.2s var(--ease), transform 0.2s var(--ease);
+}
+.forecast-ind-row.has-tooltip { cursor: help; }
+.forecast-ind-row.has-tooltip:hover .forecast-ind-help,
+.forecast-ind-row.has-tooltip:focus-within .forecast-ind-help {
+  background: var(--gold);
+  color: #000;
+  transform: scale(1.1);
+}
+.forecast-ind-row.has-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  right: auto;
+  max-width: 360px;
+  min-width: 280px;
+  white-space: pre-wrap;
+  background: #0A0A0A;
+  color: var(--text);
+  border: 1px solid rgba(228, 184, 77, 0.4);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 11px;
+  line-height: 1.55;
+  font-family: var(--font-body);
+  font-style: normal;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(228, 184, 77, 0.15);
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+  z-index: 100;
+}
+.forecast-ind-row.has-tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 16px;
+  border: 6px solid transparent;
+  border-top-color: #0A0A0A;
+  opacity: 0;
+  transition: opacity 0.2s var(--ease);
+  z-index: 101;
+}
+.forecast-ind-row.has-tooltip:hover::after,
+.forecast-ind-row.has-tooltip:focus-within::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+.forecast-ind-row.has-tooltip:hover::before,
+.forecast-ind-row.has-tooltip:focus-within::before {
+  opacity: 1;
+}
+@media (max-width: 700px) {
+  .forecast-ind-row.has-tooltip::after {
+    left: 0;
+    right: 0;
+    min-width: 0;
+    max-width: 100%;
+  }
+}
 
 /* ── Authenticité module complet (panel-series) ── */
 .authenticite-module { margin-top: 20px; }
