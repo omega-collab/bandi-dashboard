@@ -98,11 +98,19 @@ async function fetchGoogleNews() {
 
 // ─── 2. Presse locale Antilles ────────────────────────────────────────────────
 const LOCAL_FEEDS = [
-  { url: 'https://www.france-antilles.fr/feed',                   name: 'France-Antilles Martinique', lang: 'fr' },
-  { url: 'https://la1ere.francetvinfo.fr/martinique/rss.xml',     name: 'Martinique La 1ère',         lang: 'fr' },
-  { url: 'https://www.rci.fm/rss/actualites',                     name: 'RCI Martinique',             lang: 'fr' },
-  { url: 'https://www.zayactu.com/feed',                          name: 'Zayactu',                    lang: 'fr' },
-  { url: 'https://la1ere.francetvinfo.fr/guadeloupe/rss.xml',     name: 'Guadeloupe La 1ère',         lang: 'fr' },
+  // ── Martinique ──
+  // ── Martinique ──
+  { url: 'https://www.martinique.franceantilles.fr/actualite/faitsdivers/rss.xml', name: 'France-Antilles Martinique', lang: 'fr', country_code: 'MQ' },
+  { url: 'https://www.martinique.franceantilles.fr/actualite/rss.xml',             name: 'France-Antilles Martinique', lang: 'fr', country_code: 'MQ' },
+  { url: 'https://rci.fm/martinique/fb/articles_rss_mq',                           name: 'RCI Martinique',             lang: 'fr', country_code: 'MQ' },
+  { url: 'https://www.zayactu.org/feed/',                                           name: 'Zayactu',                    lang: 'fr', country_code: 'MQ' },
+  { url: 'https://www.bondamanjak.com/feed/',                                       name: 'Bondamanjak',                lang: 'fr', country_code: 'MQ' },
+  { url: 'https://antilla-martinique.com/feed/',                                    name: 'Antilla Martinique',         lang: 'fr', country_code: 'MQ' },
+  { url: 'https://martinique.coconews.com/flux-actualite.rss',                      name: 'Coconews Martinique',        lang: 'fr', country_code: 'MQ' },
+  { url: 'https://la1ere.franceinfo.fr/martinique/actu/rss',                        name: 'Martinique La 1ère',         lang: 'fr', country_code: 'MQ' },
+  // ── Guadeloupe ──
+  { url: 'https://la1ere.franceinfo.fr/guadeloupe/actu/rss',                        name: 'Guadeloupe La 1ère',         lang: 'fr', country_code: 'GP' },
+  { url: 'https://www.guadeloupe.franceantilles.fr/actualite/rss.xml',              name: 'France-Antilles Guadeloupe', lang: 'fr', country_code: 'GP' },
 ];
 
 async function fetchLocalPress() {
@@ -124,7 +132,7 @@ async function fetchLocalPress() {
           source_name: feed.name,
           source_type: 'local',
           language: feed.lang,
-          country_code: 'MQ',
+          country_code: feed.country_code || 'MQ',
           published_at: parseDate(item.pubDate || item.isoDate),
           image_url: item.enclosure?.url || null,
         });
