@@ -60,10 +60,26 @@ bandi-live/
 | `bandi_snapshots` | 1 snapshot/jour (score, rang, pays N1, top10, rang moyen) | `date` |
 | `bandi_country_rankings` | Rang par pays par jour + `code_pays` (ISO) | `date, pays` |
 | `netflix_tv_top10_world` | Top 10 TV Shows Netflix mondial par jour | `date, rang` |
-| `buzz_articles` | Articles de presse (Google News, GDELT) | `guid` |
+| `buzz_articles` | Articles de presse (Google News, GDELT, presse spécialisée) | `guid` |
 | `buzz_social` | Posts Reddit, Bluesky, YouTube | `platform, post_id` |
 | `buzz_trends` | Score Google Trends quotidien | `date` |
 | `tudum_global_weekly` | Classement officiel Netflix hebdomadaire | `week_start, categorie, rang` |
+| `external_ratings` | **Notes multi-sources unifiées** (8 sources) | `date, source` |
+| `wikipedia_pageviews` | **Pageviews Wikipedia FR + EN** (signal d'intérêt) | `date, project, article` |
+
+### `external_ratings` — sources supportées
+| source | Échelle native | Source | Script |
+|--------|---------------|--------|--------|
+| `imdb`            | /10  | IMDb aggregateRating                  | `scrape-imdb.js` |
+| `tmdb`            | /10  | TMDB vote_average (API officielle)    | `scrape-tmdb.js` |
+| `allocine_public` | /5   | Allociné Spectateurs                  | `scrape-allocine.js` |
+| `allocine_press`  | /5   | Allociné Presse                       | `scrape-allocine.js` |
+| `senscritique`    | /10  | SensCritique communauté FR            | `scrape-senscritique.js` |
+| `rt_critics`      | /100 | Rotten Tomatoes Tomatometer           | `scrape-rottentomatoes.js` |
+| `rt_audience`     | /100 | Rotten Tomatoes Audience Score        | `scrape-rottentomatoes.js` |
+| `filmaffinity`    | /10  | Filmaffinity communauté ES            | `scrape-filmaffinity.js` |
+
+Toutes les notes sont aussi stockées dans `rating_norm` (normalisé /10) pour comparaison cross-source.
 
 ### Colonnes importantes
 - `bandi_country_rankings.code_pays` : ISO 3166-1 alpha-2 (ex. `"MQ"`, `"FR"`) — utilisé par `codeToFlag()` côté frontend
@@ -178,6 +194,25 @@ document.addEventListener("DOMContentLoaded", async () => {
 - **Idempotent** : vérifie si la semaine existe déjà avant de scraper
 - **Catégories** : `tv_english`, `tv_non_english`, `film_english`, `film_non_english`
 
+### Notes externes (`ratings-scrape.yml`) — 7 scripts
+Toutes les 6h (cron `'15 */6 * * *'`), workflow unique qui enchaîne :
+1. `scrape-imdb.js` — IMDb aggregateRating (JSON-LD)
+2. `scrape-tmdb.js` — TMDB API officielle (nécessite secret **`TMDB_API_KEY`**)
+3. `scrape-senscritique.js` — parse `__NEXT_DATA__`
+4. `scrape-filmaffinity.js` — parse JSON-LD + fallback DOM
+5. `scrape-allocine.js` — Cheerio sur `.rating-item`
+6. `scrape-rottentomatoes.js` — `<score-board>` + `__NEXT_DATA__`
+7. `scrape-wikipedia.js` — API Wikimedia REST (pageviews FR + EN)
+
+Chaque étape est en `continue-on-error: true` : un échec isolé ne bloque pas les suivantes.
+
+### Clé TMDB
+TMDB nécessite une clé API v3 (gratuite) — créer sur https://www.themoviedb.org/settings/api puis :
+```bash
+gh secret set TMDB_API_KEY --body "VOTRE_CLE"
+```
+Sans cette clé, le script `scrape-tmdb.js` sort proprement avec un message warning et le workflow continue.
+
 ---
 
 ## 🚀 Phases du projet
@@ -213,11 +248,21 @@ document.addEventListener("DOMContentLoaded", async () => {
 - Onglet Buzz : filtres type/source/plateforme/période, lazy load, pagination
 
 **Phase E — Modules B2B (version finale)**
-- `data-fallback.js` : champ `strategique` (USA #7, authenticité 91%, forecast S2 85%)
+- `data-fallback.js` : champ `strategique` (USA #8, authenticité 91%, forecast S2 85%)
 - `index.html` : bento-strategic (USA + auth mini + forecast mini), zones-module, forecast-detail, authenticite-module (panel-series), toggle carte 3 modes
 - `app.js` : renderBreakthroughUSA, renderAuthenticiteMini, renderAuthenticite, renderZonesDomination, renderForecastS2, mode Momentum carte (window._paysHistCache)
 - `styles.css` : ~250 lignes — bento grid, modules USA/auth/forecast/zones
 - FILM_MARKERS enrichi (mudborn, tu yaa main), purge DB rivaux films
+
+**Phase F — Completion Score + Méthodologie multi-sources**
+- 5 nouveaux scrapers : TMDB · SensCritique · Rotten Tomatoes · Filmaffinity · Wikipedia
+- Table `external_ratings` étendue à 8 sources + nouvelle table `wikipedia_pageviews`
+- 13 nouveaux flux RSS presse spécialisée (Le Parisien, Le Monde, Les Inrocks, JDG, What's on Netflix, etc.)
+- `computeCompletionScore()` refondu :
+  - `S_notes` : moyenne pondérée 8 sources (IMDb 0.22, TMDB 0.18, RT×2 0.25, Allociné×2 0.20, SensCritique 0.10, Filmaffinity 0.05)
+  - `S_search` : Google Trends (0.6) + Wikipedia pageviews (0.4)
+- `renderCompletionBreakdown()` : chips par source dans le panneau
+- **`renderMethodologySources()`** : nouveau panneau pédagogique complet listant les 17 sources avec type, fréquence, rôle dans le calcul. ID DOM : `#methodologieSources`, placé après `#forecastDetail`.
 
 ### 🔜 Phases à venir
 
@@ -247,3 +292,11 @@ Exécuter `supabase/tudum-tables.sql` dans l'éditeur SQL Supabase.
 
 ### Buzz (Phase E)
 Exécuter `supabase/buzz-tables.sql` dans l'éditeur SQL Supabase (déjà fait selon Allan).
+
+### External ratings + Wikipedia (Phase F)
+Exécuter `supabase/external-ratings-tables.sql` dans l'éditeur SQL Supabase.
+Ce fichier est idempotent (`CREATE TABLE IF NOT EXISTS`), on peut le re-exécuter sans risque.
+Contient :
+- `external_ratings` (les 8 sources de notes)
+- `wikipedia_pageviews` (pageviews FR + EN)
+- Les RLS + policies + index
