@@ -338,11 +338,21 @@ async function loadLiveData() {
       wikipediaPageviews: Array.isArray(wikipediaPageviews) ? wikipediaPageviews : []
     });
 
+    // ── Cohérence hero ↔ rivals ──────────────────────────────────────────────
+    // Le rang affiché dans le hero doit correspondre exactement à la position de
+    // Bandi dans la liste Concurrence (netflix_tv_top10_world, TV shows uniquement).
+    // rang_monde dans bandi_snapshots = rang global toutes catégories FlixPatrol
+    // → peut diverger du rang TV shows → on écrase avec la position réelle.
+    const bandiRivalsIdx = BANDI.rivals.findIndex(r => r.isBandi);
+    if (bandiRivalsIdx !== -1) {
+      BANDI.current.rang = bandiRivalsIdx + 1;
+    }
+
     // Badge sources croisées
     await renderSourcesBadge(cfg, headers);
 
     console.log('✅ Données live chargées depuis Supabase');
-    console.log(`   Date: ${today} | Score: ${current.score_monde} | Rang: #${current.rang_monde}`);
+    console.log(`   Date: ${today} | Score: ${current.score_monde} | Rang TV shows: #${BANDI.current.rang} (rang_monde brut: #${current.rang_monde})`);
 
     // Badge "LIVE" vert si connecté
     const liveEl = document.querySelector('.live-text');
