@@ -4,6 +4,10 @@
    Liste : 192 noms équipe technique (générique)
    ======================================== */
 
+// ⚠️ Flag global : mettre à true pour réactiver la protection
+// Quand false : toutes les pages sont publiques, aucune redirection
+window.AUTH_ENABLED = false;
+
 const PASSWORD = "bandi972";
 
 // Identifiant spécial pour les personnes externes à l'équipe production
@@ -109,10 +113,14 @@ function validatePassword(input) {
 }
 
 function checkAuth() {
+  // Si auth désactivée : tout le monde est autorisé
+  if (window.AUTH_ENABLED === false) return true;
   return sessionStorage.getItem("bandi_auth") === "ok";
 }
 
 function logout() {
+  // Si auth désactivée : bouton masqué dans l'UI, mais au cas où
+  if (window.AUTH_ENABLED === false) return;
   sessionStorage.removeItem("bandi_auth");
   window.location.href = "login.html";
 }
@@ -120,6 +128,12 @@ function logout() {
 // ── Handler login ───────────────────────────────────────────
 function handleLogin(event) {
   if (event) event.preventDefault();
+
+  // Si auth désactivée : bypass direct vers le dashboard
+  if (window.AUTH_ENABLED === false) {
+    window.location.href = "index.html";
+    return;
+  }
 
   const nameEl = document.getElementById("nameInput");
   const pwdEl  = document.getElementById("passwordInput");

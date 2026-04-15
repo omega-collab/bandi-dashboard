@@ -440,11 +440,25 @@ function initLiveClock() {
 }
 
 // ============ OVERVIEW ============
+// Couleur du rang hero selon la valeur
+// Retourne le nom de classe CSS applicable à .rank-number
+function getRankColor(value) {
+  const v = Number(value);
+  if (!Number.isFinite(v) || v < 1) return 'rank-red';
+  if (v >= 1 && v <= 3) return 'rank-green';
+  if (v >= 4 && v <= 5) return 'rank-orange';
+  return 'rank-red'; // 6 à 99
+}
+
 function renderOverview() {
   const cur = BANDI.current;
   const prev = BANDI.previous;
 
-  $("rankNumber").textContent = "#" + cur.rang;
+  const rankEl = $("rankNumber");
+  rankEl.textContent = "#" + cur.rang;
+  // Applique la classe de couleur selon la valeur du rang
+  rankEl.classList.remove('rank-green', 'rank-orange', 'rank-red');
+  rankEl.classList.add(getRankColor(cur.rang));
   const rankDelta = prev.rang - cur.rang;
   const rankDeltaEl = $("rankDelta");
   const rankDeltaValueEl = $("rankDeltaValue");

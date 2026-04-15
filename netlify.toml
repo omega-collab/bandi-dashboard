@@ -2,11 +2,12 @@
   publish = "public"
   command = "echo 'Static site, no build needed'"
 
-# Redirection : la racine pointe vers login.html (page d'accueil)
-# Le dashboard (index.html) reste accessible après authentification
+# Redirection racine → dashboard
+# (auth désactivée : la page /login.html reste accessible directement
+#  mais n'est plus servie par défaut)
 [[redirects]]
   from = "/"
-  to = "/login.html"
+  to = "/index.html"
   status = 200
   force = true
 

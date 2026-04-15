@@ -2,8 +2,10 @@
 <html lang="fr">
 <head>
 <!-- Garde d'accès : redirige vers login si non authentifié -->
+<!-- ⚠️ Désactivée via window.AUTH_ENABLED (cf. js/auth.js) — accès public -->
 <script>
-  if (sessionStorage.getItem('bandi_auth') !== 'ok') {
+  window.AUTH_ENABLED = false;
+  if (window.AUTH_ENABLED === true && sessionStorage.getItem('bandi_auth') !== 'ok') {
     window.location.replace('login.html');
   }
 </script>
@@ -606,7 +608,16 @@
       <div class="series-info">
         <span class="series-label">UNE SÉRIE NETFLIX ORIGINALE</span>
         <h2 class="series-title">BANDI</h2>
-        <p class="series-creator">Par Éric Rochant (Le Bureau des Légendes)</p>
+        <p class="series-creator">
+          Par Éric Rochant <span class="creator-sep">·</span>
+          <span class="creator-capucine" title="Co-créatrice">
+            <svg class="creator-spark" viewBox="0 0 20 20" width="12" height="12" aria-hidden="true">
+              <path d="M10 1l2.5 5.5L18 9l-5.5 2.5L10 17l-2.5-5.5L2 9l5.5-2.5L10 1z" fill="currentColor"/>
+            </svg>
+            Capucine Rochant
+          </span>
+          <br /><span class="creator-ref">Le Bureau des Légendes</span>
+        </p>
         <div class="series-meta">
           <div class="meta-item">
             <span class="meta-label">Sortie</span>
@@ -708,7 +719,15 @@
       <div class="team-grid">
         <div class="team-col">
           <span class="team-label">Créateurs</span>
-          <p class="team-names">Éric Rochant · Capucine Rochant</p>
+          <p class="team-names">
+            Éric Rochant
+            <span class="creator-capucine team-capucine" title="Co-créatrice">
+              <svg class="creator-spark" viewBox="0 0 20 20" width="11" height="11" aria-hidden="true">
+                <path d="M10 1l2.5 5.5L18 9l-5.5 2.5L10 17l-2.5-5.5L2 9l5.5-2.5L10 1z" fill="currentColor"/>
+              </svg>
+              Capucine Rochant
+            </span>
+          </p>
         </div>
         <div class="team-col">
           <span class="team-label">Réalisation</span>
@@ -791,10 +810,18 @@
 <script src="js/config.js"></script>
 <script src="js/app.js"></script>
 <script>
-  // Câblage bouton logout
-  document.getElementById('logoutBtn')?.addEventListener('click', () => {
-    if (typeof logout === 'function') logout();
-  });
+  // Câblage bouton logout — masqué si auth désactivée
+  (function () {
+    var btn = document.getElementById('logoutBtn');
+    if (!btn) return;
+    if (window.AUTH_ENABLED === false) {
+      btn.style.display = 'none';
+      return;
+    }
+    btn.addEventListener('click', function () {
+      if (typeof logout === 'function') logout();
+    });
+  })();
 </script>
 </body>
 </html>
