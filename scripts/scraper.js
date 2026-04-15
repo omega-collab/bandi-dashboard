@@ -137,11 +137,18 @@ async function scrapeBandiPage() {
   return { scoreMonde, rangMonde, countries };
 }
 
+// Titres caractéristiques de FILMS (guard anti-régression)
+const FILM_MARKERS = [
+  'thrash', 'sniper', 'anaconda', 'sisu', 'four brothers',
+  'striking distance', 'eat pray', 'john wick', 'die hard', 'rambo',
+  'fast &', 'transformers', 'expendables'
+];
+
 /**
  * Scrape le Top 10 TV Shows Netflix Monde
+ * IMPORTANT : ne jamais utiliser .parent().find('table') → remonte trop haut et prend Films
  */
 async function scrapeWorldTop10() {
-  // Dernier jour où FlixPatrol a des données (généralement J-1)
   const d = new Date();
   d.setDate(d.getDate() - 1);
   const yesterday = d.toISOString().slice(0, 10);
@@ -152,34 +159,25 @@ async function scrapeWorldTop10() {
     const $ = cheerio.load(html);
 
     const shows = [];
-    // Chercher le tableau sous "TOP TV Shows"
-    let tvHeader = null;
-    $('h2').each((_, h) => {
-      const text = $(h).text();
-      if (text.includes('TV Shows') || text.includes('TV Show')) {
-        tvHeader = $(h);
-      }
-    });
 
-    if (!tvHeader) {
-      console.warn('⚠️ H2 TV Shows non trouvé sur la page');
+    // ── Trouver le h2 "TV Shows" — .filter() + .first() = match unique et fiable
+    const tvHeader = $('h2').filter((_, el) =>
+      /tv\s*show/i.test($(el).text())
+    ).first();
+
+    if (!tvHeader.length) {
+      console.warn('⚠️ H2 TV Shows non trouvé — structure FlixPatrol peut avoir changé');
       return [];
     }
 
-    // Stratégie : traverser les siblings APRÈS le h2 TV Shows
-    // (ne JAMAIS remonter via .parent().parent() → prend la table Films en premier)
-    let tvTable = null;
+    // ── Stratégie 1 : table sœur DIRECTE après le h2 (même niveau DOM)
+    let tvTable = tvHeader.nextAll('table').first();
 
-    // Stratégie 1 : nextAll direct sur le même niveau
-    const nextTables = tvHeader.nextAll('table');
-    if (nextTables.length) {
-      tvTable = nextTables.first();
-    }
-
-    // Stratégie 2 : siblings suivants (table peut être dans un wrapper div)
-    if (!tvTable || !tvTable.length) {
-      let cur = tvHeader.next();
-      while (cur.length && (!tvTable || !tvTable.length)) {
+    // ── Stratégie 2 : frère du PARENT du h2 (jamais parent().find() !)
+    //    Utile si la table est dans un container frère du bloc contenant le h2
+    if (!tvTable.length) {
+      let cur = tvHeader.parent().next();
+      while (cur.length && !tvTable.length) {
         if (cur.is('table')) {
           tvTable = cur;
         } else {
@@ -190,32 +188,35 @@ async function scrapeWorldTop10() {
       }
     }
 
-    // Stratégie 3 : fallback — parent direct uniquement (pas parent.parent)
-    if (!tvTable || !tvTable.length) {
-      tvTable = tvHeader.parent().find('table').first();
-    }
-
-    if (!tvTable || !tvTable.length) {
-      console.warn('⚠️ Table TV Shows introuvable');
+    if (!tvTable.length) {
+      console.warn('⚠️ Table TV Shows introuvable après le h2');
       return [];
     }
 
-    const table = tvTable;
-    table.find('tr').each((_, row) => {
+    tvTable.find('tr').each((_, row) => {
       const cells = $(row).find('td').map((_, c) => $(c).text().trim()).get();
       if (cells.length < 3) return;
-
-      const rangStr = cells[0].replace(/\D/g, '');
-      const rang = parseInt(rangStr, 10);
+      const rang  = parseInt(cells[0].replace(/\D/g, ''), 10);
       const titre = cells[1].replace(/\s+/g, ' ').trim().split('  ')[0];
       const score = parseInt(cells[2].replace(/\D/g, ''), 10);
-
       if (!isNaN(rang) && rang >= 1 && rang <= 10 && titre && !isNaN(score)) {
         shows.push({ rang, titre, score });
       }
     });
 
+    // ── Guard : si ≥2 titres sur les 3 premiers ressemblent à des films → abort
+    const top3 = shows.slice(0, 3).map(s => s.titre.toLowerCase());
+    const filmMatches = top3.filter(t => FILM_MARKERS.some(m => t.includes(m)));
+    if (top3.length > 0 && filmMatches.length >= 2) {
+      throw new Error(
+        `scrapeWorldTop10 a récupéré des Films au lieu de TV Shows ` +
+        `(${top3.join(', ')}) — vérifier la structure FlixPatrol`
+      );
+    }
+
+    console.log(`📺 TV Shows parsés : ${shows.map(s => `#${s.rang} ${s.titre}`).slice(0,3).join(' | ')}...`);
     return shows;
+
   } catch (err) {
     console.warn('⚠️ Top 10 monde non récupéré :', err.message);
     return [];
