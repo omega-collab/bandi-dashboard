@@ -1333,3 +1333,231 @@ input:focus-visible {
 button, .tab, .bnav-item, .region-btn, .country-row, .kpi-card, .highlight, .buzz-btn, .buzz-card {
   -webkit-tap-highlight-color: transparent;
 }
+
+/* ============ 26. MODULES B2B ============ */
+
+/* ── Bento grid stratégique ── */
+.bento-strategic {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 16px;
+  margin: 24px 0;
+}
+@media (max-width: 900px) {
+  .bento-strategic { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .bento-strategic { grid-template-columns: 1fr; }
+}
+
+/* ── Module USA ── */
+.bento-usa {
+  background: linear-gradient(135deg, #0a0a1a 0%, #1a0510 50%, #0f0f0f 100%);
+  border: 1px solid rgba(206,17,38,0.35);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.2s var(--ease), transform 0.2s var(--ease);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.bento-usa:hover {
+  border-color: var(--rouge);
+  transform: translateY(-2px);
+}
+.bento-usa::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 80%, rgba(206,17,38,0.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+.bento-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--gold, #D4A017);
+  color: #000;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+.bento-usa-flag   { font-size: 24px; }
+.bento-usa-label  { font-size: 10px; letter-spacing: 0.15em; color: var(--muted); font-family: var(--font-mono); text-transform: uppercase; }
+.bento-usa-rank   { font-family: var(--font-display); font-size: 80px; line-height: 1; color: var(--text); letter-spacing: -0.02em; }
+.bento-usa-entry  { color: #4CAF50; font-size: 13px; font-weight: 700; }
+.bento-usa-sub    { font-size: 12px; color: var(--text-sub, #8A8A8A); }
+.bento-usa-note   { font-size: 13px; color: var(--text); font-style: italic; margin-top: 8px; line-height: 1.4; }
+.bento-usa-source { font-size: 10px; color: var(--dim, #555); margin-top: auto; font-family: var(--font-mono); padding-top: 8px; }
+
+/* ── Module Authenticité mini ── */
+.bento-auth-mini {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  transition: border-color 0.2s;
+}
+.bento-auth-mini:hover { border-color: rgba(206,17,38,0.4); }
+.bento-auth-label { font-size: 10px; letter-spacing: 0.15em; color: var(--muted); font-family: var(--font-mono); text-transform: uppercase; }
+.bento-auth-gauge-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
+.gauge-mini { width: 80px; height: 80px; transform: rotate(-90deg); }
+.gauge-bg   { fill: none; stroke: var(--surface-3, #222); stroke-width: 6; }
+.gauge-fill { fill: none; stroke: var(--rouge); stroke-width: 6; stroke-linecap: round;
+  stroke-dasharray: 150.8; stroke-dashoffset: 150.8;
+  transition: stroke-dashoffset 1.5s cubic-bezier(0.4,0,0.2,1); }
+.gauge-pct {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.bento-auth-sub { font-size: 12px; color: var(--text-sub, #8A8A8A); text-align: center; }
+
+/* ── Module Forecast mini ── */
+.bento-forecast {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.2s;
+}
+.bento-forecast:hover { border-color: rgba(206,17,38,0.4); }
+.bento-forecast-label { font-size: 10px; letter-spacing: 0.15em; color: var(--muted); font-family: var(--font-mono); text-transform: uppercase; }
+.bento-forecast-bar-wrap { height: 8px; background: var(--surface-3, #222); border-radius: 4px; overflow: hidden; }
+.bento-forecast-bar {
+  height: 100%; width: 0; border-radius: 4px;
+  background: linear-gradient(90deg, #CE1126 0%, #D4A017 50%, #009739 100%);
+  transition: width 1.5s ease;
+}
+.bento-forecast-pct     { font-family: var(--font-display); font-size: 40px; line-height: 1; }
+.bento-forecast-sub     { font-size: 12px; color: var(--text-sub, #8A8A8A); }
+.bento-forecast-disclaimer { font-size: 9px; color: var(--dim, #555); font-style: italic; margin-top: auto; line-height: 1.4; }
+
+/* ── Zones de domination ── */
+.zones-module {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.zones-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+.zones-title  { font-size: 11px; letter-spacing: 0.15em; color: var(--muted); font-family: var(--font-mono); text-transform: uppercase; }
+.zones-count  { font-size: 13px; color: var(--text-sub, #8A8A8A); }
+.zones-list   { display: flex; flex-wrap: wrap; gap: 10px; }
+.zone-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-2, #1A1A1A);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.zone-item:hover { border-color: var(--rouge); background: var(--surface-3, #222); }
+.zone-flag  { font-size: 18px; }
+.zone-name  { font-weight: 600; color: var(--text); }
+.zone-label { font-size: 10px; color: var(--muted); font-family: var(--font-mono); }
+
+/* ── Forecast S2 détaillé ── */
+.forecast-detail { margin-bottom: 20px; }
+.forecast-header { margin-bottom: 20px; }
+.forecast-tag   { font-size: 10px; letter-spacing: 0.15em; color: var(--muted); font-family: var(--font-mono); display: block; margin-bottom: 8px; text-transform: uppercase; }
+.forecast-title { font-family: var(--font-display); font-size: 28px; margin: 0; }
+.forecast-main-bar-wrap { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.forecast-main-bar {
+  flex: 1; min-width: 120px; height: 12px;
+  background: var(--surface-3, #222);
+  border-radius: 6px; overflow: hidden;
+  position: relative;
+}
+.forecast-main-bar::after {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; height: 100%;
+  width: var(--bar-width, 0%);
+  background: linear-gradient(90deg, #CE1126 0%, #D4A017 50%, #009739 100%);
+  border-radius: 6px;
+  transition: width 1.5s ease;
+}
+.forecast-main-pct   { font-family: var(--font-display); font-size: 32px; white-space: nowrap; }
+.forecast-main-label { font-size: 13px; color: #009739; font-weight: 700; }
+.forecast-indicators { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.forecast-ind-row    { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.forecast-ind-icon   { font-size: 16px; flex-shrink: 0; }
+.forecast-ind-label  { flex: 1; color: var(--text-sub, #8A8A8A); }
+.forecast-ind-val    { font-family: var(--font-mono); font-size: 12px; color: var(--text); }
+.forecast-ind-seuil  { font-size: 11px; color: var(--dim, #555); }
+.forecast-method     { font-size: 11px; color: var(--muted); font-style: italic; margin-bottom: 8px; line-height: 1.5; }
+.forecast-disclaimer { font-size: 11px; color: var(--rouge); font-weight: 600; }
+
+/* ── Authenticité module complet (panel-series) ── */
+.authenticite-module { margin-top: 20px; }
+.auth-header  { margin-bottom: 20px; }
+.auth-tag     { font-size: 10px; letter-spacing: 0.15em; color: var(--muted); font-family: var(--font-mono); display: block; margin-bottom: 8px; text-transform: uppercase; }
+.auth-title   { font-family: var(--font-display); font-size: 24px; margin: 0; }
+.auth-body    { display: grid; grid-template-columns: 140px 1fr; gap: 32px; align-items: center; margin-bottom: 24px; }
+.auth-gauge-wrap { display: flex; align-items: center; justify-content: center; }
+.gauge-main   { width: 140px; height: 140px; transform: rotate(-90deg); }
+.gauge-bg     { fill: none; stroke: var(--surface-3, #222); stroke-width: 10; }
+.gauge-fill-main {
+  fill: none;
+  stroke-width: 10;
+  stroke-linecap: round;
+  stroke-dasharray: 314.16;
+  stroke-dashoffset: 314.16;
+  transition: stroke-dashoffset 1.8s cubic-bezier(0.4,0,0.2,1);
+}
+.gauge-text-pct {
+  font-family: var(--font-display);
+  font-size: 22px;
+  fill: var(--text);
+  transform: rotate(90deg);
+  transform-origin: 60px 60px;
+}
+.gauge-text-sub {
+  font-size: 9px;
+  fill: var(--muted);
+  transform: rotate(90deg);
+  transform-origin: 60px 60px;
+}
+.auth-details     { display: flex; flex-direction: column; gap: 12px; }
+.auth-stat        { display: flex; align-items: baseline; gap: 8px; }
+.auth-stat-num    { font-family: var(--font-display); font-size: 36px; color: var(--rouge); }
+.auth-stat-label  { font-size: 13px; color: var(--text-sub, #8A8A8A); }
+.auth-desc        { font-size: 14px; color: var(--text); margin: 0; line-height: 1.5; }
+.auth-cnc         { font-size: 11px; color: var(--muted); font-style: italic; margin: 0; }
+.auth-compare     { border-top: 1px solid var(--border); padding-top: 20px; }
+.auth-compare-title { font-size: 11px; letter-spacing: 0.12em; color: var(--muted); font-family: var(--font-mono); margin-bottom: 14px; text-transform: uppercase; }
+.auth-bar-row     { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font-size: 13px; }
+.auth-bar-label   { width: 120px; color: var(--text-sub, #8A8A8A); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.auth-bar-outer   { flex: 1; height: 8px; background: var(--surface-3, #222); border-radius: 4px; overflow: hidden; }
+.auth-bar-inner   { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+.auth-bar-bandi   { background: linear-gradient(90deg, #CE1126, #009739); }
+.auth-bar-other   { background: var(--surface-3, #333); border: 1px solid var(--border); }
+.auth-bar-pct     { width: 36px; text-align: right; font-family: var(--font-mono); font-size: 12px; color: var(--text-sub); }
+.auth-source      { font-size: 10px; color: var(--dim, #555); font-style: italic; margin-top: 16px; }
+@media (max-width: 600px) {
+  .auth-body { grid-template-columns: 1fr; justify-items: center; }
+  .gauge-main { width: 110px; height: 110px; }
+}

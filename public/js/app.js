@@ -130,6 +130,7 @@ async function loadLiveData() {
       { headers }
     );
     const paysHist = await paysHistRes.json();
+    window._paysHistCache = paysHist; // exposé pour initMapTab momentum
 
     // 5. Tudum officiel — dernière semaine disponible (toutes catégories)
     let tudumData = [];
@@ -1087,16 +1088,24 @@ async function initMapTab() {
       <span class="legend-item"><span class="legend-dot" style="background:rgba(0,151,57,0.65);"></span>↑ +1–2</span>
       <span class="legend-item"><span class="legend-dot" style="background:rgba(200,200,200,0.35);"></span>Stable</span>
       <span class="legend-item"><span class="legend-dot" style="background:rgba(206,17,38,0.55);"></span>↓ -1–2</span>
-      <span class="legend-item"><span class="legend-dot" style="background:#CE1126;"></span>↓ Fort recul</span>`
+      <span class="legend-item"><span class="legend-dot" style="background:#CE1126;"></span>↓ Fort recul</span>`,
+    momentum: `
+      <span class="legend-item"><span class="legend-dot" style="background:#009739;"></span>+5 rangs 7j</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#4CAF50;"></span>+2–4</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#8BC34A;"></span>+1</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#555;"></span>Stable</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#FF9800;"></span>↓ léger</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#CE1126;"></span>↓ fort</span>`
   };
 
   function updateLegend(mode) {
     const leg = document.getElementById('mapLegend');
-    if (leg) leg.innerHTML = legends[mode];
+    if (leg) leg.innerHTML = legends[mode] || legends.rang;
     const sub = document.getElementById('mapSub');
-    if (sub) sub.textContent = mode === 'rang'
-      ? 'Carte choroplèthe · Cliquer sur un pays pour les détails'
-      : 'Progression vs semaine précédente · Vert = monte · Rouge = recule';
+    if (sub) sub.textContent =
+      mode === 'rang'        ? 'Carte choroplèthe · Cliquer sur un pays pour les détails' :
+      mode === 'progression' ? 'Progression vs semaine précédente · Vert = monte · Rouge = recule' :
+                               'Momentum 7 jours · Variation de rang sur 7 jours glissants';
   }
 
   // ── Init Leaflet ─────────────────────────────────────────────
@@ -1163,6 +1172,7 @@ async function initMapTab() {
     mapMode = 'rang';
     document.getElementById('mtogRang')?.classList.add('active');
     document.getElementById('mtogPerf')?.classList.remove('active');
+    document.getElementById('mtogMomentum')?.classList.remove('active');
     updateLegend('rang');
     if (geojsonLayer) {
       geojsonLayer.setStyle(feature => {
@@ -1176,12 +1186,65 @@ async function initMapTab() {
     mapMode = 'progression';
     document.getElementById('mtogPerf')?.classList.add('active');
     document.getElementById('mtogRang')?.classList.remove('active');
+    document.getElementById('mtogMomentum')?.classList.remove('active');
     updateLegend('progression');
     if (geojsonLayer) {
       geojsonLayer.setStyle(feature => {
         const data  = getCountryData(feature.properties.name);
         const delta = getCountryDelta(feature.properties.name);
         return { fillColor: data ? perfColor(delta) : '#1A1A1A', fillOpacity: data ? 0.85 : 0.2 };
+      });
+    }
+  });
+
+  // ── Mode Momentum 7j ────────────────────────────────────────
+  function getMomentumData() {
+    const momentum = {};
+    const cache = window._paysHistCache || [];
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    // Pour chaque pays présent aujourd'hui, cherche son rang il y a ~7j
+    const sevenDaysAgo = {};
+    cache
+      .filter(p => p.date <= cutoff)
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .forEach(p => { if (!sevenDaysAgo[p.pays]) sevenDaysAgo[p.pays] = p.rang; });
+
+    BANDI.pays.forEach(p => {
+      const paysKey = p.paysEn || p.pays;
+      const oldRang = sevenDaysAgo[paysKey];
+      momentum[paysKey] = oldRang != null ? oldRang - p.rang : 0; // positif = amélioration
+    });
+    return momentum;
+  }
+
+  function getMomentumColor(delta) {
+    if (delta == null) return '#2A2A2A';
+    if (delta >= 5)  return '#009739';
+    if (delta >= 2)  return '#4CAF50';
+    if (delta >= 1)  return '#8BC34A';
+    if (delta === 0) return '#555555';
+    if (delta >= -2) return '#FF9800';
+    return '#CE1126';
+  }
+
+  document.getElementById('mtogMomentum')?.addEventListener('click', () => {
+    mapMode = 'momentum';
+    document.getElementById('mtogMomentum')?.classList.add('active');
+    document.getElementById('mtogRang')?.classList.remove('active');
+    document.getElementById('mtogPerf')?.classList.remove('active');
+    updateLegend('momentum');
+    const momentumData = getMomentumData();
+    if (geojsonLayer) {
+      geojsonLayer.setStyle(feature => {
+        const name   = feature.properties.name;
+        const fpKey  = reverseMap[name] || name;
+        const data   = getCountryData(name);
+        const delta  = momentumData[fpKey] ?? null;
+        return {
+          fillColor: data ? getMomentumColor(delta) : '#1A1A1A',
+          fillOpacity: data ? 0.85 : 0.2
+        };
       });
     }
   });
@@ -1444,6 +1507,167 @@ async function initBuzzTab() {
   }
 }
 
+// ============ MODULES B2B ============
+
+const ZONE_LABELS = {
+  'MQ': 'ancrage natif',         'GP': 'Caraïbes francophones',
+  'FR': 'marché clé EU',         'RE': 'outre-mer Océan Indien',
+  'BS': 'Caraïbes anglophones',  'HU': 'signal Europe centrale',
+  'JM': 'Caraïbes anglophone',   'PA': 'Amérique Centrale',
+  'HN': 'Amérique Centrale',     'VE': 'Amérique du Sud',
+  'TT': 'Caraïbes',              'DO': 'Caraïbes hispanophone',
+  'NC': 'Océanie',               'NG': 'Afrique',
+  'US': 'marché clé US'
+};
+
+// ── Breakthrough USA ──────────────────────────────────────────
+function renderBreakthroughUSA() {
+  const strat = BANDI.strategique;
+  if (!strat) return;
+
+  // Cherche le rang live depuis BANDI.pays si disponible
+  const usaPays = BANDI.pays.find(p => p.code === 'US' || p.paysEn === 'United States' || p.pays === 'États-Unis');
+  const rang = usaPays?.rang || strat.usaRang || 7;
+
+  const rankEl = document.getElementById('usaRankDisplay');
+  if (rankEl) rankEl.textContent = `#${rang}`;
+
+  const noteEl = document.getElementById('usaNote');
+  if (noteEl && strat.usaNote) noteEl.textContent = strat.usaNote;
+
+  const dateEl = document.getElementById('usaDate');
+  if (dateEl && strat.usaDate) dateEl.textContent = strat.usaDate;
+}
+
+// ── Authenticité mini (bento) ──────────────────────────────────
+function renderAuthenticiteMini() {
+  const auth = BANDI.strategique?.authenticite;
+  if (!auth) return;
+
+  const pct = (auth.pctCasting || 91) / 100;
+  const circ = 2 * Math.PI * 24; // 150.8
+
+  const gaugeEl = document.getElementById('authGaugeMini');
+  if (gaugeEl) {
+    gaugeEl.style.strokeDasharray  = circ.toFixed(1);
+    gaugeEl.style.strokeDashoffset = circ.toFixed(1); // part de 0
+
+    // Animation différée pour laisser le CSS transitionner
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        gaugeEl.style.strokeDashoffset = (circ * (1 - pct)).toFixed(1);
+      }, 200);
+    });
+  }
+
+  const pctEl = document.getElementById('authPctMini');
+  if (pctEl) pctEl.textContent = `${auth.pctCasting}%`;
+}
+
+// ── Authenticité complète (panel-series) ──────────────────────
+function renderAuthenticite() {
+  const auth = BANDI.strategique?.authenticite;
+  if (!auth) return;
+
+  const pct   = (auth.pctCasting || 91) / 100;
+  const circ  = 2 * Math.PI * 50; // 314.16
+
+  const gaugeEl = document.getElementById('authGaugeMain');
+  if (gaugeEl) {
+    gaugeEl.style.strokeDasharray  = circ.toFixed(2);
+    gaugeEl.style.strokeDashoffset = circ.toFixed(2);
+
+    // IntersectionObserver pour lancer l'animation au scroll
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          setTimeout(() => {
+            gaugeEl.style.strokeDashoffset = (circ * (1 - pct)).toFixed(2);
+          }, 100);
+          observer.disconnect();
+        }
+      });
+    }, { threshold: 0.3 });
+
+    const module = document.getElementById('authenticiteModule');
+    if (module) observer.observe(module);
+  }
+}
+
+// ── Zones de domination ────────────────────────────────────────
+function renderZonesDomination() {
+  const listEl  = document.getElementById('zonesList');
+  const countEl = document.getElementById('zonesCount');
+  if (!listEl) return;
+
+  // Pays #1 triés : Martinique/Guadeloupe en tête, puis par région
+  const n1 = BANDI.pays.filter(p => p.rang === 1);
+
+  const PRIORITY = ['MQ', 'GP', 'FR', 'RE', 'BS', 'JM', 'TT', 'DO'];
+  n1.sort((a, b) => {
+    const ai = PRIORITY.indexOf(a.code);
+    const bi = PRIORITY.indexOf(b.code);
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return  1;
+    return (a.pays || '').localeCompare(b.pays || '');
+  });
+
+  if (countEl) countEl.textContent = `Bandi est #1 dans ${n1.length} pays`;
+
+  listEl.innerHTML = n1.map(p => {
+    const code  = p.code || '';
+    const label = ZONE_LABELS[code] || p.region || '';
+    return `<div class="zone-item">
+      <span class="zone-flag">${p.flag || '🏳️'}</span>
+      <span class="zone-name">${p.pays}</span>
+      ${label ? `<span class="zone-label">${label}</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── Forecast S2 ───────────────────────────────────────────────
+function renderForecastS2() {
+  const fc = BANDI.strategique?.forecastS2;
+  if (!fc) return;
+
+  const prob = fc.probabilite || 85;
+
+  // Bento mini bar
+  const miniBar = document.getElementById('forecastBar');
+  if (miniBar) {
+    requestAnimationFrame(() => {
+      setTimeout(() => { miniBar.style.width = `${prob}%`; }, 300);
+    });
+  }
+  const pctEl = document.getElementById('forecastPct');
+  if (pctEl) pctEl.textContent = `${prob}%`;
+
+  // Forecast détaillé — barre principale (via CSS custom property pour ::after)
+  const mainBarEl = document.getElementById('forecastMainBar');
+  if (mainBarEl) {
+    requestAnimationFrame(() => {
+      setTimeout(() => { mainBarEl.style.setProperty('--bar-width', `${prob}%`); }, 400);
+    });
+  }
+
+  // Indicateurs
+  const indEl = document.getElementById('forecastIndicators');
+  if (indEl && fc.indicateurs) {
+    indEl.innerHTML = fc.indicateurs.map(ind => `
+      <div class="forecast-ind-row">
+        <span class="forecast-ind-icon">${ind.ok ? '✅' : '⚠️'}</span>
+        <span class="forecast-ind-label">${ind.label}</span>
+        <span class="forecast-ind-val">${ind.valeur}</span>
+        <span class="forecast-ind-seuil">seuil : ${ind.seuil}</span>
+      </div>`).join('');
+  }
+
+  // Disclaimer
+  const disclaimerEl = document.getElementById('forecastDisclaimer');
+  if (disclaimerEl && fc.disclaimer) disclaimerEl.textContent = fc.disclaimer;
+}
+
 // ============ SCROLL HEADER ============
 window.addEventListener('scroll', () => {
   const header = document.querySelector('.header');
@@ -1466,4 +1690,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   try { renderRivals(); }          catch (e) { console.error('[BANDI] renderRivals:', e); }
   try { initRivalsToggle(); }      catch (e) { console.error('[BANDI] initRivalsToggle:', e); }
   try { renderSeriesTab(); }       catch (e) { console.error('[BANDI] renderSeriesTab:', e); }
+  try { renderBreakthroughUSA(); } catch (e) { console.error('[BANDI] renderBreakthroughUSA:', e); }
+  try { renderAuthenticiteMini(); }catch (e) { console.error('[BANDI] renderAuthenticiteMini:', e); }
+  try { renderAuthenticite(); }    catch (e) { console.error('[BANDI] renderAuthenticite:', e); }
+  try { renderZonesDomination(); } catch (e) { console.error('[BANDI] renderZonesDomination:', e); }
+  try { renderForecastS2(); }      catch (e) { console.error('[BANDI] renderForecastS2:', e); }
 });

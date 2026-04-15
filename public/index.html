@@ -261,6 +261,69 @@
       <div class="tudum-mini-list" id="tudumMiniList"></div>
     </div>
 
+    <!-- ── Bento Stratégique B2B ── -->
+    <div class="bento-strategic" id="bentoStrategic">
+
+      <a class="bento-usa" id="usaModule" href="https://flixpatrol.com/top10/netflix/united-states/" target="_blank" rel="noopener">
+        <div class="bento-badge">EN VEDETTE</div>
+        <div class="bento-usa-flag">🇺🇸</div>
+        <div class="bento-usa-label">BREAKTHROUGH USA</div>
+        <div class="bento-usa-rank" id="usaRankDisplay">#7</div>
+        <div class="bento-usa-entry">▲ Première entrée</div>
+        <div class="bento-usa-sub">Top 10 TV · Netflix US</div>
+        <div class="bento-usa-note" id="usaNote">First French-Caribbean series to break US Top 10</div>
+        <div class="bento-usa-source">Source : FlixPatrol · <span id="usaDate">14/04/2026</span></div>
+      </a>
+
+      <div class="bento-auth-mini" id="authMini">
+        <div class="bento-auth-label">AUTHENTICITÉ</div>
+        <div class="bento-auth-gauge-wrap">
+          <svg class="gauge-mini" viewBox="0 0 60 60">
+            <circle class="gauge-bg" cx="30" cy="30" r="24" />
+            <circle class="gauge-fill" cx="30" cy="30" r="24" id="authGaugeMini" />
+          </svg>
+          <span class="gauge-pct" id="authPctMini">91%</span>
+        </div>
+        <div class="bento-auth-sub">Casting martiniquais</div>
+      </div>
+
+      <div class="bento-forecast" id="forecastModule">
+        <div class="bento-forecast-label">FORECAST S2</div>
+        <div class="bento-forecast-bar-wrap">
+          <div class="bento-forecast-bar" id="forecastBar"></div>
+        </div>
+        <div class="bento-forecast-pct" id="forecastPct">85%</div>
+        <div class="bento-forecast-sub">Probabilité renouvellement</div>
+        <div class="bento-forecast-disclaimer">Estimation interne · non officielle</div>
+      </div>
+
+    </div>
+
+    <!-- ── Zones de domination ── -->
+    <div class="zones-module" id="zonesModule">
+      <div class="zones-header">
+        <span class="zones-title">ZONES DE DOMINATION</span>
+        <span class="zones-count" id="zonesCount">Bandi est #1 dans — pays</span>
+      </div>
+      <div class="zones-list" id="zonesList"></div>
+    </div>
+
+    <!-- ── Forecast S2 détaillé ── -->
+    <div class="forecast-detail panel" id="forecastDetail">
+      <div class="forecast-header">
+        <span class="forecast-tag">ANALYSE INTERNE</span>
+        <h3 class="forecast-title">Forecast Saison 2</h3>
+      </div>
+      <div class="forecast-main-bar-wrap">
+        <div class="forecast-main-bar" id="forecastMainBar"></div>
+        <span class="forecast-main-pct">85%</span>
+        <span class="forecast-main-label">Très favorable</span>
+      </div>
+      <div class="forecast-indicators" id="forecastIndicators"></div>
+      <p class="forecast-method">Méthodologie : modèle probabiliste basé sur l'historique des renouvellements Netflix de séries non-anglophones ayant atteint le top 10 mondial dès la S1.</p>
+      <p class="forecast-disclaimer" id="forecastDisclaimer"></p>
+    </div>
+
     <!-- Bande visuelle : triptyque ambiance -->
     <div class="visual-strip">
       <img src="assets/bandi-triptych.jpeg" alt="Ambiance Bandi" />
@@ -503,6 +566,10 @@
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 17l4-8 4 4 4-8 4 4"/></svg>
             Par progression
           </button>
+          <button class="stoggle" data-mapmode="momentum" id="mtogMomentum">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            Momentum 7j
+          </button>
         </div>
       </div>
       <!-- Légende dynamique -->
@@ -556,6 +623,56 @@
       <p class="synopsis-note">
         « Bandi » en créole martiniquais signifie <em>bandit, voleur, malfaiteur</em>. Première série Netflix intégralement tournée en Martinique, dans les quartiers de Trenelle, Dillon et Volga-Plage.
       </p>
+    </div>
+
+    <!-- ── Indice d'authenticité martiniquaise ── -->
+    <div class="authenticite-module panel" id="authenticiteModule">
+      <div class="auth-header">
+        <span class="auth-tag">INDICATEUR CLÉ</span>
+        <h3 class="auth-title">Indice d'Authenticité Martiniquaise</h3>
+      </div>
+      <div class="auth-body">
+        <div class="auth-gauge-wrap">
+          <svg class="gauge-main" viewBox="0 0 120 120">
+            <defs>
+              <linearGradient id="authGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%"   stop-color="#CE1126"/>
+                <stop offset="50%"  stop-color="#D4A017"/>
+                <stop offset="100%" stop-color="#009739"/>
+              </linearGradient>
+            </defs>
+            <circle class="gauge-bg" cx="60" cy="60" r="50" />
+            <circle class="gauge-fill-main" cx="60" cy="60" r="50" id="authGaugeMain" stroke="url(#authGrad)" />
+            <text class="gauge-text-pct" x="60" y="56" text-anchor="middle">91%</text>
+            <text class="gauge-text-sub" x="60" y="70" text-anchor="middle">du casting</text>
+          </svg>
+        </div>
+        <div class="auth-details">
+          <div class="auth-stat"><span class="auth-stat-num">75</span><span class="auth-stat-label">acteurs locaux</span></div>
+          <div class="auth-stat"><span class="auth-stat-num">82</span><span class="auth-stat-label">rôles au total</span></div>
+          <p class="auth-desc">Une production qui privilégie les talents antillais et créoles authentiques.</p>
+          <p class="auth-cnc">Indicateur clé pour dossiers CNC, festivals, subventions Région Martinique.</p>
+        </div>
+      </div>
+      <div class="auth-compare">
+        <div class="auth-compare-title">COMPARAISON PRODUCTIONS SIMILAIRES</div>
+        <div class="auth-bar-row">
+          <span class="auth-bar-label">Bandi (MQ)</span>
+          <div class="auth-bar-outer"><div class="auth-bar-inner auth-bar-bandi" style="width:91%"></div></div>
+          <span class="auth-bar-pct">91%</span>
+        </div>
+        <div class="auth-bar-row">
+          <span class="auth-bar-label">Top Boy (UK)</span>
+          <div class="auth-bar-outer"><div class="auth-bar-inner auth-bar-other" style="width:50%"></div></div>
+          <span class="auth-bar-pct">~50%</span>
+        </div>
+        <div class="auth-bar-row">
+          <span class="auth-bar-label">Narcos (CO)</span>
+          <div class="auth-bar-outer"><div class="auth-bar-inner auth-bar-other" style="width:40%"></div></div>
+          <span class="auth-bar-pct">~40%</span>
+        </div>
+      </div>
+      <p class="auth-source">Source : production Maui Entertainment · casting interne · À valider par la production avant toute présentation officielle</p>
     </div>
 
     <div class="series-gallery">
