@@ -1983,20 +1983,39 @@ function computeCompletionScore() {
 // Formate une ligne d'explication pour le tooltip (version courte)
 function formatCompletionTooltip(c) {
   const lines = [];
-  lines.push('Formule pondérée sur 100 :');
-  lines.push(`• Stabilité du classement (40 %) — ${c.components.rank.value}${c.components.rank.available && c.components.rank.raw != null ? ` (rang moyen 7j : ${c.components.rank.raw.toFixed(1)})` : ' (données insuffisantes)'}`);
-  lines.push(`• Engagement social (30 %) — ${c.components.engagement.value}${c.components.engagement.available ? ` (${c.components.engagement.raw.count} posts · 7j)` : ' (estimation neutre)'}`);
-  lines.push(`• Notes critiques (20 %) — ${c.components.notes.value}${c.components.notes.available ? ` (${c.components.notes.dataLabel})` : ' (non disponible, valeur neutre)'}`);
-  const sr = c.components.search.raw || {};
-  const searchSummary = c.components.search.available
-    ? ` (${[
-        sr.trendsMax != null ? `Google pic ${sr.trendsMax}` : null,
-        sr.wikiViews7d ? `Wiki ${sr.wikiViews7d.toLocaleString('fr-FR')} vues 7j` : null
-      ].filter(Boolean).join(' · ')})`
-    : ' (non disponible)';
-  lines.push(`• Intérêt recherche (10 %) — ${c.components.search.value}${searchSummary}`);
+  lines.push(`Score de complétion : ${c.score}% (seuil Netflix : 70%)`);
   lines.push('');
-  lines.push(`Sources actives : ${c.totalActiveSources}/${c.totalSources}. Voir le panneau « Méthode & sources » ci-dessous pour le détail.`);
+
+  // Classement
+  const rankVal = c.components.rank.available && c.components.rank.raw != null
+    ? `Rang moyen sur 7 jours : ${c.components.rank.raw.toFixed(1)} → ${c.components.rank.value}%`
+    : `Classement — données insuffisantes`;
+  lines.push(`📊 Stabilité du classement · ${rankVal}`);
+
+  // Engagement
+  const engVal = c.components.engagement.available
+    ? `${c.components.engagement.raw.count} publications sur les réseaux (7j) → ${c.components.engagement.value}%`
+    : `Réseaux sociaux — données en attente`;
+  lines.push(`💬 Buzz en ligne · ${engVal}`);
+
+  // Notes
+  const notesVal = c.components.notes.available
+    ? `${c.components.notes.dataLabel} → ${c.components.notes.value}%`
+    : `Notes — données en attente`;
+  lines.push(`⭐ Avis du public · ${notesVal}`);
+
+  // Recherche
+  const sr = c.components.search.raw || {};
+  const searchVal = c.components.search.available
+    ? [
+        sr.trendsMax != null ? `Google Trends pic : ${sr.trendsMax}/100` : null,
+        sr.wikiViews7d ? `Wikipedia : ${sr.wikiViews7d.toLocaleString('fr-FR')} vues/7j` : null
+      ].filter(Boolean).join(' · ') + ` → ${c.components.search.value}%`
+    : `Recherche — données en attente`;
+  lines.push(`🔍 Intérêt en ligne · ${searchVal}`);
+
+  lines.push('');
+  lines.push(`${c.totalActiveSources} source${c.totalActiveSources > 1 ? 's' : ''} active${c.totalActiveSources > 1 ? 's' : ''} sur ${c.totalSources}`);
   return lines.join('\n');
 }
 
@@ -2051,6 +2070,7 @@ function renderForecastS2() {
           valeur: `${compScore.score}%`,
           seuil: `≥ ${seuil}%`,
           ok,
+          icon: '📈',
           tooltip: tooltipText,
           hasTooltip: true
         };
@@ -2083,7 +2103,7 @@ function renderForecastS2() {
         : '';
       return `
       <div class="forecast-ind-row${ind.hasTooltip ? ' has-tooltip' : ''}"${tooltipAttrs}>
-        <span class="forecast-ind-icon">${ind.ok ? '✅' : '⚠️'}</span>
+        <span class="forecast-ind-icon">${ind.icon ?? (ind.ok ? '✅' : '⚠️')}</span>
         <span class="forecast-ind-label">${ind.label}${helpIcon}</span>
         <span class="forecast-ind-val">${ind.valeur}</span>
         <span class="forecast-ind-seuil">seuil : ${ind.seuil}</span>
