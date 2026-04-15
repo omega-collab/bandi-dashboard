@@ -1,0 +1,18 @@
+{
+  "name": "bandi-live-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Dashboard temps réel Bandi Netflix avec scraping FlixPatrol",
+  "scripts": {
+    "scrape": "node scripts/scraper.js",
+    "test-scrape": "node scripts/test-scraper.js",
+    "dev": "npx serve public",
+    "deploy": "netlify deploy --prod --dir=public"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.4.5"
+  }
+}

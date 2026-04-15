@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Dev Server (serve public)",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "public"],
+      "port": 3000
+    }
+  ]
+}
