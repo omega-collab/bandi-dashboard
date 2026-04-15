@@ -196,6 +196,12 @@ async function loadLiveData() {
       };
     });
 
+    // Historique quotidien Martinique (pour graphique Phase B)
+    const martiniqueRanks = paysHist
+      .filter(r => r.pays === 'Martinique')
+      .sort((a, b) => (a.date < b.date ? -1 : 1))
+      .map(r => ({ date: r.date.slice(5).replace('-', '/'), rang: r.rang }));
+
     // Override BANDI (Object.assign pour muter la const déclarée dans data-fallback.js)
     Object.assign(BANDI, {
       current: {
@@ -227,6 +233,7 @@ async function loadLiveData() {
       pays: enrichedPays.length > 0 ? enrichedPays : BANDI.pays,
       snapshots30: snapshots,
       countryPerf,
+      martiniqueRanks,
       rivals: top10Data.length > 0
         ? top10Data.map(t => ({
             titre: t.titre,
@@ -295,6 +302,87 @@ async function renderSourcesBadge(cfg, headers) {
   } catch (e) {
     // badge silencieux si erreur
   }
+}
+
+// ============ GRAPHIQUE RANG MARTINIQUE ============
+let martiniqueChartInstance = null;
+
+function renderMartiniqueChart() {
+  const ctx = document.getElementById('martiniqueChart');
+  if (!ctx) return;
+
+  const data = (BANDI.martiniqueRanks && BANDI.martiniqueRanks.length > 0)
+    ? BANDI.martiniqueRanks
+    : BANDI.historique
+        .filter(h => h.rang !== null)
+        .map(h => ({ date: h.jour, rang: 1 })); // fallback statique : toujours #1
+
+  if (data.length === 0) return;
+
+  if (martiniqueChartInstance) martiniqueChartInstance.destroy();
+
+  martiniqueChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.map(d => d.date),
+      datasets: [{
+        data: data.map(d => d.rang),
+        borderColor: '#CE1126',
+        backgroundColor: ctx => {
+          const { chart } = ctx;
+          const { ctx: c, chartArea } = chart;
+          if (!chartArea) return 'rgba(206,17,38,0.2)';
+          const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          g.addColorStop(0, 'rgba(206,17,38,0.35)');
+          g.addColorStop(1, 'rgba(206,17,38,0)');
+          return g;
+        },
+        fill: true,
+        tension: 0.3,
+        borderWidth: 2.5,
+        pointBackgroundColor: '#CE1126',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 5,
+        pointHoverRadius: 7
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0D0D0D',
+          borderColor: '#CE1126',
+          borderWidth: 1,
+          titleColor: '#fff',
+          bodyColor: '#B5B5B5',
+          callbacks: {
+            label: c => `🇲🇶 Rang #${c.raw} · ${c.raw === 1 ? '🥇 N°1 !' : ''}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#8A8A8A', font: { family: 'JetBrains Mono', size: 10 }, maxTicksLimit: 10 },
+          grid: { color: 'rgba(42,42,42,0.5)' }
+        },
+        y: {
+          reverse: true,          // rang 1 = en haut
+          min: 1,
+          suggestedMax: 5,
+          ticks: {
+            color: '#8A8A8A',
+            font: { family: 'JetBrains Mono', size: 10 },
+            stepSize: 1,
+            callback: v => `#${v}`
+          },
+          grid: { color: 'rgba(42,42,42,0.5)' }
+        }
+      }
+    }
+  });
 }
 
 // ============ TAB NAVIGATION ============
@@ -1155,6 +1243,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   try { renderRegionFilters(); }  catch (e) { console.error('[BANDI] renderRegionFilters:', e); }
   try { renderCountries(); }   catch (e) { console.error('[BANDI] renderCountries:', e); }
   try { initCountrySearch(); } catch (e) { console.error('[BANDI] initCountrySearch:', e); }
-  try { renderRivals(); }      catch (e) { console.error('[BANDI] renderRivals:', e); }
-  try { renderSeriesTab(); }   catch (e) { console.error('[BANDI] renderSeriesTab:', e); }
+  try { renderMartiniqueChart(); } catch (e) { console.error('[BANDI] renderMartiniqueChart:', e); }
+  try { renderRivals(); }          catch (e) { console.error('[BANDI] renderRivals:', e); }
+  try { renderSeriesTab(); }       catch (e) { console.error('[BANDI] renderSeriesTab:', e); }
 });

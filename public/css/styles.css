@@ -1618,6 +1618,37 @@ input:focus-visible {
 /* =======================================================
    HISTORIQUE TAB
    ======================================================= */
+/* ============ PANEL RANG MARTINIQUE ============ */
+.martinique-rank-panel {
+  margin: 0 0 1.5rem 0;
+}
+.martinique-rank-panel .panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.martinique-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+.mq-label {
+  font-family: 'Anton', sans-serif;
+  font-size: 2rem;
+  line-height: 1;
+  color: #CE1126;
+  letter-spacing: 0.03em;
+}
+.mq-streak {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: #8A8A8A;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 .history-banner {
   display: flex;
   align-items: center;
