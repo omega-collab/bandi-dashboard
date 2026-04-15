@@ -980,44 +980,21 @@ body::before {
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
 .series-creator { font-size: 14px; color: var(--text-sub); margin-bottom: 20px; font-style: italic; line-height: 1.7; }
-.series-creator .creator-sep { color: var(--dim); margin: 0 6px; font-style: normal; }
 .series-creator .creator-ref { font-size: 12px; color: var(--dim); }
 
-/* Badge Capucine Rochant — mise en valeur co-créatrice */
-.creator-capucine {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
-  background: linear-gradient(135deg, rgba(228, 184, 77, 0.18) 0%, rgba(206, 17, 38, 0.12) 100%);
-  border: 1px solid rgba(228, 184, 77, 0.4);
-  border-radius: 999px;
-  color: var(--gold);
+/* Éric Rochant & Capucine Rochant — traitement visuel identique (co-créateurs à égalité) */
+.creator-name {
   font-style: normal;
   font-weight: 600;
-  font-size: 12px;
-  letter-spacing: 0.01em;
+  color: var(--text);
   white-space: nowrap;
-  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
-  vertical-align: baseline;
 }
-.creator-capucine:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 14px rgba(228, 184, 77, 0.25);
-}
-.creator-capucine .creator-spark {
-  flex-shrink: 0;
-  filter: drop-shadow(0 0 3px rgba(228, 184, 77, 0.7));
-  animation: sparkPulse 2.6s var(--ease) infinite;
-}
-@keyframes sparkPulse {
-  0%, 100% { transform: scale(1);   opacity: 1; }
-  50%      { transform: scale(1.2); opacity: 0.85; }
-}
-.team-capucine {
-  font-size: 11px;
-  padding: 2px 9px;
-  margin-left: 4px;
+.creator-amp {
+  color: var(--rouge);
+  font-style: normal;
+  font-weight: 700;
+  margin: 0 6px;
+  opacity: 0.9;
 }
 .series-meta { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 .meta-item {
