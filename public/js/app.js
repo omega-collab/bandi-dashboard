@@ -162,13 +162,15 @@ async function loadLiveData() {
       if (sRes.ok) buzzSocialRecent = await sRes.json();
     } catch (_) { /* table absente, pas critique */ }
 
-    // 8. Notes externes (IMDb + Allociné public + Allociné presse) — pour Completion Score
+    // 8. Notes externes multi-sources — pour Completion Score
     // Table unifiée external_ratings (source, rating, rating_max, rating_norm, votes, reviews_count)
-    // On récupère les 30 dernières lignes puis on garde la plus récente par source.
+    // Sources : imdb · tmdb · allocine_public · allocine_press · senscritique
+    //           · rt_critics · rt_audience · filmaffinity
+    // On récupère les 80 dernières lignes (10 par source max) puis on garde la plus récente par source.
     let externalRatings = [];
     try {
       const erRes = await fetch(
-        `${cfg.url}/rest/v1/external_ratings?order=date.desc&limit=30`,
+        `${cfg.url}/rest/v1/external_ratings?order=date.desc&limit=80`,
         { headers }
       );
       if (erRes.ok) {
@@ -182,6 +184,21 @@ async function loadLiveData() {
     for (const r of externalRatings) {
       if (!latestBySource[r.source]) latestBySource[r.source] = r;
     }
+
+    // 9. Wikipedia pageviews (signal d'intérêt encyclopédique) — pour Completion Score
+    // Table wikipedia_pageviews (date, project, article, views)
+    // On récupère les 30 derniers jours (tous projets confondus).
+    let wikipediaPageviews = [];
+    try {
+      const wpRes = await fetch(
+        `${cfg.url}/rest/v1/wikipedia_pageviews?order=date.desc&limit=60`,
+        { headers }
+      );
+      if (wpRes.ok) {
+        const arr = await wpRes.json();
+        if (Array.isArray(arr)) wikipediaPageviews = arr;
+      }
+    } catch (_) { /* table absente, pas critique */ }
 
     // Construction de l'historique par pays (4 derniers jours)
     const historyByCountry = {};
@@ -307,11 +324,18 @@ async function loadLiveData() {
       // Données pour Completion Score estimé
       buzzTrends7d: Array.isArray(buzzTrends7d) ? buzzTrends7d : [],
       buzzSocialRecent: Array.isArray(buzzSocialRecent) ? buzzSocialRecent : [],
-      // Notes externes (IMDb + Allociné public + Allociné presse)
+      // Notes externes multi-sources
       externalRatings: latestBySource,
-      imdb: latestBySource.imdb || null,
+      imdb:           latestBySource.imdb            || null,
+      tmdb:           latestBySource.tmdb            || null,
       allocinePublic: latestBySource.allocine_public || null,
-      allocinePress: latestBySource.allocine_press || null
+      allocinePress:  latestBySource.allocine_press  || null,
+      senscritique:   latestBySource.senscritique    || null,
+      rtCritics:      latestBySource.rt_critics      || null,
+      rtAudience:     latestBySource.rt_audience     || null,
+      filmaffinity:   latestBySource.filmaffinity    || null,
+      // Wikipedia pageviews
+      wikipediaPageviews: Array.isArray(wikipediaPageviews) ? wikipediaPageviews : []
     });
 
     // Badge sources croisées
@@ -1785,48 +1809,61 @@ function computeCompletionScore() {
     dataLabel: `${recentCount} posts · 7 derniers jours`
   };
 
-  // ── S_notes : moyenne pondérée IMDb + Allociné public + Allociné presse
+  // ── S_notes : moyenne pondérée de 8 sources de notes critiques
   // Chaque note est normalisée sur 10 via rating_norm (déjà calculé côté scraper).
-  // Poids internes : IMDb 50 %, Allociné public 30 %, Allociné presse 20 %.
-  // Score final = moyenne × 10 (pour arriver sur 100).
+  //
+  // Poids internes (hiérarchie : audience mondiale > critique presse > communauté) :
+  //   IMDb                      0.22  (audience monde, référence industrie)
+  //   TMDB                      0.18  (audience monde, API officielle)
+  //   Rotten Tomatoes Critics   0.15  (critique presse US agrégée)
+  //   Rotten Tomatoes Audience  0.10  (audience US)
+  //   Allociné Spectateurs      0.10  (audience FR)
+  //   Allociné Presse           0.10  (critique presse FR)
+  //   SensCritique              0.10  (communauté francophone)
+  //   Filmaffinity              0.05  (communauté hispanophone)
+  //   Total                     1.00
+  //
+  // Les poids sont renormalisés en fonction des sources effectivement disponibles.
+  // Score final = moyenne pondérée × 10 (pour passer de /10 à /100).
   let sNotes = 50, notesAvail = false;
-  const notesDetail = { imdb: null, allocinePublic: null, allocinePress: null };
+  const notesDetail = {
+    imdb: null, tmdb: null,
+    allocinePublic: null, allocinePress: null,
+    senscritique: null,
+    rtCritics: null, rtAudience: null,
+    filmaffinity: null
+  };
   const notesSources = [];
   const notesUsed = [];
 
-  const imdb = BANDI.imdb;
-  if (imdb && imdb.rating_norm != null && imdb.rating_norm > 0) {
-    notesDetail.imdb = {
-      note: Number(imdb.rating),
-      max: Number(imdb.rating_max || 10),
-      norm: Number(imdb.rating_norm),
-      votes: imdb.votes || null
-    };
-    notesUsed.push({ norm: Number(imdb.rating_norm), weight: 0.5, label: 'IMDb' });
-    notesSources.push('IMDb');
+  // Helper : ajoute une source si la note est valide
+  function addNote(key, src, scaleMax, defaultWeight, label, detailKey, extraFields = {}) {
+    if (src && src.rating_norm != null && src.rating_norm > 0) {
+      notesDetail[detailKey] = {
+        note: Number(src.rating),
+        max: Number(src.rating_max || scaleMax),
+        norm: Number(src.rating_norm),
+        ...extraFields,
+        votes: src.votes || null,
+        reviews: src.reviews_count || null
+      };
+      notesUsed.push({ norm: Number(src.rating_norm), weight: defaultWeight, label });
+      notesSources.push(label);
+      return true;
+    }
+    return false;
   }
-  const acPub = BANDI.allocinePublic;
-  if (acPub && acPub.rating_norm != null && acPub.rating_norm > 0) {
-    notesDetail.allocinePublic = {
-      note: Number(acPub.rating),
-      max: Number(acPub.rating_max || 5),
-      norm: Number(acPub.rating_norm),
-      votes: acPub.votes || null
-    };
-    notesUsed.push({ norm: Number(acPub.rating_norm), weight: 0.3, label: 'Allociné Spectateurs' });
-    notesSources.push('Allociné Spectateurs');
-  }
-  const acPress = BANDI.allocinePress;
-  if (acPress && acPress.rating_norm != null && acPress.rating_norm > 0) {
-    notesDetail.allocinePress = {
-      note: Number(acPress.rating),
-      max: Number(acPress.rating_max || 5),
-      norm: Number(acPress.rating_norm),
-      reviews: acPress.reviews_count || null
-    };
-    notesUsed.push({ norm: Number(acPress.rating_norm), weight: 0.2, label: 'Allociné Presse' });
-    notesSources.push('Allociné Presse');
-  }
+
+  addNote('imdb',        BANDI.imdb,            10,  0.22, 'IMDb',                    'imdb');
+  addNote('tmdb',        BANDI.tmdb,            10,  0.18, 'TMDB',                    'tmdb');
+  addNote('rt_critics',  BANDI.rtCritics,       100, 0.15, 'Rotten Tomatoes (presse)', 'rtCritics');
+  addNote('rt_audience', BANDI.rtAudience,      100, 0.10, 'Rotten Tomatoes (public)', 'rtAudience');
+  addNote('ac_pub',      BANDI.allocinePublic,  5,   0.10, 'Allociné Spectateurs',    'allocinePublic');
+  addNote('ac_press',    BANDI.allocinePress,   5,   0.10, 'Allociné Presse',         'allocinePress');
+  addNote('sc',          BANDI.senscritique,    10,  0.10, 'SensCritique',            'senscritique');
+  addNote('fa',          BANDI.filmaffinity,    10,  0.05, 'Filmaffinity',            'filmaffinity');
+
+  const NOTES_TOTAL_SOURCES = 8; // IMDb · TMDB · RT critics · RT audience · AC public · AC press · SC · FA
 
   if (notesUsed.length > 0) {
     // Moyenne pondérée — on renormalise les poids par ceux effectivement disponibles
@@ -1844,40 +1881,80 @@ function computeCompletionScore() {
     weight: 0.2,
     available: notesAvail,
     raw: notesDetail,
-    sources: notesSources.length || 3,
-    sourceList: notesSources.length ? notesSources : ['IMDb', 'Allociné Spectateurs', 'Allociné Presse'],
+    sources: notesSources.length || NOTES_TOTAL_SOURCES,
+    sourceList: notesSources.length
+      ? notesSources
+      : ['IMDb', 'TMDB', 'Rotten Tomatoes (presse)', 'Rotten Tomatoes (public)',
+         'Allociné Spectateurs', 'Allociné Presse', 'SensCritique', 'Filmaffinity'],
     dataPoints: notesSources.length,
     dataLabel: notesSources.length
-      ? `${notesSources.length}/3 sources actives`
-      : '0/3 sources — en attente'
+      ? `${notesSources.length}/${NOTES_TOTAL_SOURCES} sources actives`
+      : `0/${NOTES_TOTAL_SOURCES} sources — en attente`
   };
 
-  // ── S_search : tendance Google Trends (déjà 0-100), pic 7 derniers jours
-  let sSearch = 50, searchAvail = false, trendsMax = null, trendsDays = 0;
+  // ── S_search : signal d'intérêt (Google Trends + Wikipedia pageviews)
+  // Deux sous-composants, pondérés :
+  //   Google Trends    0.60 — déjà 0-100 (indice Google)
+  //   Wikipedia views  0.40 — log₁₀(views_7j + 1) × 20, clampé [0, 100]
+  //     Barème : 0 vue → 0 · 100 → 40 · 1000 → 60 · 10k → 80 · 100k → 100
+  // Le score final est la moyenne pondérée des sous-composants disponibles.
+  let sSearch = 50, searchAvail = false;
+  const searchRaw = { trendsMax: null, trendsDays: 0, wikiViews7d: 0, wikiDays: 0, wikiArticles: [] };
+  const searchParts = [];
+  const searchSourceList = [];
+
+  // Google Trends
   const trends = Array.isArray(BANDI.buzzTrends7d) ? BANDI.buzzTrends7d : [];
-  trendsDays = trends.length;
+  searchRaw.trendsDays = trends.length;
   if (trends.length > 0) {
     const scores = trends.map(t => Number(t.score) || 0).filter(s => s > 0);
     if (scores.length > 0) {
-      trendsMax = Math.max(...scores);
-      sSearch = Math.max(0, Math.min(100, Math.round(trendsMax)));
-      searchAvail = true;
-      out.signalsAvailable.push('Recherche Google');
-    } else {
-      out.signalsMissing.push('Recherche Google');
+      searchRaw.trendsMax = Math.max(...scores);
+      searchParts.push({ value: searchRaw.trendsMax, weight: 0.6, label: 'Google Trends' });
+      searchSourceList.push('Google Trends');
     }
-  } else {
-    out.signalsMissing.push('Recherche Google');
   }
+
+  // Wikipedia pageviews — somme des 7 derniers jours, tous projets confondus
+  const wiki = Array.isArray(BANDI.wikipediaPageviews) ? BANDI.wikipediaPageviews : [];
+  if (wiki.length > 0) {
+    const cutoff = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+    const recentWiki = wiki.filter(w => w.date >= cutoff);
+    searchRaw.wikiDays = recentWiki.length;
+    searchRaw.wikiViews7d = recentWiki.reduce((s, w) => s + (Number(w.views) || 0), 0);
+    const articlesSet = new Set();
+    recentWiki.forEach(w => articlesSet.add(`${w.project}/${w.article}`));
+    searchRaw.wikiArticles = [...articlesSet];
+    if (searchRaw.wikiViews7d > 0) {
+      const wikiScore = Math.max(0, Math.min(100, Math.round(Math.log10(searchRaw.wikiViews7d + 1) * 20)));
+      searchParts.push({ value: wikiScore, weight: 0.4, label: 'Wikipedia' });
+      searchSourceList.push('Wikipedia pageviews');
+    }
+  }
+
+  if (searchParts.length > 0) {
+    const tw = searchParts.reduce((s, p) => s + p.weight, 0);
+    sSearch = Math.max(0, Math.min(100, Math.round(
+      searchParts.reduce((s, p) => s + p.value * p.weight, 0) / tw
+    )));
+    searchAvail = true;
+    out.signalsAvailable.push('Intérêt recherche');
+  } else {
+    out.signalsMissing.push('Intérêt recherche');
+  }
+
+  const SEARCH_TOTAL_SOURCES = 2;
   out.components.search = {
     value: sSearch,
     weight: 0.1,
     available: searchAvail,
-    raw: trendsMax,
-    sources: 1,
-    sourceList: ['Google Trends'],
-    dataPoints: trendsDays,
-    dataLabel: trendsDays ? `${trendsDays} jours · pic à ${trendsMax ?? '—'}` : 'en attente'
+    raw: searchRaw,
+    sources: searchSourceList.length || SEARCH_TOTAL_SOURCES,
+    sourceList: searchSourceList.length ? searchSourceList : ['Google Trends', 'Wikipedia pageviews'],
+    dataPoints: searchRaw.trendsDays + searchRaw.wikiDays,
+    dataLabel: searchAvail
+      ? `${searchRaw.trendsDays > 0 ? `Google pic ${searchRaw.trendsMax}` : ''}${searchRaw.trendsDays > 0 && searchRaw.wikiViews7d > 0 ? ' · ' : ''}${searchRaw.wikiViews7d > 0 ? `Wiki ${searchRaw.wikiViews7d.toLocaleString('fr-FR')} vues 7j` : ''}`
+      : 'en attente'
   };
 
   // ── Score final (somme pondérée)
@@ -1910,7 +1987,14 @@ function formatCompletionTooltip(c) {
   lines.push(`• Stabilité du classement (40 %) — ${c.components.rank.value}${c.components.rank.available && c.components.rank.raw != null ? ` (rang moyen 7j : ${c.components.rank.raw.toFixed(1)})` : ' (données insuffisantes)'}`);
   lines.push(`• Engagement social (30 %) — ${c.components.engagement.value}${c.components.engagement.available ? ` (${c.components.engagement.raw.count} posts · 7j)` : ' (estimation neutre)'}`);
   lines.push(`• Notes critiques (20 %) — ${c.components.notes.value}${c.components.notes.available ? ` (${c.components.notes.dataLabel})` : ' (non disponible, valeur neutre)'}`);
-  lines.push(`• Tendance Google (10 %) — ${c.components.search.value}${c.components.search.available ? ` (pic 7j : ${c.components.search.raw})` : ' (non disponible)'}`);
+  const sr = c.components.search.raw || {};
+  const searchSummary = c.components.search.available
+    ? ` (${[
+        sr.trendsMax != null ? `Google pic ${sr.trendsMax}` : null,
+        sr.wikiViews7d ? `Wiki ${sr.wikiViews7d.toLocaleString('fr-FR')} vues 7j` : null
+      ].filter(Boolean).join(' · ')})`
+    : ' (non disponible)';
+  lines.push(`• Intérêt recherche (10 %) — ${c.components.search.value}${searchSummary}`);
   lines.push('');
   lines.push(`Sources actives : ${c.totalActiveSources}/${c.totalSources}. Voir le panneau « Méthode & sources » ci-dessous pour le détail.`);
   return lines.join('\n');
@@ -2054,15 +2138,15 @@ function renderCompletionBreakdown() {
       key: 'notes',
       label: 'Notes critiques',
       icon: '⭐',
-      desc: 'Moyenne pondérée des notes publiques et presse (ramenées sur /10).',
-      formula: '(IMDb·0,5 + Allociné public·0,3 + Presse·0,2) × 10'
+      desc: 'Moyenne pondérée de 8 sources de notes (presse & audience, toutes ramenées sur /10).',
+      formula: '(IMDb·0,22 + TMDB·0,18 + RT presse·0,15 + RT public·0,10 + Allociné pub·0,10 + Allociné presse·0,10 + SensCritique·0,10 + Filmaffinity·0,05) × 10'
     },
     {
       key: 'search',
-      label: 'Tendance Google',
+      label: 'Intérêt recherche',
       icon: '🔍',
-      desc: 'Pic d\'intérêt Google Trends sur les 7 derniers jours (indice 0-100).',
-      formula: 'max(Google Trends 7j)'
+      desc: 'Combine Google Trends (0-100) et Wikipedia pageviews 7j — signaux d\'intérêt complémentaires.',
+      formula: 'moyenne pondérée (Google Trends · 0,6 + Wikipedia · 0,4)'
     }
   ];
 
@@ -2075,13 +2159,36 @@ function renderCompletionBreakdown() {
     const stateLabel = isOk ? 'Actif' : 'En attente';
     const barWidth = Math.max(0, Math.min(100, comp.value));
 
-    // Détail notes critiques : mini-ventilation par source
+    // Détail notes critiques : mini-ventilation par source (8 sources au total)
     let detailExtra = '';
     if (r.key === 'notes' && isOk && comp.raw) {
       const parts = [];
-      if (comp.raw.imdb) parts.push(`<span class="cb-chip"><strong>IMDb</strong> ${comp.raw.imdb.note}/${comp.raw.imdb.max}${comp.raw.imdb.votes ? ` · ${comp.raw.imdb.votes.toLocaleString('fr-FR')} votes` : ''}</span>`);
-      if (comp.raw.allocinePublic) parts.push(`<span class="cb-chip"><strong>Allociné ♥</strong> ${comp.raw.allocinePublic.note}/${comp.raw.allocinePublic.max}${comp.raw.allocinePublic.votes ? ` · ${comp.raw.allocinePublic.votes} notes` : ''}</span>`);
-      if (comp.raw.allocinePress) parts.push(`<span class="cb-chip"><strong>Allociné presse</strong> ${comp.raw.allocinePress.note}/${comp.raw.allocinePress.max}${comp.raw.allocinePress.reviews ? ` · ${comp.raw.allocinePress.reviews} critiques` : ''}</span>`);
+      const n = comp.raw;
+      const chip = (label, obj, suffix = '') => {
+        if (!obj) return;
+        const extra = obj.votes ? ` · ${obj.votes.toLocaleString('fr-FR')} votes`
+                    : obj.reviews ? ` · ${obj.reviews} critiques` : '';
+        parts.push(`<span class="cb-chip"><strong>${label}</strong> ${obj.note}/${obj.max}${suffix}${extra}</span>`);
+      };
+      chip('IMDb',                n.imdb);
+      chip('TMDB',                n.tmdb);
+      chip('RT presse',           n.rtCritics);
+      chip('RT public',           n.rtAudience);
+      chip('Allociné ♥',          n.allocinePublic);
+      chip('Allociné presse',     n.allocinePress);
+      chip('SensCritique',        n.senscritique);
+      chip('Filmaffinity',        n.filmaffinity);
+      if (parts.length) detailExtra = `<div class="cb-chips">${parts.join('')}</div>`;
+    }
+    // Détail intérêt recherche : mini-ventilation Google + Wikipedia
+    if (r.key === 'search' && isOk && comp.raw) {
+      const parts = [];
+      if (comp.raw.trendsMax != null) {
+        parts.push(`<span class="cb-chip"><strong>Google Trends</strong> pic ${comp.raw.trendsMax}/100 · ${comp.raw.trendsDays}j</span>`);
+      }
+      if (comp.raw.wikiViews7d > 0) {
+        parts.push(`<span class="cb-chip"><strong>Wikipedia</strong> ${comp.raw.wikiViews7d.toLocaleString('fr-FR')} vues 7j · ${comp.raw.wikiArticles.length} article(s)</span>`);
+      }
       if (parts.length) detailExtra = `<div class="cb-chips">${parts.join('')}</div>`;
     }
 
@@ -2130,10 +2237,174 @@ function renderCompletionBreakdown() {
     <div class="cb-rows">${rowsHtml}</div>
     <p class="cb-footer">
       Mise à jour auto · FlixPatrol + Buzz toutes les <strong>6 h</strong>,
-      Tudum Netflix chaque <strong>mardi</strong>, notes externes (IMDb + Allociné)
-      toutes les <strong>6 h</strong>. Les signaux indisponibles utilisent une valeur neutre
-      (50/100) et sont marqués « En attente ».
+      notes externes (IMDb · TMDB · Allociné · SensCritique · Rotten Tomatoes · Filmaffinity)
+      toutes les <strong>6 h</strong>, Wikipedia pageviews toutes les <strong>6 h</strong>,
+      Tudum Netflix chaque <strong>mardi</strong>. Les signaux indisponibles utilisent une valeur
+      neutre (50/100) et sont marqués « En attente ». Voir
+      <a href="#methodologieSources" class="cb-more">Méthodologie & sources complètes ↓</a>.
     </p>
+  `;
+}
+
+// ============================================================
+// RENDER — Section Méthodologie & Sources (panneau pédagogique)
+// Affiche :
+//   1. Intro : comment le dashboard agrège ses données
+//   2. 4 signaux du Completion Score avec leur calcul détaillé
+//   3. Liste exhaustive des 12+ sources externes (FlixPatrol · Tudum · IMDb · TMDB
+//      · Allociné × 2 · SensCritique · Rotten Tomatoes × 2 · Filmaffinity · Wikipedia
+//      · Google Trends · Reddit · YouTube · Bluesky · presse RSS) avec :
+//      - icône + nom + type (API / scraping / RSS)
+//      - lien direct vers la page source Bandi
+//      - fréquence de mise à jour
+//      - à quoi elle sert (quel signal elle alimente)
+// ============================================================
+function renderMethodologySources() {
+  const root = document.getElementById('methodologieSources');
+  if (!root) return;
+
+  const SIGNALS = [
+    {
+      icon: '🏆',
+      title: 'Stabilité du classement',
+      weight: '40 %',
+      formula: '100 − (rang moyen 7j × 10)',
+      explain: 'Plus Bandi reste proche du #1 dans le Top 10 Netflix mondial, plus ce signal est élevé. Calculé sur la moyenne des rangs des 7 derniers jours.',
+      feeds: ['FlixPatrol']
+    },
+    {
+      icon: '💬',
+      title: 'Engagement social',
+      weight: '30 %',
+      formula: 'log₁₀(engagement total + 1) × 20',
+      explain: 'Somme des interactions (likes, commentaires, vues) sur les posts sociaux récents parlant de Bandi, en échelle logarithmique pour lisser les pics.',
+      feeds: ['Reddit', 'YouTube', 'Bluesky']
+    },
+    {
+      icon: '⭐',
+      title: 'Notes critiques (8 sources)',
+      weight: '20 %',
+      formula: '(IMDb·0,22 + TMDB·0,18 + RT presse·0,15 + RT public·0,10 + Allociné public·0,10 + Allociné presse·0,10 + SensCritique·0,10 + Filmaffinity·0,05) × 10',
+      explain: 'Moyenne pondérée de 8 plateformes de notation (audience mondiale, critique presse, communautés francophone et hispanophone). Toutes les notes sont ramenées sur /10 avant pondération.',
+      feeds: ['IMDb', 'TMDB', 'Rotten Tomatoes (presse)', 'Rotten Tomatoes (public)', 'Allociné Spectateurs', 'Allociné Presse', 'SensCritique', 'Filmaffinity']
+    },
+    {
+      icon: '🔍',
+      title: 'Intérêt recherche',
+      weight: '10 %',
+      formula: 'Google Trends · 0,6 + log₁₀(Wikipedia vues 7j + 1) × 20 · 0,4',
+      explain: 'Combine l\'indice Google Trends (pic 7j) et le volume de pages vues sur Wikipedia FR + EN. Signal avancé de la curiosité encyclopédique d\'un public.',
+      feeds: ['Google Trends', 'Wikipedia pageviews']
+    }
+  ];
+
+  const SOURCES = [
+    // ── Classements Netflix officiels ou tiers
+    { cat: 'Classements', name: 'FlixPatrol',          type: 'Scraping HTML', freq: '6 h',   url: 'https://flixpatrol.com/title/bandi/',              feeds: 'Rang mondial · rang pays · score popularité', status: 'active' },
+    { cat: 'Classements', name: 'Netflix Tudum',       type: 'TSV officiel',  freq: 'Hebdo (mardi)', url: 'https://www.netflix.com/tudum/top10',            feeds: 'Heures vues officielles monde', status: 'active' },
+    // ── Notes critiques (8 sources)
+    { cat: 'Notes',       name: 'IMDb',                type: 'Scraping HTML (JSON-LD)', freq: '6 h', url: 'https://www.imdb.com/title/tt37024175/', feeds: 'Note /10 · nb votes', status: 'active' },
+    { cat: 'Notes',       name: 'TMDB',                type: 'API officielle gratuite', freq: '6 h', url: 'https://www.themoviedb.org/tv/269161-bandi', feeds: 'Note /10 · nb votes · popularité', status: 'active' },
+    { cat: 'Notes',       name: 'Rotten Tomatoes',     type: 'Scraping HTML', freq: '6 h',   url: 'https://www.rottentomatoes.com/tv/bandi',          feeds: 'Tomatometer (presse) + Audience Score', status: 'active' },
+    { cat: 'Notes',       name: 'Allociné',            type: 'Scraping HTML', freq: '6 h',   url: 'https://www.allocine.fr/series/ficheserie_gen_cserie=1000000157.html', feeds: 'Note Spectateurs /5 + Note Presse /5', status: 'active' },
+    { cat: 'Notes',       name: 'SensCritique',        type: 'Scraping HTML', freq: '6 h',   url: 'https://www.senscritique.com/serie/bandi/133850632', feeds: 'Note communauté /10', status: 'active' },
+    { cat: 'Notes',       name: 'Filmaffinity',        type: 'Scraping HTML', freq: '6 h',   url: 'https://m.filmaffinity.com/us/film923114.html',    feeds: 'Note communauté ES /10', status: 'active' },
+    // ── Signaux d'intérêt
+    { cat: 'Recherche',   name: 'Google Trends',       type: 'API non officielle', freq: '6 h', url: 'https://trends.google.com/trends/explore?q=Bandi%20Netflix', feeds: 'Indice d\'intérêt 0-100', status: 'active' },
+    { cat: 'Recherche',   name: 'Wikipedia pageviews', type: 'API officielle Wikimedia', freq: '6 h', url: 'https://fr.wikipedia.org/wiki/Bandi_(2026)', feeds: 'Pages vues quotidiennes FR + EN', status: 'active' },
+    // ── Buzz social
+    { cat: 'Buzz social', name: 'Reddit',              type: 'API officielle (JSON)', freq: '6 h', url: 'https://www.reddit.com/search/?q=Bandi%20Netflix', feeds: 'Posts + upvotes + commentaires', status: 'active' },
+    { cat: 'Buzz social', name: 'YouTube',             type: 'API Data v3',   freq: '6 h',   url: 'https://www.youtube.com/results?search_query=Bandi+Netflix', feeds: 'Vidéos + vues + likes', status: 'active' },
+    { cat: 'Buzz social', name: 'Bluesky',             type: 'API publique',  freq: '6 h',   url: 'https://bsky.app/search?q=Bandi%20Netflix',        feeds: 'Posts + reposts + likes', status: 'active' },
+    // ── Presse (articles)
+    { cat: 'Presse',      name: 'Google News (4 langues)', type: 'RSS',       freq: '6 h',   url: 'https://news.google.com/search?q=Bandi+Netflix',   feeds: 'Articles FR · EN · ES · PT', status: 'active' },
+    { cat: 'Presse',      name: 'GDELT Project',       type: 'API officielle', freq: '6 h',  url: 'https://api.gdeltproject.org/api/v2/doc/doc',      feeds: 'Articles mondiaux géolocalisés', status: 'active' },
+    { cat: 'Presse',      name: 'Presse Antilles (10 flux)', type: 'RSS',     freq: '6 h',   url: '#',                                                 feeds: 'France-Antilles · RCI · Zayactu · La 1ère · etc.', status: 'active' },
+    { cat: 'Presse',      name: 'Web spécialisé streaming (13 flux)', type: 'RSS', freq: '6 h', url: '#',                                              feeds: 'Le Parisien · Le Monde · Les Inrocks · Télérama · JDG · What\'s on Netflix · etc.', status: 'active' }
+  ];
+
+  const signalsHtml = SIGNALS.map(s => `
+    <div class="ms-signal">
+      <div class="ms-signal-head">
+        <span class="ms-signal-icon" aria-hidden="true">${s.icon}</span>
+        <span class="ms-signal-title">${s.title}</span>
+        <span class="ms-signal-weight">${s.weight}</span>
+      </div>
+      <p class="ms-signal-explain">${s.explain}</p>
+      <div class="ms-signal-formula"><span class="ms-k">Formule</span><code>${s.formula}</code></div>
+      <div class="ms-signal-feeds">
+        <span class="ms-k">Sources :</span>
+        ${s.feeds.map(f => `<span class="ms-feed">${f}</span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  // Regroupement sources par catégorie
+  const cats = [...new Set(SOURCES.map(s => s.cat))];
+  const sourcesHtml = cats.map(cat => {
+    const items = SOURCES.filter(s => s.cat === cat);
+    return `
+      <div class="ms-cat">
+        <h5 class="ms-cat-title">${cat} <span class="ms-cat-count">${items.length}</span></h5>
+        <div class="ms-cat-list">
+          ${items.map(s => `
+            <a class="ms-source ms-source-${s.status}" href="${s.url}" target="_blank" rel="noopener">
+              <div class="ms-source-head">
+                <span class="ms-source-name">${s.name}</span>
+                <span class="ms-source-type">${s.type}</span>
+              </div>
+              <div class="ms-source-body">
+                <span class="ms-source-feeds">${s.feeds}</span>
+              </div>
+              <div class="ms-source-foot">
+                <span class="ms-source-freq">⟳ ${s.freq}</span>
+                <span class="ms-source-link">↗</span>
+              </div>
+            </a>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  root.innerHTML = `
+    <div class="ms-header">
+      <span class="ms-tag">Méthodologie & sources</span>
+      <h3 class="ms-title">Comment ce dashboard est calculé</h3>
+      <p class="ms-intro">
+        Le dashboard Bandi agrège <strong>17 sources externes</strong> scrappées automatiquement
+        toutes les 6 heures. Chaque indicateur est reproductible : vous pouvez cliquer sur
+        n'importe quelle source ci-dessous pour voir la donnée brute à sa source.
+        Aucune donnée n'est inventée ou extrapolée.
+      </p>
+    </div>
+
+    <div class="ms-section">
+      <h4 class="ms-section-title">1 · Les 4 signaux du Taux de complétion</h4>
+      <p class="ms-section-sub">Le Taux de complétion est un score /100 agrégé à partir de 4 signaux pondérés. Voici le détail de chaque signal, sa formule et les sources qui l'alimentent.</p>
+      <div class="ms-signals">${signalsHtml}</div>
+    </div>
+
+    <div class="ms-section">
+      <h4 class="ms-section-title">2 · Les sources externes (17 au total)</h4>
+      <p class="ms-section-sub">Toutes les sources sont gratuites et publiques. Fréquence de rafraîchissement précisée pour chacune.</p>
+      ${sourcesHtml}
+    </div>
+
+    <div class="ms-footer">
+      <div class="ms-footer-row">
+        <span class="ms-k">Stack technique</span>
+        <span>Node.js scrapers → Supabase Postgres → Frontend Vanilla JS · GitHub Actions cron (6h + hebdo Tudum)</span>
+      </div>
+      <div class="ms-footer-row">
+        <span class="ms-k">Licence</span>
+        <span>Données publiques agrégées à des fins d'analyse. Dashboard à usage informatif.</span>
+      </div>
+      <div class="ms-footer-row">
+        <span class="ms-k">Dernier rafraîchissement frontend</span>
+        <span id="msLastRefresh">${new Date().toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span>
+      </div>
+    </div>
   `;
 }
 
@@ -2164,4 +2435,5 @@ document.addEventListener("DOMContentLoaded", async () => {
   try { renderAuthenticite(); }    catch (e) { console.error('[BANDI] renderAuthenticite:', e); }
   try { renderZonesDomination(); } catch (e) { console.error('[BANDI] renderZonesDomination:', e); }
   try { renderForecastS2(); }      catch (e) { console.error('[BANDI] renderForecastS2:', e); }
+  try { renderMethodologySources(); } catch (e) { console.error('[BANDI] renderMethodologySources:', e); }
 });

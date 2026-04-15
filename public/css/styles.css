@@ -1976,3 +1976,296 @@ button, .tab, .bnav-item, .region-btn, .country-row, .kpi-card, .highlight, .buz
   .auth-body { grid-template-columns: 1fr; justify-items: center; }
   .gauge-main { width: 110px; height: 110px; }
 }
+
+/* ============================================================
+   MÉTHODOLOGIE & SOURCES — panneau pédagogique
+   17 sources externes, 4 signaux, formules détaillées
+   ============================================================ */
+.methodologie-sources {
+  position: relative;
+  margin-top: 28px;
+  padding: 32px 32px 28px;
+  background:
+    radial-gradient(ellipse at top left, rgba(228,184,77,0.04), transparent 60%),
+    var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+}
+.methodologie-sources::before {
+  content: '';
+  position: absolute; top: 0; left: 0; bottom: 0; width: 4px;
+  background: linear-gradient(180deg, #CE1126 0%, #E4B84D 50%, #009739 100%);
+}
+
+/* ── Header ── */
+.ms-header { margin-bottom: 28px; }
+.ms-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: var(--gold-soft);
+  padding: 4px 10px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+.ms-title {
+  font-family: var(--font-display);
+  font-size: 32px;
+  line-height: 1.1;
+  margin: 0 0 10px;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.ms-intro {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-sub);
+  max-width: 780px;
+  margin: 0;
+}
+.ms-intro strong { color: var(--gold); font-weight: 600; }
+
+/* ── Section ── */
+.ms-section { margin-top: 32px; }
+.ms-section-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  margin: 0 0 6px;
+  color: var(--text);
+}
+.ms-section-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 18px;
+  max-width: 780px;
+}
+
+/* ── Signaux (4 cards avec formule) ── */
+.ms-signals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 900px) { .ms-signals { grid-template-columns: 1fr; } }
+
+.ms-signal {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.ms-signal:hover { border-color: var(--gold); transform: translateY(-2px); }
+
+.ms-signal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ms-signal-icon { font-size: 20px; }
+.ms-signal-title {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+.ms-signal-weight {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--gold);
+  background: var(--gold-soft);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.ms-signal-explain {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-sub);
+  margin: 0;
+}
+
+.ms-signal-formula {
+  background: var(--surface-3);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 11px;
+}
+.ms-signal-formula code {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text);
+  background: transparent;
+  padding: 0;
+  margin-top: 4px;
+  word-break: break-word;
+  line-height: 1.5;
+}
+.ms-k {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-right: 6px;
+}
+
+.ms-signal-feeds {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.ms-feed {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  color: var(--text-sub);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+/* ── Sources catalogue (par catégorie) ── */
+.ms-cat { margin-bottom: 22px; }
+.ms-cat-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ms-cat-count {
+  background: var(--gold-soft);
+  color: var(--gold);
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ms-cat-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+@media (max-width: 1100px) { .ms-cat-list { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 700px)  { .ms-cat-list { grid-template-columns: 1fr; } }
+
+.ms-source {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.15s, transform 0.15s, background 0.15s;
+  cursor: pointer;
+}
+.ms-source:hover {
+  border-color: var(--gold);
+  background: var(--surface-3);
+  transform: translateY(-1px);
+}
+.ms-source-active { position: relative; }
+.ms-source-active::before {
+  content: '';
+  position: absolute;
+  top: 10px; right: 10px;
+  width: 6px; height: 6px;
+  background: #4CAF50;
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(76,175,80,0.8);
+}
+
+.ms-source-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.ms-source-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.ms-source-type {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--muted);
+  background: var(--surface-3);
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ms-source-body { font-size: 11px; color: var(--text-sub); line-height: 1.45; }
+
+.ms-source-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
+}
+.ms-source-freq {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--gold);
+  font-weight: 600;
+}
+.ms-source-link { color: var(--muted); font-size: 11px; }
+
+/* ── Footer technique ── */
+.ms-footer {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ms-footer-row {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--text-sub);
+  flex-wrap: wrap;
+}
+.ms-footer-row .ms-k { margin-right: 4px; }
+
+/* ── Lien "voir méthodologie" dans le breakdown ── */
+.cb-more {
+  color: var(--gold);
+  text-decoration: none;
+  font-weight: 600;
+}
+.cb-more:hover { text-decoration: underline; }
+
+@media (max-width: 700px) {
+  .methodologie-sources { padding: 24px 20px; }
+  .ms-title { font-size: 26px; }
+}
