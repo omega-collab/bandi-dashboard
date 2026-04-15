@@ -1,0 +1,38 @@
+name: Scrape Ratings (IMDb + Allociné)
+
+on:
+  schedule:
+    # Toutes les 6h — 00h15, 06h15, 12h15, 18h15 UTC
+    # Décalé de 15 min pour ne pas tomber en même temps que buzz-scrape / flixpatrol-scrape
+    - cron: '15 */6 * * *'
+  workflow_dispatch:  # Déclenchement manuel possible
+
+jobs:
+  scrape-ratings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        run: npm ci || npm install
+
+      - name: Scrape IMDb (aggregateRating)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          IMDB_TITLE_ID: tt37024175
+        run: node scripts/scrape-imdb.js
+        continue-on-error: true   # si IMDb change son layout, ne bloque pas Allociné
+
+      - name: Scrape Allociné (public + presse)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ALLOCINE_SERIE_ID: '1000000157'
+        run: node scripts/scrape-allocine.js

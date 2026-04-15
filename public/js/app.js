@@ -162,18 +162,26 @@ async function loadLiveData() {
       if (sRes.ok) buzzSocialRecent = await sRes.json();
     } catch (_) { /* table absente, pas critique */ }
 
-    // 8. IMDb rating (dernière entrée) — pour Completion Score
-    let imdbRating = null;
+    // 8. Notes externes (IMDb + Allociné public + Allociné presse) — pour Completion Score
+    // Table unifiée external_ratings (source, rating, rating_max, rating_norm, votes, reviews_count)
+    // On récupère les 30 dernières lignes puis on garde la plus récente par source.
+    let externalRatings = [];
     try {
-      const iRes = await fetch(
-        `${cfg.url}/rest/v1/imdb_ratings?order=date.desc&limit=1`,
+      const erRes = await fetch(
+        `${cfg.url}/rest/v1/external_ratings?order=date.desc&limit=30`,
         { headers }
       );
-      if (iRes.ok) {
-        const arr = await iRes.json();
-        if (Array.isArray(arr) && arr.length > 0) imdbRating = arr[0];
+      if (erRes.ok) {
+        const arr = await erRes.json();
+        if (Array.isArray(arr)) externalRatings = arr;
       }
     } catch (_) { /* table absente, pas critique */ }
+
+    // Réduction : dernière entrée par source
+    const latestBySource = {};
+    for (const r of externalRatings) {
+      if (!latestBySource[r.source]) latestBySource[r.source] = r;
+    }
 
     // Construction de l'historique par pays (4 derniers jours)
     const historyByCountry = {};
@@ -289,7 +297,11 @@ async function loadLiveData() {
       // Données pour Completion Score estimé
       buzzTrends7d: Array.isArray(buzzTrends7d) ? buzzTrends7d : [],
       buzzSocialRecent: Array.isArray(buzzSocialRecent) ? buzzSocialRecent : [],
-      imdb: imdbRating
+      // Notes externes (IMDb + Allociné public + Allociné presse)
+      externalRatings: latestBySource,
+      imdb: latestBySource.imdb || null,
+      allocinePublic: latestBySource.allocine_public || null,
+      allocinePress: latestBySource.allocine_press || null
     });
 
     // Badge sources croisées
@@ -1679,15 +1691,20 @@ function renderZonesDomination() {
 
 // ── Forecast S2 ───────────────────────────────────────────────
 // ============================================================
-// Completion Score (estimation) — modèle pondéré
-// Remplace l'ancien "Taux de complétion" simulé (string "84%")
+// Completion Score (estimation) — modèle pondéré sur 100
 //
 // Formule :
 //   Score = 0.4·S_rank + 0.3·S_engagement + 0.2·S_notes + 0.1·S_search
 //
 // Chaque signal est normalisé dans [0, 100].
 // Si un signal est absent, on retombe sur une valeur neutre (50)
-// et on diminue le "poids réel" dans le disclaimer.
+// et on le marque "indisponible" dans le panneau pédagogique.
+//
+// Sources par signal :
+//   S_rank       → bandi_snapshots (FlixPatrol)
+//   S_engagement → buzz_social     (Reddit + YouTube + Bluesky)
+//   S_notes      → external_ratings (IMDb + Allociné public + Allociné presse)
+//   S_search     → buzz_trends     (Google Trends)
 // ============================================================
 function computeCompletionScore() {
   const out = {
@@ -1701,9 +1718,10 @@ function computeCompletionScore() {
   // ── S_rank : stabilité du classement FlixPatrol (rang moyen 7 derniers jours)
   // Formule : 100 - (rang_moyen × 10), clampée [0, 100]
   // Rang 1 → 90 · Rang 5 → 50 · Rang ≥ 10 → 0
-  let sRank = 50, rankAvail = false, rangMoyen7d = null;
+  let sRank = 50, rankAvail = false, rangMoyen7d = null, rankDaysUsed = 0;
   const hist = Array.isArray(BANDI.historique) ? BANDI.historique : [];
   const rangs = hist.map(h => h.rang).filter(r => typeof r === 'number' && r > 0).slice(-7);
+  rankDaysUsed = rangs.length;
   if (rangs.length >= 3) {
     rangMoyen7d = rangs.reduce((s, r) => s + r, 0) / rangs.length;
     sRank = Math.max(0, Math.min(100, Math.round(100 - rangMoyen7d * 10)));
@@ -1712,13 +1730,22 @@ function computeCompletionScore() {
   } else {
     out.signalsMissing.push('Stabilité classement');
   }
-  out.components.rank = { value: sRank, weight: 0.4, available: rankAvail, raw: rangMoyen7d };
+  out.components.rank = {
+    value: sRank,
+    weight: 0.4,
+    available: rankAvail,
+    raw: rangMoyen7d,
+    sources: 1,             // FlixPatrol
+    sourceList: ['FlixPatrol'],
+    dataPoints: rankDaysUsed,
+    dataLabel: `${rankDaysUsed} jours pris en compte`
+  };
 
-  // ── S_engagement : activité sociale récente (Reddit, YouTube, Bluesky)
-  // On compte les posts des 7 derniers jours et on moyenne leur engagement
+  // ── S_engagement : activité sociale récente (Reddit, YouTube, Bluesky) sur 7j
   // Formule : clamp(log₁₀(totalEngagement + 1) × 20, 0, 100)
-  //   0 engagement → 0 · 100 → 40 · 1000 → 60 · 10k → 80 · 100k → 100
+  //   0 → 0 · 100 → 40 · 1000 → 60 · 10k → 80 · 100k → 100
   let sEng = 50, engAvail = false, totalEng = 0, recentCount = 0;
+  const platformSet = new Set();
   const social = Array.isArray(BANDI.buzzSocialRecent) ? BANDI.buzzSocialRecent : [];
   if (social.length > 0) {
     const cutoff = Date.now() - 7 * 24 * 3600 * 1000;
@@ -1728,6 +1755,7 @@ function computeCompletionScore() {
     });
     recentCount = recent.length;
     totalEng = recent.reduce((s, p) => s + (Number(p.engagement_score) || 0), 0);
+    recent.forEach(p => { if (p.platform) platformSet.add(p.platform); });
     sEng = Math.max(0, Math.min(100, Math.round(Math.log10(totalEng + 1) * 20)));
     engAvail = recentCount > 0;
     if (engAvail) out.signalsAvailable.push('Engagement social');
@@ -1735,26 +1763,89 @@ function computeCompletionScore() {
   } else {
     out.signalsMissing.push('Engagement social');
   }
-  out.components.engagement = { value: sEng, weight: 0.3, available: engAvail, raw: { count: recentCount, total: totalEng } };
+  const platformList = [...platformSet];
+  out.components.engagement = {
+    value: sEng,
+    weight: 0.3,
+    available: engAvail,
+    raw: { count: recentCount, total: totalEng },
+    sources: platformList.length || 3,           // 3 plateformes attendues
+    sourceList: platformList.length ? platformList : ['Reddit', 'YouTube', 'Bluesky'],
+    dataPoints: recentCount,
+    dataLabel: `${recentCount} posts · 7 derniers jours`
+  };
 
-  // ── S_notes : note IMDb (0-10) × 10
-  // Si note absente → valeur neutre 50/100 avec disclaimer
-  let sNotes = 50, notesAvail = false, imdbRating = null;
+  // ── S_notes : moyenne pondérée IMDb + Allociné public + Allociné presse
+  // Chaque note est normalisée sur 10 via rating_norm (déjà calculé côté scraper).
+  // Poids internes : IMDb 50 %, Allociné public 30 %, Allociné presse 20 %.
+  // Score final = moyenne × 10 (pour arriver sur 100).
+  let sNotes = 50, notesAvail = false;
+  const notesDetail = { imdb: null, allocinePublic: null, allocinePress: null };
+  const notesSources = [];
+  const notesUsed = [];
+
   const imdb = BANDI.imdb;
-  if (imdb && typeof imdb.rating === 'number' && imdb.rating > 0) {
-    imdbRating = imdb.rating;
-    sNotes = Math.max(0, Math.min(100, Math.round(imdb.rating * 10)));
-    notesAvail = true;
-    out.signalsAvailable.push('Note IMDb');
-  } else {
-    out.signalsMissing.push('Note IMDb');
+  if (imdb && imdb.rating_norm != null && imdb.rating_norm > 0) {
+    notesDetail.imdb = {
+      note: Number(imdb.rating),
+      max: Number(imdb.rating_max || 10),
+      norm: Number(imdb.rating_norm),
+      votes: imdb.votes || null
+    };
+    notesUsed.push({ norm: Number(imdb.rating_norm), weight: 0.5, label: 'IMDb' });
+    notesSources.push('IMDb');
   }
-  out.components.notes = { value: sNotes, weight: 0.2, available: notesAvail, raw: imdbRating };
+  const acPub = BANDI.allocinePublic;
+  if (acPub && acPub.rating_norm != null && acPub.rating_norm > 0) {
+    notesDetail.allocinePublic = {
+      note: Number(acPub.rating),
+      max: Number(acPub.rating_max || 5),
+      norm: Number(acPub.rating_norm),
+      votes: acPub.votes || null
+    };
+    notesUsed.push({ norm: Number(acPub.rating_norm), weight: 0.3, label: 'Allociné Spectateurs' });
+    notesSources.push('Allociné Spectateurs');
+  }
+  const acPress = BANDI.allocinePress;
+  if (acPress && acPress.rating_norm != null && acPress.rating_norm > 0) {
+    notesDetail.allocinePress = {
+      note: Number(acPress.rating),
+      max: Number(acPress.rating_max || 5),
+      norm: Number(acPress.rating_norm),
+      reviews: acPress.reviews_count || null
+    };
+    notesUsed.push({ norm: Number(acPress.rating_norm), weight: 0.2, label: 'Allociné Presse' });
+    notesSources.push('Allociné Presse');
+  }
 
-  // ── S_search : tendance Google Trends (déjà 0-100)
-  // On prend le max des 7 derniers jours (pic d'intérêt)
-  let sSearch = 50, searchAvail = false, trendsMax = null;
+  if (notesUsed.length > 0) {
+    // Moyenne pondérée — on renormalise les poids par ceux effectivement disponibles
+    const totalW = notesUsed.reduce((s, n) => s + n.weight, 0);
+    const weightedNorm = notesUsed.reduce((s, n) => s + n.norm * n.weight, 0) / totalW;
+    sNotes = Math.max(0, Math.min(100, Math.round(weightedNorm * 10)));
+    notesAvail = true;
+    out.signalsAvailable.push('Notes critiques');
+  } else {
+    out.signalsMissing.push('Notes critiques');
+  }
+
+  out.components.notes = {
+    value: sNotes,
+    weight: 0.2,
+    available: notesAvail,
+    raw: notesDetail,
+    sources: notesSources.length || 3,
+    sourceList: notesSources.length ? notesSources : ['IMDb', 'Allociné Spectateurs', 'Allociné Presse'],
+    dataPoints: notesSources.length,
+    dataLabel: notesSources.length
+      ? `${notesSources.length}/3 sources actives`
+      : '0/3 sources — en attente'
+  };
+
+  // ── S_search : tendance Google Trends (déjà 0-100), pic 7 derniers jours
+  let sSearch = 50, searchAvail = false, trendsMax = null, trendsDays = 0;
   const trends = Array.isArray(BANDI.buzzTrends7d) ? BANDI.buzzTrends7d : [];
+  trendsDays = trends.length;
   if (trends.length > 0) {
     const scores = trends.map(t => Number(t.score) || 0).filter(s => s > 0);
     if (scores.length > 0) {
@@ -1768,7 +1859,16 @@ function computeCompletionScore() {
   } else {
     out.signalsMissing.push('Recherche Google');
   }
-  out.components.search = { value: sSearch, weight: 0.1, available: searchAvail, raw: trendsMax };
+  out.components.search = {
+    value: sSearch,
+    weight: 0.1,
+    available: searchAvail,
+    raw: trendsMax,
+    sources: 1,
+    sourceList: ['Google Trends'],
+    dataPoints: trendsDays,
+    dataLabel: trendsDays ? `${trendsDays} jours · pic à ${trendsMax ?? '—'}` : 'en attente'
+  };
 
   // ── Score final (somme pondérée)
   out.score = Math.round(
@@ -1778,19 +1878,31 @@ function computeCompletionScore() {
     0.1 * sSearch
   );
 
+  // Total de sources physiques derrière le calcul
+  out.totalSources =
+    out.components.rank.sources +
+    out.components.engagement.sources +
+    out.components.notes.sources +
+    out.components.search.sources;
+  out.totalActiveSources =
+    (out.components.rank.available ? out.components.rank.sources : 0) +
+    (out.components.engagement.available ? out.components.engagement.sources : 0) +
+    (out.components.notes.available ? out.components.notes.sources : 0) +
+    (out.components.search.available ? out.components.search.sources : 0);
+
   return out;
 }
 
-// Formate une ligne d'explication pour le tooltip
+// Formate une ligne d'explication pour le tooltip (version courte)
 function formatCompletionTooltip(c) {
   const lines = [];
   lines.push('Formule pondérée sur 100 :');
   lines.push(`• Stabilité du classement (40 %) — ${c.components.rank.value}${c.components.rank.available && c.components.rank.raw != null ? ` (rang moyen 7j : ${c.components.rank.raw.toFixed(1)})` : ' (données insuffisantes)'}`);
-  lines.push(`• Engagement social (30 %) — ${c.components.engagement.value}${c.components.engagement.available ? ` (${c.components.engagement.raw.count} posts récents)` : ' (estimation neutre)'}`);
-  lines.push(`• Note IMDb (20 %) — ${c.components.notes.value}${c.components.notes.available ? ` (${c.components.notes.raw}/10)` : ' (non disponible, valeur neutre)'}`);
+  lines.push(`• Engagement social (30 %) — ${c.components.engagement.value}${c.components.engagement.available ? ` (${c.components.engagement.raw.count} posts · 7j)` : ' (estimation neutre)'}`);
+  lines.push(`• Notes critiques (20 %) — ${c.components.notes.value}${c.components.notes.available ? ` (${c.components.notes.dataLabel})` : ' (non disponible, valeur neutre)'}`);
   lines.push(`• Tendance Google (10 %) — ${c.components.search.value}${c.components.search.available ? ` (pic 7j : ${c.components.search.raw})` : ' (non disponible)'}`);
   lines.push('');
-  lines.push('Plus de signaux = score plus fiable. Les signaux manquants utilisent une valeur neutre de 50/100.');
+  lines.push(`Sources actives : ${c.totalActiveSources}/${c.totalSources}. Voir le panneau « Méthode & sources » ci-dessous pour le détail.`);
   return lines.join('\n');
 }
 
@@ -1862,6 +1974,131 @@ function renderForecastS2() {
   // Disclaimer
   const disclaimerEl = document.getElementById('forecastDisclaimer');
   if (disclaimerEl && fc.disclaimer) disclaimerEl.textContent = fc.disclaimer;
+
+  // Panneau pédagogique « Méthode & sources »
+  try { renderCompletionBreakdown(); } catch (e) { console.error('[BANDI] renderCompletionBreakdown:', e); }
+}
+
+// ============================================================
+// Panneau pédagogique "Méthode & sources" du Completion Score
+// Affiche chaque signal avec :
+//   - son poids dans la formule
+//   - son score normalisé (0-100)
+//   - le nombre de sources derrière
+//   - les sources nommées
+//   - l'état (actif / en attente)
+// ============================================================
+function renderCompletionBreakdown() {
+  const root = document.getElementById('completionBreakdown');
+  if (!root) return;
+
+  const c = computeCompletionScore();
+  const pct = c.score;
+  const active = c.totalActiveSources;
+  const total = c.totalSources;
+  const ratio = total ? Math.round((active / total) * 100) : 0;
+
+  // Détail par signal
+  const rows = [
+    {
+      key: 'rank',
+      label: 'Stabilité du classement',
+      icon: '🏆',
+      desc: 'Rang moyen de Bandi dans le Top 10 Netflix mondial sur les 7 derniers jours.',
+      formula: '100 − (rang moyen × 10)'
+    },
+    {
+      key: 'engagement',
+      label: 'Engagement social',
+      icon: '💬',
+      desc: 'Volume + interactions (likes, commentaires, vues) sur les posts récents parlant de Bandi.',
+      formula: 'log₁₀(engagement total + 1) × 20'
+    },
+    {
+      key: 'notes',
+      label: 'Notes critiques',
+      icon: '⭐',
+      desc: 'Moyenne pondérée des notes publiques et presse (ramenées sur /10).',
+      formula: '(IMDb·0,5 + Allociné public·0,3 + Presse·0,2) × 10'
+    },
+    {
+      key: 'search',
+      label: 'Tendance Google',
+      icon: '🔍',
+      desc: 'Pic d\'intérêt Google Trends sur les 7 derniers jours (indice 0-100).',
+      formula: 'max(Google Trends 7j)'
+    }
+  ];
+
+  const weightLabels = { rank: '40 %', engagement: '30 %', notes: '20 %', search: '10 %' };
+
+  const rowsHtml = rows.map(r => {
+    const comp = c.components[r.key];
+    const isOk = comp.available;
+    const stateClass = isOk ? 'is-active' : 'is-pending';
+    const stateLabel = isOk ? 'Actif' : 'En attente';
+    const barWidth = Math.max(0, Math.min(100, comp.value));
+
+    // Détail notes critiques : mini-ventilation par source
+    let detailExtra = '';
+    if (r.key === 'notes' && isOk && comp.raw) {
+      const parts = [];
+      if (comp.raw.imdb) parts.push(`<span class="cb-chip"><strong>IMDb</strong> ${comp.raw.imdb.note}/${comp.raw.imdb.max}${comp.raw.imdb.votes ? ` · ${comp.raw.imdb.votes.toLocaleString('fr-FR')} votes` : ''}</span>`);
+      if (comp.raw.allocinePublic) parts.push(`<span class="cb-chip"><strong>Allociné ♥</strong> ${comp.raw.allocinePublic.note}/${comp.raw.allocinePublic.max}${comp.raw.allocinePublic.votes ? ` · ${comp.raw.allocinePublic.votes} notes` : ''}</span>`);
+      if (comp.raw.allocinePress) parts.push(`<span class="cb-chip"><strong>Allociné presse</strong> ${comp.raw.allocinePress.note}/${comp.raw.allocinePress.max}${comp.raw.allocinePress.reviews ? ` · ${comp.raw.allocinePress.reviews} critiques` : ''}</span>`);
+      if (parts.length) detailExtra = `<div class="cb-chips">${parts.join('')}</div>`;
+    }
+
+    const sourcesList = (comp.sourceList || []).map(s => `<span class="cb-src">${s}</span>`).join('');
+
+    return `
+      <div class="cb-row ${stateClass}">
+        <div class="cb-row-head">
+          <span class="cb-icon" aria-hidden="true">${r.icon}</span>
+          <span class="cb-label">${r.label}</span>
+          <span class="cb-weight">${weightLabels[r.key]}</span>
+          <span class="cb-state">${stateLabel}</span>
+        </div>
+        <p class="cb-desc">${r.desc}</p>
+        <div class="cb-bar-wrap">
+          <div class="cb-bar"><div class="cb-bar-fill" style="width:${barWidth}%"></div></div>
+          <span class="cb-bar-val">${comp.value}<span class="cb-bar-max">/100</span></span>
+        </div>
+        <div class="cb-meta">
+          <span class="cb-meta-item"><span class="cb-meta-k">Sources :</span> ${comp.sources} ${sourcesList}</span>
+          <span class="cb-meta-item"><span class="cb-meta-k">Données :</span> ${comp.dataLabel || '—'}</span>
+          <span class="cb-meta-item"><span class="cb-meta-k">Formule :</span> <code>${r.formula}</code></span>
+        </div>
+        ${detailExtra}
+      </div>`;
+  }).join('');
+
+  root.innerHTML = `
+    <div class="cb-head">
+      <div class="cb-head-left">
+        <span class="cb-tag">Méthode & sources</span>
+        <h4 class="cb-title">Comment le Taux de complétion est calculé</h4>
+        <p class="cb-sub">Score sur 100 agrégé à partir de 4 signaux pondérés. Chaque signal
+          s'appuie sur une ou plusieurs sources scrappées automatiquement toutes les 6 h.</p>
+      </div>
+      <div class="cb-head-right">
+        <div class="cb-score">${pct}<span class="cb-score-max">/100</span></div>
+        <div class="cb-score-label">Taux de complétion estimé</div>
+        <div class="cb-sources-ratio">
+          <span class="cb-sources-num">${active}/${total}</span>
+          <span class="cb-sources-lbl">sources actives</span>
+        </div>
+        <div class="cb-ratio-bar"><div class="cb-ratio-fill" style="width:${ratio}%"></div></div>
+      </div>
+    </div>
+    <div class="cb-rows">${rowsHtml}</div>
+    <p class="cb-footer">
+      Mise à jour auto · FlixPatrol + Buzz toutes les <strong>6 h</strong>,
+      Tudum Netflix chaque <strong>mardi</strong>, notes externes (IMDb + Allociné)
+      toutes les <strong>6 h</strong>. Les signaux indisponibles utilisent une valeur neutre
+      (50/100) et sont marqués « En attente ».
+    </p>
+  `;
 }
 
 // ============ SCROLL HEADER ============
