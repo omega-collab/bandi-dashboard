@@ -144,6 +144,60 @@ async function fetchLocalPress() {
   return articles;
 }
 
+// ─── 2b. Presse & web spécialisés streaming (FR + EN) ────────────────────────
+// Flux RSS directs des blogs/magazines spécialisés Netflix / séries.
+// On filtre ceux qui mentionnent Bandi — on ne stocke pas tout le feed.
+const SPECIALIZED_FEEDS = [
+  // ── FR · national généraliste
+  { url: 'https://www.leparisien.fr/culture-loisirs/cinema/rss.xml',        name: 'Le Parisien',           lang: 'fr', country_code: 'FR' },
+  { url: 'https://www.lemonde.fr/televisions-radio/rss_full.xml',           name: 'Le Monde',              lang: 'fr', country_code: 'FR' },
+  { url: 'https://www.lesinrocks.com/tag/series/feed/',                     name: 'Les Inrocks',           lang: 'fr', country_code: 'FR' },
+  { url: 'https://www.telerama.fr/rss/services.xml',                        name: 'Télérama',              lang: 'fr', country_code: 'FR' },
+  { url: 'https://www.lalibre.be/arc/outboundfeeds/rss/category/culture/?outputType=xml', name: 'La Libre', lang: 'fr', country_code: 'BE' },
+  // ── FR · web spécialisé streaming / pop culture
+  { url: 'https://www.journaldugeek.com/feed/',                             name: 'Journal du Geek',       lang: 'fr', country_code: 'FR' },
+  { url: 'https://www.fnac.com/feeds/rss/blog-le-monde-des-series.xml',     name: 'Fnac Leclaireur',       lang: 'fr', country_code: 'FR' },
+  { url: 'https://kinggeek.fr/feed',                                        name: 'King of Geek',          lang: 'fr', country_code: 'FR' },
+  { url: 'https://www.numerama.com/feed/',                                  name: 'Numerama',              lang: 'fr', country_code: 'FR' },
+  { url: 'https://www.ecranlarge.com/rss/news.xml',                         name: 'Écran Large',           lang: 'fr', country_code: 'FR' },
+  { url: 'https://www.programme-tv.net/rss/news.xml',                       name: 'Programme TV',          lang: 'fr', country_code: 'FR' },
+  // ── EN · spécialisés Netflix
+  { url: 'https://www.whats-on-netflix.com/feed/',                          name: "What's on Netflix",     lang: 'en', country_code: 'US' },
+  { url: 'https://www.thereviewgeek.com/feed/',                             name: 'The Review Geek',       lang: 'en', country_code: 'GB' },
+  { url: 'https://decider.com/feed/',                                       name: 'Decider',               lang: 'en', country_code: 'US' },
+];
+
+async function fetchSpecializedFeeds() {
+  const articles = [];
+  for (const feed of SPECIALIZED_FEEDS) {
+    try {
+      const result = await parser.parseURL(feed.url);
+      const matches = result.items.filter(item =>
+        BANDI_RE.test(item.title || '') || BANDI_RE.test(item.contentSnippet || '')
+      );
+      console.log(`  ${feed.name}: ${result.items.length} total → ${matches.length} avec Bandi`);
+      for (const item of matches) {
+        const url = item.link || item.guid || '';
+        if (!url) continue;
+        articles.push({
+          url,
+          title: item.title || '',
+          description: truncate(item.contentSnippet || item.content || ''),
+          source_name: feed.name,
+          source_type: classifyUrl(url),
+          language: feed.lang,
+          country_code: feed.country_code || null,
+          published_at: parseDate(item.pubDate || item.isoDate),
+          image_url: item.enclosure?.url || null,
+        });
+      }
+    } catch (err) {
+      console.warn(`  ⚠️ ${feed.name} échoué : ${err.message}`);
+    }
+  }
+  return articles;
+}
+
 // ─── 3. GDELT Project ────────────────────────────────────────────────────────
 async function fetchGdelt() {
   const articles = [];
@@ -184,13 +238,14 @@ async function main() {
   console.log(`🗞️  Scrape presse Bandi · ${new Date().toISOString()}`);
   console.log('━'.repeat(50));
 
-  const [googleArticles, localArticles, gdeltArticles] = await Promise.all([
+  const [googleArticles, localArticles, specializedArticles, gdeltArticles] = await Promise.all([
     fetchGoogleNews(),
     fetchLocalPress(),
+    fetchSpecializedFeeds(),
     fetchGdelt(),
   ]);
 
-  const all = [...googleArticles, ...localArticles, ...gdeltArticles];
+  const all = [...googleArticles, ...localArticles, ...specializedArticles, ...gdeltArticles];
   console.log(`\n📊 Total brut : ${all.length} articles`);
 
   // Déduplique par URL avant upsert
