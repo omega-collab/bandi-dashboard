@@ -69,6 +69,10 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
       Concurrence
     </button>
+    <button class="tab" data-tab="buzz">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Buzz
+    </button>
     <button class="tab" data-tab="series">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
       Fiche série
@@ -262,6 +266,101 @@
     </div>
   </section>
 
+  <!-- ============ TAB: BUZZ ============ -->
+  <section class="tab-panel" id="panel-buzz">
+
+    <!-- Header résumé -->
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Buzz & Veille</h2>
+          <p class="panel-sub">Presse mondiale + réseaux sociaux · Tout ce qui parle de Bandi</p>
+        </div>
+        <div class="buzz-stats" id="buzzStats">
+          <span>— articles</span>
+          <span style="opacity:0.4">·</span>
+          <span>— posts</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="panel buzz-filters-panel">
+      <div class="buzz-filter-row">
+        <span class="buzz-filter-label">Type</span>
+        <div class="buzz-filter-group">
+          <button class="buzz-btn active" data-filter="type" data-val="all">Tout</button>
+          <button class="buzz-btn" data-filter="type" data-val="press">📰 Presse</button>
+          <button class="buzz-btn" data-filter="type" data-val="social">💬 Social</button>
+        </div>
+      </div>
+      <div class="buzz-filter-row" id="buzzSourceRow">
+        <span class="buzz-filter-label">Source</span>
+        <div class="buzz-filter-group">
+          <button class="buzz-btn active" data-filter="source" data-val="all">Tout</button>
+          <button class="buzz-btn" data-filter="source" data-val="local">🇲🇶 Local</button>
+          <button class="buzz-btn" data-filter="source" data-val="national">🇫🇷 National</button>
+          <button class="buzz-btn" data-filter="source" data-val="international">🌍 International</button>
+        </div>
+      </div>
+      <div class="buzz-filter-row" id="buzzPlatformRow">
+        <span class="buzz-filter-label">Plateforme</span>
+        <div class="buzz-filter-group">
+          <button class="buzz-btn active" data-filter="platform" data-val="all">Tout</button>
+          <button class="buzz-btn" data-filter="platform" data-val="reddit">💬 Reddit</button>
+          <button class="buzz-btn" data-filter="platform" data-val="youtube">🎥 YouTube</button>
+          <button class="buzz-btn" data-filter="platform" data-val="bluesky">🦋 Bluesky</button>
+        </div>
+      </div>
+      <div class="buzz-filter-row">
+        <span class="buzz-filter-label">Période</span>
+        <div class="buzz-filter-group">
+          <button class="buzz-btn" data-filter="period" data-val="1">Aujourd'hui</button>
+          <button class="buzz-btn" data-filter="period" data-val="7">7 jours</button>
+          <button class="buzz-btn" data-filter="period" data-val="30">30 jours</button>
+          <button class="buzz-btn active" data-filter="period" data-val="all">Tout</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Google Trends (si dispo) -->
+    <div class="panel chart-panel" id="buzzTrendsPanel" style="display:none">
+      <div class="panel-head">
+        <div>
+          <h2>Intérêt Google · 30 jours</h2>
+          <p class="panel-sub">Indice de recherche mondial "Bandi Netflix" · Source Google Trends</p>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:160px;">
+        <canvas id="buzzTrendsChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="buzz-loading" id="buzzLoading">
+      <span class="pulse-dot" style="width:8px;height:8px;margin:0;"></span>
+      <span>Chargement de la veille…</span>
+    </div>
+
+    <!-- Timeline -->
+    <div id="buzzTimeline"></div>
+
+    <!-- Pagination -->
+    <div class="buzz-pagination" id="buzzPagination" style="display:none">
+      <button class="buzz-page-btn" id="buzzPrev">← Précédent</button>
+      <span class="buzz-page-info" id="buzzPageInfo">Page 1</span>
+      <button class="buzz-page-btn" id="buzzNext">Suivant →</button>
+    </div>
+
+    <!-- Empty state -->
+    <div class="buzz-empty" id="buzzEmpty" style="display:none">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3;"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      <p>Veille en cours de constitution.</p>
+      <p style="font-size:13px;opacity:0.5;">Reviens dans quelques jours — les scrapers tournent toutes les 3h.</p>
+    </div>
+
+  </section>
+
   <!-- ============ TAB: RIVALS ============ -->
   <section class="tab-panel" id="panel-rivals">
     <div class="panel">
@@ -452,6 +551,10 @@
   <button class="bnav-item" data-tab="countries" aria-label="Pays">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20"/><path d="M12 2a15 15 0 0 0 0 20"/></svg>
     <span>Pays</span>
+  </button>
+  <button class="bnav-item" data-tab="buzz" aria-label="Buzz">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <span>Buzz</span>
   </button>
   <button class="bnav-item" data-tab="rivals" aria-label="Concurrence">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>

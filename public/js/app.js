@@ -7,6 +7,67 @@
 // ============ UTILS ============
 function $(id) { return document.getElementById(id); }
 
+// Convertit un code ISO 3166-1 alpha-2 en emoji drapeau (ex. "MQ" → "🇲🇶")
+function codeToFlag(code) {
+  if (!code || code.length !== 2) return '🏳️';
+  const offset = 0x1F1E6 - 65; // 'A' = 65
+  return String.fromCodePoint(
+    ...code.toUpperCase().split('').map(c => c.charCodeAt(0) + offset)
+  );
+}
+
+// Mapping côté client EN → {fr, code} pour enrichir les données live
+// (même fichier que scripts/country-mapping.json, intégré en dur pour le frontend statique)
+const COUNTRY_FR_MAP = {
+  "Martinique":{"fr":"Martinique","code":"MQ"},"Guadeloupe":{"fr":"Guadeloupe","code":"GP"},
+  "Bahamas":{"fr":"Bahamas","code":"BS"},"Jamaica":{"fr":"Jamaïque","code":"JM"},
+  "Dominican Republic":{"fr":"Rép. Dominicaine","code":"DO"},"Trinidad and Tobago":{"fr":"Trinidad & Tobago","code":"TT"},
+  "Cuba":{"fr":"Cuba","code":"CU"},"Reunion":{"fr":"Réunion","code":"RE"},
+  "Mauritius":{"fr":"Maurice","code":"MU"},"Maldives":{"fr":"Maldives","code":"MV"},
+  "France":{"fr":"France","code":"FR"},"Hungary":{"fr":"Hongrie","code":"HU"},
+  "Portugal":{"fr":"Portugal","code":"PT"},"Spain":{"fr":"Espagne","code":"ES"},
+  "Belgium":{"fr":"Belgique","code":"BE"},"Switzerland":{"fr":"Suisse","code":"CH"},
+  "Netherlands":{"fr":"Pays-Bas","code":"NL"},"Italy":{"fr":"Italie","code":"IT"},
+  "Luxembourg":{"fr":"Luxembourg","code":"LU"},"Czech Republic":{"fr":"Rép. Tchèque","code":"CZ"},
+  "Slovakia":{"fr":"Slovaquie","code":"SK"},"Romania":{"fr":"Roumanie","code":"RO"},
+  "Germany":{"fr":"Allemagne","code":"DE"},"Austria":{"fr":"Autriche","code":"AT"},
+  "Poland":{"fr":"Pologne","code":"PL"},"Greece":{"fr":"Grèce","code":"GR"},
+  "Sweden":{"fr":"Suède","code":"SE"},"Norway":{"fr":"Norvège","code":"NO"},
+  "Denmark":{"fr":"Danemark","code":"DK"},"Finland":{"fr":"Finlande","code":"FI"},
+  "Ireland":{"fr":"Irlande","code":"IE"},"United Kingdom":{"fr":"Royaume-Uni","code":"GB"},
+  "Croatia":{"fr":"Croatie","code":"HR"},"Bulgaria":{"fr":"Bulgarie","code":"BG"},
+  "Iceland":{"fr":"Islande","code":"IS"},"Lithuania":{"fr":"Lituanie","code":"LT"},
+  "Latvia":{"fr":"Lettonie","code":"LV"},"Estonia":{"fr":"Estonie","code":"EE"},
+  "Slovenia":{"fr":"Slovénie","code":"SI"},"Cyprus":{"fr":"Chypre","code":"CY"},
+  "Malta":{"fr":"Malte","code":"MT"},"Serbia":{"fr":"Serbie","code":"RS"},
+  "Ukraine":{"fr":"Ukraine","code":"UA"},
+  "Panama":{"fr":"Panama","code":"PA"},"Honduras":{"fr":"Honduras","code":"HN"},
+  "Costa Rica":{"fr":"Costa Rica","code":"CR"},"Nicaragua":{"fr":"Nicaragua","code":"NI"},
+  "Salvador":{"fr":"Salvador","code":"SV"},"Guatemala":{"fr":"Guatemala","code":"GT"},
+  "Venezuela":{"fr":"Venezuela","code":"VE"},"Brazil":{"fr":"Brésil","code":"BR"},
+  "Argentina":{"fr":"Argentine","code":"AR"},"Chile":{"fr":"Chili","code":"CL"},
+  "Colombia":{"fr":"Colombie","code":"CO"},"Uruguay":{"fr":"Uruguay","code":"UY"},
+  "Ecuador":{"fr":"Équateur","code":"EC"},"Peru":{"fr":"Pérou","code":"PE"},
+  "Paraguay":{"fr":"Paraguay","code":"PY"},"Bolivia":{"fr":"Bolivie","code":"BO"},
+  "United States":{"fr":"États-Unis","code":"US"},"Canada":{"fr":"Canada","code":"CA"},
+  "Mexico":{"fr":"Mexique","code":"MX"},"New Caledonia":{"fr":"Nouvelle-Calédonie","code":"NC"},
+  "Australia":{"fr":"Australie","code":"AU"},"New Zealand":{"fr":"Nouvelle-Zélande","code":"NZ"},
+  "Nigeria":{"fr":"Nigeria","code":"NG"},"Kenya":{"fr":"Kenya","code":"KE"},
+  "Morocco":{"fr":"Maroc","code":"MA"},"South Africa":{"fr":"Afrique du Sud","code":"ZA"},
+  "Egypt":{"fr":"Égypte","code":"EG"},"Japan":{"fr":"Japon","code":"JP"},
+  "South Korea":{"fr":"Corée du Sud","code":"KR"},"Taiwan":{"fr":"Taïwan","code":"TW"},
+  "Hong Kong":{"fr":"Hong Kong","code":"HK"},"Hong-Kong":{"fr":"Hong Kong","code":"HK"},
+  "Singapore":{"fr":"Singapour","code":"SG"},"Malaysia":{"fr":"Malaisie","code":"MY"},
+  "Thailand":{"fr":"Thaïlande","code":"TH"},"Philippines":{"fr":"Philippines","code":"PH"},
+  "Indonesia":{"fr":"Indonésie","code":"ID"},"Vietnam":{"fr":"Vietnam","code":"VN"},
+  "India":{"fr":"Inde","code":"IN"},"Saudi Arabia":{"fr":"Arabie Saoudite","code":"SA"},
+  "United Arab Emirates":{"fr":"Émirats Arabes Unis","code":"AE"},
+  "Kuwait":{"fr":"Koweït","code":"KW"},"Qatar":{"fr":"Qatar","code":"QA"},
+  "Bahrain":{"fr":"Bahreïn","code":"BH"},"Oman":{"fr":"Oman","code":"OM"},
+  "Jordan":{"fr":"Jordanie","code":"JO"},"Lebanon":{"fr":"Liban","code":"LB"},
+  "Israel":{"fr":"Israël","code":"IL"},"Turkey":{"fr":"Turquie","code":"TR"}
+};
+
 function formatDelta(n) {
   if (n === null || n === undefined || isNaN(n)) return "—";
   return (n > 0 ? "+" : "") + n;
@@ -21,8 +82,9 @@ function trendClass(delta, inverse = false) {
 // ============ FETCH SUPABASE ============
 async function loadLiveData() {
   const cfg = window.SUPABASE_CONFIG;
+  console.log('[BANDI] loadLiveData — config:', cfg ? `url=${cfg.url.slice(0, 40)}…` : 'MANQUANT');
   if (!cfg || cfg.url.includes('PLACEHOLDER')) {
-    console.warn('⚠️ Supabase non configuré, utilisation des données de fallback');
+    console.warn('[BANDI] ⚠️ Supabase non configuré — fallback statique utilisé');
     return;
   }
 
@@ -81,13 +143,12 @@ async function loadLiveData() {
       historyByCountry[p.pays] = hist;
     });
 
-    // Merge avec la structure BANDI (garde casting, synopsis, flags du fallback)
-    const paysFallback = BANDI.pays;
+    // Enrichissement pays : code ISO → flag emoji + nom FR via COUNTRY_FR_MAP
     const enrichedPays = paysData.map(p => {
-      const fallback = paysFallback.find(fp =>
-        fp.pays === p.pays ||
-        fp.pays.toLowerCase() === p.pays.toLowerCase()
-      );
+      // code_pays stocké en DB par le scraper mis à jour, fallback via mapping client
+      const code = p.code_pays || COUNTRY_FR_MAP[p.pays]?.code || '';
+      const mapped = COUNTRY_FR_MAP[p.pays];
+      const nomFr = mapped?.fr || p.pays; // nom français ou anglais si non trouvé
 
       const hist = historyByCountry[p.pays] || [null, null, null, p.rang];
       const lastTwo = hist.slice(-2).filter(x => x !== null);
@@ -98,12 +159,13 @@ async function loadLiveData() {
       }
 
       return {
-        pays: p.pays,
-        flag: fallback?.flag || '🏳️',
-        code: fallback?.code || '',
-        region: p.region || fallback?.region || 'Autre',
+        pays: nomFr,         // nom FR pour l'affichage
+        paysEn: p.pays,      // nom EN pour les lookups internes (carte, etc.)
+        flag: codeToFlag(code),
+        code,
+        region: p.region || mapped?.region || 'Autre',
         rang: p.rang,
-        entree: fallback?.entree || '—',
+        entree: '—',
         historique: hist,
         trend
       };
@@ -121,10 +183,11 @@ async function loadLiveData() {
         ? prevRecords.reduce((s, r) => s + r.rang, 0) / prevRecords.length
         : null;
       const delta = prevAvg !== null ? prevAvg - p.rang : null; // positif = progression
-      const fb = enrichedPays.find(ep => ep.pays === p.pays);
+      const enriched = enrichedPays.find(ep => ep.paysEn === p.pays);
       return {
-        pays: p.pays,
-        flag: fb?.flag || '🏳️',
+        pays: enriched?.pays || COUNTRY_FR_MAP[p.pays]?.fr || p.pays,
+        paysEn: p.pays,
+        flag: enriched?.flag || codeToFlag(p.code_pays || COUNTRY_FR_MAP[p.pays]?.code || ''),
         region: p.region || 'Autre',
         rang: p.rang,
         prevAvg: prevAvg !== null ? Math.round(prevAvg * 10) / 10 : null,
@@ -253,7 +316,8 @@ function initTabs() {
     if (navigator.vibrate) navigator.vibrate(8);
     // Init lazy des onglets lourds
     if (target === 'history') renderHistoryTab();
-    if (target === 'map') initMapTab();
+    if (target === 'map')     initMapTab();
+    if (target === 'buzz')    initBuzzTab();
   }
 
   allTabs.forEach(tab => {
@@ -823,16 +887,274 @@ async function initMapTab() {
   }
 }
 
+// ============ BUZZ ============
+let buzzLoaded = false;
+let buzzPage = 0;
+const BUZZ_PAGE = 50;
+const buzzFilters = { type: 'all', source: 'all', platform: 'all', period: 'all' };
+let buzzAllItems = [];
+let buzzTrendsChartInstance = null;
+
+function timeAgo(date) {
+  if (!date) return '—';
+  const m = Math.floor((Date.now() - date.getTime()) / 60000);
+  if (m < 1) return "à l'instant";
+  if (m < 60) return `il y a ${m}min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `il y a ${h}h`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `il y a ${d}j`;
+  return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
+
+function fmtEngagement(n, platform) {
+  if (n === null || n === undefined || n === 0) return '';
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1e3).toFixed(1)}K`;
+  return String(n);
+}
+
+const BUZZ_ICONS = { press: '📰', reddit: '💬', youtube: '🎥', bluesky: '🦋' };
+const BUZZ_LABELS = { press: 'Presse', reddit: 'Reddit', youtube: 'YouTube', bluesky: 'Bluesky' };
+const SOURCE_COLORS = { local: '#CE1126', national: '#009739', international: '#D4A017' };
+const SOURCE_LABELS = { local: 'Local', national: 'National', international: 'International' };
+const ENGAGE_ICONS = { reddit: '↑', youtube: '▶', bluesky: '♥', press: '' };
+
+async function loadBuzzData(cfg, headers) {
+  const [artRes, socRes, trendsRes] = await Promise.all([
+    fetch(`${cfg.url}/rest/v1/buzz_articles?order=published_at.desc&limit=500`, { headers }),
+    fetch(`${cfg.url}/rest/v1/buzz_social?order=published_at.desc&limit=500`, { headers }),
+    fetch(`${cfg.url}/rest/v1/buzz_trends?order=date.asc&limit=31`, { headers }),
+  ]);
+  const articles = await artRes.json();
+  const social   = await socRes.json();
+  const trends   = await trendsRes.json();
+
+  const press = (Array.isArray(articles) ? articles : []).map(a => ({
+    id: 'p' + a.id, itemType: 'press', platform: 'press',
+    sourceType: a.source_type || 'international',
+    url: a.url, title: a.title || '(sans titre)',
+    excerpt: a.description, source: a.source_name || '',
+    publishedAt: a.published_at ? new Date(a.published_at) : null,
+    thumbnail: a.image_url || null, engagement: null,
+  }));
+
+  const soc = (Array.isArray(social) ? social : []).map(s => ({
+    id: 's' + s.id, itemType: 'social', platform: s.platform,
+    sourceType: null,
+    url: s.url, title: s.content || '(sans contenu)',
+    excerpt: null, source: s.author_name || '',
+    publishedAt: s.published_at ? new Date(s.published_at) : null,
+    thumbnail: s.thumbnail_url || null, engagement: s.engagement_score,
+  }));
+
+  buzzAllItems = [...press, ...soc]
+    .filter(i => i.publishedAt && !isNaN(i.publishedAt.getTime()))
+    .sort((a, b) => b.publishedAt - a.publishedAt);
+
+  // Render trends chart if data
+  const trendsData = Array.isArray(trends) ? trends : [];
+  if (trendsData.length > 0) renderBuzzTrendsChart(trendsData);
+
+  return { pressCount: press.length, socialCount: soc.length };
+}
+
+function buzzFiltered() {
+  const now = Date.now();
+  return buzzAllItems.filter(i => {
+    if (buzzFilters.type === 'press'  && i.itemType !== 'press')  return false;
+    if (buzzFilters.type === 'social' && i.itemType !== 'social') return false;
+    if (buzzFilters.source   !== 'all' && i.itemType === 'press' && i.sourceType !== buzzFilters.source) return false;
+    if (buzzFilters.platform !== 'all' && i.itemType === 'social' && i.platform !== buzzFilters.platform) return false;
+    if (buzzFilters.period   !== 'all') {
+      const days = parseInt(buzzFilters.period);
+      if ((now - i.publishedAt.getTime()) > days * 86400000) return false;
+    }
+    return true;
+  });
+}
+
+function renderBuzzCard(item) {
+  const icon  = BUZZ_ICONS[item.platform]  || '📄';
+  const label = BUZZ_LABELS[item.platform] || item.platform;
+  const time  = timeAgo(item.publishedAt);
+  const eng   = fmtEngagement(item.engagement, item.platform);
+  const engIcon = ENGAGE_ICONS[item.platform] || '';
+
+  const srcBadge = item.sourceType && SOURCE_COLORS[item.sourceType]
+    ? `<span class="buzz-source-badge" style="color:${SOURCE_COLORS[item.sourceType]};background:${SOURCE_COLORS[item.sourceType]}18;border-color:${SOURCE_COLORS[item.sourceType]}35">${SOURCE_LABELS[item.sourceType]}</span>`
+    : '';
+
+  const thumb = item.thumbnail
+    ? `<div class="buzz-card-thumb" style="background-image:url('${item.thumbnail}')"></div>`
+    : '';
+
+  const title   = (item.title   || '').slice(0, 160) + ((item.title || '').length > 160 ? '…' : '');
+  const excerpt = item.excerpt ? (item.excerpt.slice(0, 120) + (item.excerpt.length > 120 ? '…' : '')) : '';
+
+  const engHtml = eng
+    ? `<span class="buzz-engagement">${engIcon} ${eng}</span>`
+    : '';
+
+  return `<a class="buzz-card${item.thumbnail ? ' has-thumb' : ''}" href="${item.url}" target="_blank" rel="noopener noreferrer">
+    ${thumb}
+    <div class="buzz-card-body">
+      <div class="buzz-card-badges">
+        <span class="buzz-type-badge">${icon} ${label}</span>
+        ${srcBadge}
+      </div>
+      <div class="buzz-card-title">${title}</div>
+      ${excerpt ? `<div class="buzz-card-excerpt">${excerpt}</div>` : ''}
+      <div class="buzz-card-meta">
+        <span>${item.source}</span>
+        <span class="buzz-sep">·</span>
+        <span>${time}</span>
+        ${engHtml}
+      </div>
+    </div>
+  </a>`;
+}
+
+function renderBuzzTimeline() {
+  const filtered = buzzFiltered();
+  const start = buzzPage * BUZZ_PAGE;
+  const page  = filtered.slice(start, start + BUZZ_PAGE);
+  const total = filtered.length;
+
+  const tl   = $('buzzTimeline');
+  const em   = $('buzzEmpty');
+  const pg   = $('buzzPagination');
+
+  if (total < 5) {
+    if (tl) tl.innerHTML = '';
+    if (em) em.style.display = '';
+    if (pg) pg.style.display = 'none';
+    return;
+  }
+  if (em) em.style.display = 'none';
+  if (tl) tl.innerHTML = page.map(renderBuzzCard).join('');
+
+  const totalPages = Math.ceil(total / BUZZ_PAGE);
+  if (pg) pg.style.display = totalPages > 1 ? '' : 'none';
+  const pi = $('buzzPageInfo');
+  if (pi) pi.textContent = `Page ${buzzPage + 1} / ${totalPages} · ${total} résultats`;
+  const prevBtn = $('buzzPrev');
+  const nextBtn = $('buzzNext');
+  if (prevBtn) prevBtn.disabled = buzzPage === 0;
+  if (nextBtn) nextBtn.disabled = buzzPage >= totalPages - 1;
+}
+
+function renderBuzzTrendsChart(trendsData) {
+  const panel = $('buzzTrendsPanel');
+  if (panel) panel.style.display = '';
+  const ctx = document.getElementById('buzzTrendsChart');
+  if (!ctx) return;
+  if (buzzTrendsChartInstance) { buzzTrendsChartInstance.destroy(); }
+
+  buzzTrendsChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: trendsData.map(t => (t.date || '').slice(5).replace('-', '/')),
+      datasets: [{
+        data: trendsData.map(t => t.interest_score),
+        borderColor: '#CE1126',
+        backgroundColor: (context) => {
+          const { chart } = context;
+          const { ctx: c, chartArea } = chart;
+          if (!chartArea) return null;
+          const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          g.addColorStop(0, 'rgba(206,17,38,0.3)');
+          g.addColorStop(1, 'rgba(206,17,38,0)');
+          return g;
+        },
+        fill: true, tension: 0.4, borderWidth: 2,
+        pointRadius: 2, pointHoverRadius: 5,
+        pointBackgroundColor: '#CE1126', pointBorderColor: '#fff', pointBorderWidth: 1,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0D0D0D', borderColor: '#CE1126', borderWidth: 1,
+          titleColor: '#fff', bodyColor: '#B5B5B5',
+          callbacks: { label: c => `Intérêt : ${c.raw}/100` }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#8A8A8A', font: { family: 'JetBrains Mono', size: 10 }, maxTicksLimit: 10 }, grid: { color: 'rgba(42,42,42,0.5)' } },
+        y: { min: 0, max: 100, ticks: { color: '#8A8A8A', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: 'rgba(42,42,42,0.5)' } }
+      }
+    }
+  });
+}
+
+async function initBuzzTab() {
+  if (buzzLoaded) { renderBuzzTimeline(); return; }
+  buzzLoaded = true;
+
+  const loading = $('buzzLoading');
+  if (loading) loading.style.display = '';
+
+  const cfg = window.SUPABASE_CONFIG;
+  if (!cfg || cfg.url.includes('PLACEHOLDER')) {
+    if (loading) loading.style.display = 'none';
+    const em = $('buzzEmpty'); if (em) em.style.display = '';
+    return;
+  }
+
+  const headers = { 'apikey': cfg.anonKey, 'Authorization': `Bearer ${cfg.anonKey}` };
+
+  try {
+    const { pressCount, socialCount } = await loadBuzzData(cfg, headers);
+
+    // Stats header
+    const stats = $('buzzStats');
+    if (stats) stats.innerHTML = `<span><strong>${pressCount}</strong> articles</span><span style="opacity:0.4">·</span><span><strong>${socialCount}</strong> posts</span>`;
+
+    if (loading) loading.style.display = 'none';
+    renderBuzzTimeline();
+
+    // Filtres
+    document.querySelectorAll('.buzz-btn[data-filter]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const f = btn.dataset.filter, v = btn.dataset.val;
+        buzzFilters[f] = v;
+        buzzPage = 0;
+        document.querySelectorAll(`.buzz-btn[data-filter="${f}"]`).forEach(b => b.classList.toggle('active', b.dataset.val === v));
+        // Masquer filtres source/plateforme selon le type
+        const sr = $('buzzSourceRow'), pr = $('buzzPlatformRow');
+        if (f === 'type') {
+          if (sr) sr.style.display = v === 'social' ? 'none' : '';
+          if (pr) pr.style.display = v === 'press'  ? 'none' : '';
+        }
+        renderBuzzTimeline();
+      });
+    });
+
+    // Pagination
+    $('buzzPrev')?.addEventListener('click', () => { buzzPage--; renderBuzzTimeline(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    $('buzzNext')?.addEventListener('click', () => { buzzPage++; renderBuzzTimeline(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+  } catch (err) {
+    console.error('Buzz load error:', err);
+    if (loading) loading.style.display = 'none';
+    const em = $('buzzEmpty'); if (em) em.style.display = '';
+  }
+}
+
 // ============ INIT ============
 document.addEventListener("DOMContentLoaded", async () => {
-  await loadLiveData();
-  initTabs();
-  initLiveClock();
-  renderOverview();
-  renderChart();
-  renderRegionFilters();
-  renderCountries();
-  initCountrySearch();
-  renderRivals();
-  renderSeriesTab();
+  // Chaque call isolé pour qu'une erreur n'empêche pas les suivants
+  try { await loadLiveData(); } catch (e) { console.error('[BANDI] loadLiveData:', e); }
+  try { initTabs(); }          catch (e) { console.error('[BANDI] initTabs:', e); }
+  try { initLiveClock(); }     catch (e) { console.error('[BANDI] initLiveClock:', e); }
+  try { renderOverview(); }    catch (e) { console.error('[BANDI] renderOverview:', e); }
+  try { renderChart(); }       catch (e) { console.error('[BANDI] renderChart:', e); }
+  try { renderRegionFilters(); }  catch (e) { console.error('[BANDI] renderRegionFilters:', e); }
+  try { renderCountries(); }   catch (e) { console.error('[BANDI] renderCountries:', e); }
+  try { initCountrySearch(); } catch (e) { console.error('[BANDI] initCountrySearch:', e); }
+  try { renderRivals(); }      catch (e) { console.error('[BANDI] renderRivals:', e); }
+  try { renderSeriesTab(); }   catch (e) { console.error('[BANDI] renderSeriesTab:', e); }
 });

@@ -1,0 +1,32 @@
+name: Scrape Social Bandi
+
+on:
+  schedule:
+    # Toutes les 6h : 00h, 06h, 12h, 18h UTC
+    - cron: '30 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  scrape-social:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --omit=dev
+
+      - name: Scrape social (Reddit + YouTube + Bluesky + Trends)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: node scripts/scrape-social.js
+
+      - if: always()
+        run: echo "Social scrape terminé à $(date -u)"

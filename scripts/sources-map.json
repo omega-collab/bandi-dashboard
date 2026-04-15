@@ -1,0 +1,43 @@
+{
+  "local": [
+    "france-antilles.fr",
+    "martinique.la1ere.francetvinfo.fr",
+    "guadeloupe.la1ere.francetvinfo.fr",
+    "la1ere.francetvinfo.fr",
+    "rci.fm",
+    "zayactu.com",
+    "martiniquetv.mq",
+    "linfo.re",
+    "guadeloupe.fr",
+    "antilles.francetvinfo.fr",
+    "monplaisir.fr",
+    "martinique.fr"
+  ],
+  "national": [
+    "lefigaro.fr",
+    "lemonde.fr",
+    "liberation.fr",
+    "telerama.fr",
+    "allocine.fr",
+    "premiere.fr",
+    "lepoint.fr",
+    "lexpress.fr",
+    "leparisien.fr",
+    "20minutes.fr",
+    "bfmtv.com",
+    "tf1info.fr",
+    "francetvinfo.fr",
+    "france.tv",
+    "radiofrance.fr",
+    "rfi.fr",
+    "rtl.fr",
+    "europe1.fr",
+    "cnews.fr",
+    "huffingtonpost.fr",
+    "next.liberation.fr",
+    "variety.fr",
+    "screendaily.com",
+    "programme-tv.net",
+    "puremedias.com"
+  ]
+}

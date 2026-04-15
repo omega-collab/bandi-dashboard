@@ -1,0 +1,31 @@
+name: Scrape Presse Bandi
+
+on:
+  schedule:
+    # Toutes les 3h : 00h, 03h, 06h, 09h, 12h, 15h, 18h, 21h UTC
+    - cron: '0 */3 * * *'
+  workflow_dispatch:
+
+jobs:
+  scrape-press:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --omit=dev
+
+      - name: Scrape presse
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/scrape-press.js
+
+      - if: always()
+        run: echo "Press scrape terminé à $(date -u)"

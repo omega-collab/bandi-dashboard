@@ -12,7 +12,14 @@
 
 import { createClient } from '@supabase/supabase-js';
 import * as cheerio from 'cheerio';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import 'dotenv/config';
+
+// Mapping EN → { fr, code } pour les pays FlixPatrol
+const __dir = dirname(fileURLToPath(import.meta.url));
+const COUNTRY_MAP = JSON.parse(readFileSync(join(__dir, 'country-mapping.json'), 'utf8'));
 
 const { SUPABASE_URL, SUPABASE_SERVICE_KEY } = process.env;
 
@@ -154,11 +161,46 @@ async function scrapeWorldTop10() {
       }
     });
 
-    if (!tvHeader) return [];
+    if (!tvHeader) {
+      console.warn('⚠️ H2 TV Shows non trouvé sur la page');
+      return [];
+    }
 
-    // La table est dans le div.content parent du h2 (2 niveaux au-dessus)
-    const container = tvHeader.parent().parent();
-    const table = container.find('table').first();
+    // Stratégie : traverser les siblings APRÈS le h2 TV Shows
+    // (ne JAMAIS remonter via .parent().parent() → prend la table Films en premier)
+    let tvTable = null;
+
+    // Stratégie 1 : nextAll direct sur le même niveau
+    const nextTables = tvHeader.nextAll('table');
+    if (nextTables.length) {
+      tvTable = nextTables.first();
+    }
+
+    // Stratégie 2 : siblings suivants (table peut être dans un wrapper div)
+    if (!tvTable || !tvTable.length) {
+      let cur = tvHeader.next();
+      while (cur.length && (!tvTable || !tvTable.length)) {
+        if (cur.is('table')) {
+          tvTable = cur;
+        } else {
+          const inner = cur.find('table').first();
+          if (inner.length) tvTable = inner;
+        }
+        cur = cur.next();
+      }
+    }
+
+    // Stratégie 3 : fallback — parent direct uniquement (pas parent.parent)
+    if (!tvTable || !tvTable.length) {
+      tvTable = tvHeader.parent().find('table').first();
+    }
+
+    if (!tvTable || !tvTable.length) {
+      console.warn('⚠️ Table TV Shows introuvable');
+      return [];
+    }
+
+    const table = tvTable;
     table.find('tr').each((_, row) => {
       const cells = $(row).find('td').map((_, c) => $(c).text().trim()).get();
       if (cells.length < 3) return;
@@ -214,17 +256,22 @@ async function main() {
     if (e1) throw new Error(`Insert snapshot : ${e1.message}`);
     console.log('✅ Snapshot inséré');
 
-    // Insert pays
+    // Insert pays (avec code ISO depuis country-mapping.json)
     if (countries.length > 0) {
-      const rows = countries.map(c => ({
-        date: today,
-        pays: c.pays,
-        rang: c.rang,
-        region: c.region
-      }));
+      const rows = countries.map(c => {
+        const mapped = COUNTRY_MAP[c.pays];
+        return {
+          date: today,
+          pays: c.pays,
+          code_pays: mapped?.code || null,
+          rang: c.rang,
+          region: c.region
+        };
+      });
       const { error: e2 } = await supabase.from('bandi_country_rankings').upsert(rows, { onConflict: 'date,pays' });
       if (e2) throw new Error(`Insert pays : ${e2.message}`);
-      console.log(`✅ ${rows.length} pays insérés`);
+      const withCode = rows.filter(r => r.code_pays).length;
+      console.log(`✅ ${rows.length} pays insérés (${withCode} avec code ISO)`);
     }
 
     // Insert top 10
