@@ -141,7 +141,7 @@ async function scrapeBandiPage() {
 const FILM_MARKERS = [
   'thrash', 'sniper', 'anaconda', 'sisu', 'four brothers',
   'striking distance', 'eat pray', 'john wick', 'die hard', 'rambo',
-  'fast &', 'transformers', 'expendables'
+  'fast &', 'transformers', 'expendables', 'mudborn', 'tu yaa main'
 ];
 
 /**
