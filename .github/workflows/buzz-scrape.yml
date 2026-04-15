@@ -1,15 +1,15 @@
-name: Scrape Presse Bandi
+name: Scrape Buzz (presse + social)
 
 on:
   schedule:
-    # Toutes les 3h : 00h, 03h, 06h, 09h, 12h, 15h, 18h, 21h UTC
-    - cron: '0 */3 * * *'
+    # Toutes les 6 heures
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 jobs:
-  scrape-press:
+  scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v4
@@ -18,14 +18,22 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
-        run: npm install --omit=dev
+      - name: Install deps
+        run: npm ci || npm install
 
-      - name: Scrape presse
+      - name: Scrape presse (Google News + RSS Antilles)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: node scripts/scrape-press.js
 
+      - name: Scrape social (Reddit + Bluesky + YouTube optionnel)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: node scripts/scrape-social.js
+        continue-on-error: true  # social peut échouer sans bloquer le workflow
+
       - if: always()
-        run: echo "Press scrape terminé à $(date -u)"
+        run: echo "Buzz scrape terminé à $(date -u)"
