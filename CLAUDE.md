@@ -206,15 +206,25 @@ document.addEventListener("DOMContentLoaded", async () => {
 - Badge `.hero-origin-badge` "N NETFLIX ORIGINAL · MARTINIQUE"
 - Scroll listener pour `.header.scrolled`
 
+**Phase D — Buzz (veille automatique)**
+- Tables `buzz_articles`, `buzz_social`, `buzz_trends` créées (SQL exécuté)
+- `scripts/scrape-press.js` : 4 sources Google News + 10 flux presse antillaise + GDELT
+- `scripts/scrape-social.js` : Reddit, YouTube, Bluesky (workflow cron 6h)
+- Onglet Buzz : filtres type/source/plateforme/période, lazy load, pagination
+
+**Phase E — Modules B2B (version finale)**
+- `data-fallback.js` : champ `strategique` (USA #7, authenticité 91%, forecast S2 85%)
+- `index.html` : bento-strategic (USA + auth mini + forecast mini), zones-module, forecast-detail, authenticite-module (panel-series), toggle carte 3 modes
+- `app.js` : renderBreakthroughUSA, renderAuthenticiteMini, renderAuthenticite, renderZonesDomination, renderForecastS2, mode Momentum carte (window._paysHistCache)
+- `styles.css` : ~250 lignes — bento grid, modules USA/auth/forecast/zones
+- FILM_MARKERS enrichi (mudborn, tu yaa main), purge DB rivaux films
+
 ### 🔜 Phases à venir
 
-**Phase D — Toggle carte [rang] / [volume vues]**
-- Boutons de switch sur l'onglet Carte
-- Gradient couleur basé sur heures vues (Tudum) vs rang (FlixPatrol)
-
-**Phase E — Buzz (veille automatique)**
-- Tables `buzz_articles`, `buzz_social`, `buzz_trends` créées (SQL exécuté)
-- Scraper à développer (Google News GDELT + Reddit + YouTube)
+Aucune phase critique restante. Améliorations possibles :
+- Fetch USA rang live depuis Supabase (actuellement hardcodé dans `strategique.usaRang`)
+- Valider authenticité 91% avec Maui Entertainment / équipe production
+- Page de présentation B2B dédiée (PDF export ou route `/b2b`)
 
 ---
 
