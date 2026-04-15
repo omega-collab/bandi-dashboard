@@ -101,7 +101,7 @@ const BANDI = {
     { pays: "Roumanie",          code: "RO", flag: "🇷🇴", region: "Europe",             rang: 9,  entree: "11/04", historique: [null, 8, 9, 9], trend: "down" },
     { pays: "Italie",            code: "IT", flag: "🇮🇹", region: "Europe",             rang: 10, entree: "12/04", historique: [null, null, 10, 10], trend: "stable" },
     { pays: "Salvador",          code: "SV", flag: "🇸🇻", region: "Amérique Centrale",  rang: 10, entree: "12/04", historique: [null, null, 10, 10], trend: "stable" },
-    { pays: "États-Unis",        code: "US", flag: "🇺🇸", region: "Amérique du Nord",   rang: 10, entree: "12/04", historique: [null, null, 10, 10], trend: "up" }
+    { pays: "États-Unis",        code: "US", flag: "🇺🇸", region: "Amérique du Nord",   rang: 7,  entree: "12/04", historique: [null, null, 10, 7],  trend: "up" }
   ],
 
   // Top TV Shows Netflix Monde au 13/04
@@ -116,7 +116,43 @@ const BANDI = {
     { titre: "Big Mistakes",                 score: 180, isBandi: false },
     { titre: "Something Very Bad...",        score: 153, isBandi: false },
     { titre: "Beauty in Black",              score: 136, isBandi: false }
-  ]
+  ],
+
+  // ── Données stratégiques B2B ──────────────────────────────────────────
+  // Hardcodées · À valider manuellement par la production
+  strategique: {
+    // #7 USA Top 10 Netflix · FlixPatrol 14/04/2026
+    // Rang live prioritaire si disponible dans bandi_country_rankings WHERE pays='United States'
+    usaRang: 7,
+    usaDate: '14/04/2026',
+    usaEntry: true,
+    usaNote: 'First French-Caribbean series to break US Top 10',
+
+    // 91% du casting est martiniquais · Source : Maui Entertainment / casting interne
+    // À VALIDER par la production avant toute présentation officielle
+    authenticite: {
+      pctCasting: 91,
+      acteursLocaux: 75,
+      totalRoles: 82,
+      comparaisons: [
+        { titre: 'Top Boy (UK)', pct: 50 },
+        { titre: 'Narcos (CO)',  pct: 40 }
+      ]
+    },
+
+    // Forecast Saison 2 · modèle probabiliste interne · NON OFFICIEL
+    forecastS2: {
+      probabilite: 85,
+      indicateurs: [
+        { label: 'Taux de complétion',      valeur: '84%',   seuil: '70%',    ok: true  },
+        { label: 'Top 10 USA atteint',      valeur: '#7',    seuil: '~3%',    ok: true  },
+        { label: '#1 dans 13+ pays',        valeur: '13+',   seuil: 'signal', ok: true  },
+        { label: 'Score popularité',        valeur: '+108%', seuil: '4 jours',ok: true  },
+        { label: 'Renouvellement officiel', valeur: '—',     seuil: 'Netflix',ok: false }
+      ],
+      disclaimer: 'Estimation interne · non officielle — Modèle basé sur l\'historique des renouvellements Netflix de séries non-anglophones ayant atteint le top 10 mondial dès la S1.'
+    }
+  }
 };
 
 // Couleurs régions
