@@ -88,6 +88,9 @@ async function fetchAndParse(weekStart) {
     const heuresRaw   = get('hours_viewed_millions', 'hours_viewed');
     const heures      = heuresRaw ? parseFloat(heuresRaw.replace(/,/g, '')) || null : null;
     const semaines    = parseInt(get('cumulative_weeks_in_top_10', 'weeks_in_top_10'), 10) || 0;
+    // Colonne "vues" (foyers) — disponible depuis fin 2024 dans certains TSV Netflix
+    const vuesRaw     = get('weekly_views', 'views', 'views_millions');
+    const views       = vuesRaw ? parseFloat(vuesRaw.replace(/,/g, '')) || null : null;
     const catRaw      = get('category', 'type').toLowerCase();
 
     // Normalise la catégorie
@@ -98,7 +101,9 @@ async function fetchAndParse(weekStart) {
     else                                                            categorie = 'tv_english';
 
     if (!isNaN(rang) && rang > 0 && titre) {
-      rows.push({ week_start: weekStart, categorie, rang, titre, saison, heures_vues: heures, semaines_top10: semaines });
+      const row = { week_start: weekStart, categorie, rang, titre, saison, heures_vues: heures, semaines_top10: semaines };
+      if (views != null) row.views_millions = views; // bonus si colonne présente
+      rows.push(row);
     }
   }
 

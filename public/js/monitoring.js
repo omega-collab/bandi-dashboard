@@ -1,474 +1,414 @@
-// ===============================
-// BANDI MONITORING MODULE (ISOLÉ)
-// Rendu dans : #monAnalytics
-// Init via : BANDI_MONITORING.renderMonitoringTab()
-// ===============================
-
 (function () {
+  'use strict';
+  // ─────────────────────────────────────────────────────────────────────────
+  //  BANDI · MODULE MONITORING · Jauges performance temps réel
+  //  Container : #monAnalytics   |   Init : BANDI_MONITORING.renderMonitoringTab()
+  // ─────────────────────────────────────────────────────────────────────────
 
-  const BANDI_MONITORING = {}
+  // ── Géométrie de l'arc SVG (demi-cercle style speedometer) ───────────────
+  const R    = 78;
+  const CX   = 100;
+  const CY   = 110;
+  const ARC  = Math.PI * R;   // ≈ 245.04 — longueur totale du demi-arc
+  const PATH = `M ${CX - R},${CY} A ${R},${R} 0 0,1 ${CX + R},${CY}`;
+  //            "M 22,110 A 78,78 0 0,1 178,110"
+  const VB   = '0 0 200 126';
+  const DUR  = 1100;           // durée animation ms
 
-  // ─── UTILS ───────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
-  function normalize(value, max) {
-    if (!value || isNaN(value)) return 0
-    return Math.min((value / max) * 100, 100)
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  function gradColor(pct) {
+    if (pct >= 68) return '#009739';
+    if (pct >= 38) return '#D4A017';
+    return '#CE1126';
   }
 
-  function variance(arr) {
-    if (!arr || arr.length === 0) return 0
-    const mean = arr.reduce((a, b) => a + b, 0) / arr.length
-    return arr.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / arr.length
+  function rankColor(r) {
+    if (!r) return '#333';
+    return r <= 3 ? '#009739' : r <= 6 ? '#D4A017' : '#CE1126';
   }
 
-  function coherenceLabel(score) {
-    if (score >= 75) return "Signaux fortement alignés"
-    if (score >= 50) return "Signaux modérément alignés"
-    return "Signaux divergents"
+  function dltHtml(val, inv) {
+    if (val == null || isNaN(val) || val === 0) return '';
+    const up   = inv ? val < 0 : val > 0;
+    const sign = val > 0 ? '+' : '';
+    return `<span class="${up ? 'mg-up' : 'mg-dn'}">${up ? '▲' : '▼'}&thinsp;${sign}${val}</span>`;
   }
 
-  function confidenceLabel(score) {
-    if (score > 80) return "Données très fiables"
-    if (score > 60) return "Données globalement fiables"
-    return "Données à interpréter avec prudence"
+  function fmtHeures(h) {
+    if (h == null) return '—';
+    if (h >= 1000) return `${(h / 1000).toFixed(1)}B`;
+    if (h >= 1)    return `${h.toFixed(1)}M`;
+    return `${Math.round(h * 1000)}K`;
   }
 
-  function confidenceColor(score) {
-    if (score > 80) return "#2ecc71"
-    if (score > 60) return "#f39c12"
-    return "#e74c3c"
+  // ── Animation arc ─────────────────────────────────────────────────────────
+
+  function animArc(main, glow, pct) {
+    const target = ARC * clamp(pct, 0, 100) / 100;
+    const zero   = `0 ${ARC.toFixed(2)}`;
+    main.setAttribute('stroke-dasharray', zero);
+    if (glow) glow.setAttribute('stroke-dasharray', zero);
+
+    let t0 = null;
+    function step(ts) {
+      if (!t0) t0 = ts;
+      const prog = clamp((ts - t0) / DUR, 0, 1);
+      const ease = 1 - Math.pow(1 - prog, 3); // ease-out cubic
+      const da   = `${(target * ease).toFixed(2)} ${ARC.toFixed(2)}`;
+      main.setAttribute('stroke-dasharray', da);
+      if (glow) glow.setAttribute('stroke-dasharray', da);
+      if (prog < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
   }
 
-  // ─── 1. CONSISTENCY ENGINE ───────────────────────────
+  // ── Build une carte jauge ──────────────────────────────────────────────────
 
-  BANDI_MONITORING.computeConsistencyEngine = function (data) {
-    const flix    = normalize(data.flixpatrolScore, 1000)
-    const tudum   = normalize(data.tudumHours, 50)
-    const buzz    = normalize(data.buzzScore, 100)
-    const ratings = normalize(data.ratingsScore, 10)
+  function card(g) {
+    const z  = `0 ${ARC.toFixed(2)}`;
+    // Taille du texte selon longueur de la valeur affichée
+    const fs = g.display.length > 6 ? 18
+             : g.display.length > 4 ? 22
+             : g.display.length > 3 ? 28
+             : g.display.length > 2 ? 32 : 36;
+    return `<div class="mg-card" title="${g.tooltip || ''}">
+  <div class="mg-lbl">${g.label}</div>
+  <svg viewBox="${VB}" class="mg-svg" aria-hidden="true">
+    <!-- Arc fond -->
+    <path d="${PATH}" fill="none" stroke="#1a1a1a" stroke-width="14" stroke-linecap="round"/>
+    <!-- Arc lueur (wide, faible opacité) -->
+    <path d="${PATH}" fill="none" stroke="${g.color}" stroke-width="28"
+          stroke-linecap="round" stroke-dasharray="${z}" opacity="0.13"
+          id="glow-${g.id}"/>
+    <!-- Arc rempli (animé) -->
+    <path d="${PATH}" fill="none" stroke="${g.color}" stroke-width="12"
+          stroke-linecap="round" stroke-dasharray="${z}"
+          id="arc-${g.id}"/>
+    <!-- Valeur centrale -->
+    <text x="100" y="79" text-anchor="middle" class="mg-val" font-size="${fs}">${g.display}</text>
+    <!-- Unité -->
+    <text x="100" y="99" text-anchor="middle" class="mg-unit">${g.unit}</text>
+    <!-- Min / Max -->
+    <text x="20"  y="120" text-anchor="middle" class="mg-mm">${g.minL}</text>
+    <text x="180" y="120" text-anchor="middle" class="mg-mm">${g.maxL}</text>
+  </svg>
+  <div class="mg-foot">
+    <span class="mg-dlt">${g.delta || ''}</span>
+    <span class="mg-src">${g.src}</span>
+  </div>
+</div>`;
+  }
 
-    const values = [flix, tudum, buzz, ratings]
-    const v = variance(values)
-    const score = Math.max(0, Math.round(100 - v))
+  function section(title, gauges) {
+    return `<div class="mg-section">
+  <div class="mg-sec-title">${title}</div>
+  <div class="mg-grid">${gauges.map(card).join('')}</div>
+</div>`;
+  }
 
-    return {
-      coherenceScore: score,
-      variance: Math.round(v),
-      normalized: {
-        flixpatrol: Math.round(flix),
-        tudum:      Math.round(tudum),
-        buzz:       Math.round(buzz),
-        ratings:    Math.round(ratings)
+  // ── CSS injecté une seule fois ──────────────────────────────────────────────
+
+  function injectCSS() {
+    if (document.getElementById('bm-css')) return;
+    const el = document.createElement('style');
+    el.id = 'bm-css';
+    el.textContent = `
+/* ── Wrapper ── */
+#monAnalytics {
+  animation: mgIn .38s cubic-bezier(.4,0,.2,1);
+  margin-bottom: 4px;
+}
+@keyframes mgIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Topbar ── */
+.mg-topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px;
+}
+.mg-topbar-title {
+  font-size: 10px; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: #666;
+  font-family: 'JetBrains Mono', monospace;
+}
+.mg-topbar-sub { font-size: 10px; color: #444; font-family: 'JetBrains Mono', monospace; }
+
+/* ── Section ── */
+.mg-section { margin-bottom: 22px; }
+.mg-sec-title {
+  font-size: 9px; font-weight: 700; letter-spacing: .15em;
+  text-transform: uppercase; color: #555;
+  font-family: 'JetBrains Mono', monospace;
+  padding-bottom: 12px;
+  display: flex; align-items: center; gap: 10px;
+}
+.mg-sec-title::after {
+  content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.05);
+}
+
+/* ── Grille responsive ── */
+.mg-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+@media (max-width: 800px)  { .mg-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
+@media (max-width: 440px)  { .mg-grid { grid-template-columns: repeat(2, 1fr); gap: 8px;  } }
+
+/* ── Carte ── */
+.mg-card {
+  background: #111;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 14px;
+  padding: 14px 10px 10px;
+  display: flex; flex-direction: column; align-items: center;
+  transition: border-color .2s, transform .25s cubic-bezier(.34,1.56,.64,1);
+  cursor: default;
+  position: relative;
+}
+.mg-card:hover {
+  border-color: rgba(255,255,255,.18);
+  transform: translateY(-3px);
+}
+
+/* ── Textes ── */
+.mg-lbl {
+  font-size: 9px; font-weight: 700; letter-spacing: .11em;
+  text-transform: uppercase; color: #555;
+  margin-bottom: 2px; text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1.35;
+}
+.mg-svg  { width: 100%; height: auto; display: block; }
+.mg-val  { font-family: 'Anton', sans-serif; fill: #ffffff; }
+.mg-unit {
+  font-size: 8px; fill: #383838;
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.mg-mm   { font-size: 7px; fill: #272727; font-family: 'JetBrains Mono', monospace; }
+
+/* ── Footer delta + source ── */
+.mg-foot {
+  display: flex; justify-content: space-between; align-items: center;
+  width: 100%; margin-top: 4px; padding: 0 2px; min-height: 16px;
+}
+.mg-dlt  { font-size: 11px; font-weight: 700; min-width: 38px; }
+.mg-src  { font-size: 8px; color: #333; font-family: 'JetBrains Mono', monospace; text-align: right; max-width: 90px; }
+.mg-up   { color: #009739; }
+.mg-dn   { color: #CE1126; }
+
+/* ── Séparateur bas ── */
+.mg-sep  { height: 1px; background: rgba(255,255,255,.05); margin: 24px 0 20px; }
+    `;
+    document.head.appendChild(el);
+  }
+
+  // ── RENDER PRINCIPAL ───────────────────────────────────────────────────────
+
+  function renderMonitoringTab() {
+    const container = document.getElementById('monAnalytics');
+    if (!container) return;
+    injectCSS();
+
+    // ── Lecture des données depuis BANDI (enrichi par initMonitoringTab dans app.js) ──
+    const B    = window.BANDI    || {};
+    const cur  = B.current       || {};
+    const hist = B.historique    || [];
+    const t0   = (B.tudumWeekly  || [])[0] || {};
+
+    // Valeurs live
+    const rang         = cur.rang            || 0;
+    const score        = cur.score           || 0;
+    const paysN1       = cur.paysN1          ?? null;
+    const paysTop10    = cur.paysTop10       ?? null;
+    const completion   = B.completionScore   ?? null;
+    const buzzScore    = B.buzz?.score       ?? null;
+    const ratAvg       = B.ratings?.average  ?? null;
+    const heuresSem    = t0.heures_vues      ?? null;
+    const heuresCumul  = B.heuresVuesCumul   ?? null;
+    const joursTop10   = B.joursEnTop10      ?? null;
+    const semTop10     = t0.semaines_top10   ?? null;
+    const vuesSem      = t0.views_millions   ?? null; // colonne bonus Tudum si disponible
+
+    // Deltas J vs J-1 depuis l'historique
+    const prev   = hist.length >= 2 ? hist[hist.length - 2] : null;
+    const dRang  = prev ? (prev.rang  - rang)                     : null; // positif = amélioré
+    const dScore = prev ? (score - (prev.score  || 0))            : null;
+    const dPN1   = prev && paysN1   != null ? (paysN1   - (prev.paysN1   || 0)) : null;
+    const dPT10  = prev && paysTop10!= null ? (paysTop10 - (prev.paysTop10 || 0)) : null;
+
+    // Pcts pour le remplissage de l'arc (0-100)
+    const pctRang  = rang        ? clamp(Math.round((11 - rang) / 10 * 100), 0, 100) : 0;
+    const pctScore = score       ? clamp(Math.round(score / 1200 * 100),     0, 100) : 0;
+    const pctPN1   = paysN1   != null ? clamp(Math.round(paysN1   / 20 * 100),  0, 100) : 0;
+    const pctPT10  = paysTop10!= null ? clamp(Math.round(paysTop10 / 50 * 100), 0, 100) : 0;
+    const pctComp  = completion!= null ? clamp(Math.round(completion),           0, 100) : 0;
+    const pctBuzz  = buzzScore != null ? clamp(Math.round(buzzScore),            0, 100) : 0;
+    const pctRat   = ratAvg   != null ? clamp(Math.round(ratAvg / 10 * 100),    0, 100) : 0;
+    const pctSem   = semTop10 != null ? clamp(Math.round(semTop10 / 12 * 100),  0, 100) : 0;
+    const pctHsem  = heuresSem  != null ? clamp(Math.round(heuresSem / 30 * 100),   0, 100) : 0;
+    const pctHcum  = heuresCumul!= null ? clamp(Math.round(heuresCumul / 200 * 100),0, 100) : 0;
+    const pctJours = joursTop10 != null ? clamp(Math.round(joursTop10 / 500 * 100), 0, 100) : 0;
+    const pctVues  = vuesSem    != null ? clamp(Math.round(vuesSem / 20 * 100),     0, 100) : 0;
+
+    // ── SECTION 1 : Classement FlixPatrol ─────────────────────────────────
+    const s1 = [
+      {
+        id: 'rang',      label: 'Rang Mondial',
+        display: rang ? `#${rang}` : '—',  unit: 'TV SHOWS · MONDE',
+        pct: pctRang,    color: rankColor(rang),
+        delta: dltHtml(dRang, false),
+        src: 'FlixPatrol',  minL: '#10', maxL: '#1',
+        tooltip: 'Position dans le Top 10 TV Shows Netflix mondial (FlixPatrol)'
       },
-      label: coherenceLabel(score)
-    }
-  }
+      {
+        id: 'score',     label: 'Score Popularité',
+        display: score ? score.toString() : '—',  unit: 'POINTS',
+        pct: pctScore,   color: gradColor(pctScore),
+        delta: dltHtml(dScore, false),
+        src: 'FlixPatrol',  minL: '0', maxL: '1 200',
+        tooltip: 'Score de popularité FlixPatrol (agrégation des classements pays)'
+      },
+      {
+        id: 'pn1',       label: 'Pays N°1',
+        display: paysN1 != null ? paysN1.toString() : '—',  unit: 'PAYS DOMINÉS',
+        pct: pctPN1,     color: (paysN1 || 0) >= 10 ? '#009739' : (paysN1 || 0) >= 5 ? '#D4A017' : '#CE1126',
+        delta: dltHtml(dPN1, false),
+        src: 'FlixPatrol',  minL: '0', maxL: '20',
+        tooltip: 'Nombre de pays où Bandi est classé #1 aujourd\'hui'
+      },
+      {
+        id: 'presence',  label: 'Présence Mondiale',
+        display: paysTop10 != null ? paysTop10.toString() : '—',  unit: 'PAYS TOP 10',
+        pct: pctPT10,    color: (paysTop10 || 0) >= 20 ? '#009739' : (paysTop10 || 0) >= 10 ? '#D4A017' : '#CE1126',
+        delta: dltHtml(dPT10, false),
+        src: 'FlixPatrol',  minL: '0', maxL: '50',
+        tooltip: 'Nombre de pays avec Bandi dans le top 10 aujourd\'hui'
+      }
+    ];
 
-  // ─── 2. CONFIDENCE INDEX ─────────────────────────────
+    // ── SECTION 2 : Qualité & Engagement ──────────────────────────────────
+    const s2 = [
+      {
+        id: 'completion', label: 'Taux Complétion',
+        display: completion != null ? `${completion}%` : '—',  unit: 'SCORE COMBINÉ',
+        pct: pctComp,    color: gradColor(pctComp),
+        delta: '',
+        src: 'IMDb · RT · Buzz',  minL: '0%', maxL: '100%',
+        tooltip: 'Score composite : notes critiques + buzz presse + engagement'
+      },
+      {
+        id: 'buzz',      label: 'Buzz Presse',
+        display: buzzScore != null ? buzzScore.toString() : '—',  unit: 'TENDANCE GOOGLE',
+        pct: pctBuzz,    color: gradColor(pctBuzz),
+        delta: '',
+        src: 'Google Trends',  minL: '0', maxL: '100',
+        tooltip: 'Indice de popularité de recherche Google (0-100 normalisé)'
+      },
+      {
+        id: 'rating',    label: 'Note Critique',
+        display: ratAvg != null ? ratAvg.toFixed(1) : '—',  unit: 'SUR 10',
+        pct: pctRat,     color: gradColor(pctRat),
+        delta: '',
+        src: 'IMDb · Allociné · RT',  minL: '0', maxL: '10',
+        tooltip: 'Moyenne pondérée des 8 sources de notation (IMDb, RT, Allociné, TMDB…)'
+      },
+      {
+        id: 'semaines',  label: 'Semaines Top 10',
+        display: semTop10 ? semTop10.toString() : '—',  unit: 'SEMAINES',
+        pct: pctSem,     color: (semTop10 || 0) >= 6 ? '#009739' : (semTop10 || 0) >= 3 ? '#D4A017' : '#CE1126',
+        delta: '',
+        src: 'Netflix Tudum',  minL: '0', maxL: '12',
+        tooltip: 'Semaines cumulées dans le classement officiel Netflix Tudum'
+      }
+    ];
 
-  BANDI_MONITORING.computeConfidenceIndex = function (consistency) {
-    const sourcesPresent =
-      (consistency.normalized.flixpatrol > 0 ? 1 : 0) +
-      (consistency.normalized.tudum       > 0 ? 1 : 0) +
-      (consistency.normalized.buzz        > 0 ? 1 : 0) +
-      (consistency.normalized.ratings     > 0 ? 1 : 0)
+    // ── SECTION 3 : Visionnage Netflix ────────────────────────────────────
+    const s3 = [];
 
-    const availabilityScore = (sourcesPresent / 4) * 100
-    const confidenceScore   = Math.round(
-      consistency.coherenceScore * 0.7 + availabilityScore * 0.3
-    )
+    s3.push({
+      id: 'hsem',      label: 'Heures / Semaine',
+      display: fmtHeures(heuresSem),  unit: 'HEURES VUES',
+      pct: pctHsem,    color: gradColor(pctHsem),
+      delta: '',
+      src: 'Netflix Tudum',  minL: '0', maxL: '30M',
+      tooltip: 'Heures de visionnage déclarées officiellement par Netflix (semaine courante)'
+    });
 
-    return {
-      confidenceScore,
-      label: confidenceLabel(confidenceScore),
-      sourcesPresent
-    }
-  }
+    s3.push({
+      id: 'htot',      label: 'Heures Totales',
+      display: fmtHeures(heuresCumul),  unit: 'HEURES CUMULÉES',
+      pct: pctHcum,    color: gradColor(pctHcum),
+      delta: '',
+      src: 'Netflix Tudum',  minL: '0', maxL: '200M',
+      tooltip: 'Cumul total de toutes les heures de visionnage depuis la sortie'
+    });
 
-  // ─── 3. CONSISTENCY TIMELINE ─────────────────────────
+    s3.push({
+      id: 'jours',     label: 'Jours en Top 10',
+      display: joursTop10 ? joursTop10.toLocaleString('fr') : '—',  unit: 'PAYS × JOURS',
+      pct: pctJours,   color: gradColor(pctJours),
+      delta: '',
+      src: 'FlixPatrol',  minL: '0', maxL: '500',
+      tooltip: 'Total des présences quotidiennes dans les top 10 nationaux (pays × jours)'
+    });
 
-  BANDI_MONITORING.computeConsistencyTimeline = function (history) {
-    if (!history || history.length < 2) return []
-
-    return history.slice(-14).map((snap, i, arr) => {
-      const prev  = i > 0 ? arr[i - 1] : null
-      const delta = prev ? Math.abs((prev.rang_moyen || 0) - (snap.rang_moyen || 0)) : 0
-      const coherence = Math.max(0, Math.min(100, Math.round(100 - delta * 10)))
-
-      return {
-        date: snap.date || `J-${arr.length - i}`,
-        coherence
-      }
-    })
-  }
-
-  // ─── STYLE (injecté une seule fois) ──────────────────
-
-  function injectMonitoringStyles() {
-    if (document.getElementById("bandi-monitoring-styles")) return
-
-    const style = document.createElement("style")
-    style.id = "bandi-monitoring-styles"
-    style.textContent = `
-      #monAnalytics {
-        padding-bottom: 4px;
-        animation: fadeInMon 0.35s ease;
-      }
-      @keyframes fadeInMon {
-        from { opacity: 0; transform: translateY(8px); }
-        to   { opacity: 1; transform: translateY(0); }
-      }
-
-      /* Section header */
-      .mon-section-title {
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: #888;
-        margin: 28px 0 12px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .mon-section-title::after {
-        content: '';
-        flex: 1;
-        height: 1px;
-        background: rgba(255,255,255,0.07);
-      }
-      .mon-section-title:first-child { margin-top: 0; }
-
-      /* KPI row */
-      .mon-kpi-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-        margin-bottom: 16px;
-      }
-      @media (max-width: 600px) {
-        .mon-kpi-row { grid-template-columns: 1fr; }
-      }
-
-      /* KPI card */
-      .mon-kpi-card {
-        background: rgba(255,255,255,0.04);
-        border: 1px solid rgba(255,255,255,0.07);
-        border-radius: 10px;
-        padding: 20px;
-        position: relative;
-      }
-      .mon-kpi-card .mon-kpi-label {
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        color: #888;
-        margin-bottom: 6px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-      .mon-kpi-card .mon-kpi-score {
-        font-size: 42px;
-        font-weight: 800;
-        line-height: 1;
-        margin-bottom: 4px;
-        font-family: 'Anton', sans-serif;
-      }
-      .mon-kpi-card .mon-kpi-sublabel {
-        font-size: 12px;
-        color: #aaa;
-        margin-bottom: 10px;
-      }
-      .mon-kpi-card .mon-tooltip-pill {
-        display: inline-block;
-        background: rgba(255,255,255,0.06);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 20px;
-        padding: 3px 10px;
-        font-size: 10px;
-        color: #999;
-        line-height: 1.5;
-      }
-
-      /* Source bars */
-      .mon-source-bars {
-        margin-top: 14px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-      .mon-bar-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 11px;
-      }
-      .mon-bar-name {
-        width: 78px;
-        color: #bbb;
-        flex-shrink: 0;
-        font-size: 11px;
-      }
-      .mon-bar-track {
-        flex: 1;
-        height: 5px;
-        background: rgba(255,255,255,0.08);
-        border-radius: 3px;
-        overflow: hidden;
-      }
-      .mon-bar-fill {
-        height: 100%;
-        border-radius: 3px;
-        transition: width 0.8s cubic-bezier(.4,0,.2,1);
-      }
-      .mon-bar-val {
-        width: 30px;
-        text-align: right;
-        color: #888;
-        font-size: 10px;
-      }
-
-      /* Source dominance card */
-      .mon-dominance-card {
-        background: rgba(255,255,255,0.04);
-        border: 1px solid rgba(255,255,255,0.07);
-        border-radius: 10px;
-        padding: 18px 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-      .mon-dominance-row {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-size: 13px;
-      }
-      .mon-badge {
-        font-size: 9px;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        padding: 2px 7px;
-        border-radius: 4px;
-        flex-shrink: 0;
-      }
-      .mon-badge.primary   { background: rgba(206,17,38,0.25); color: #CE1126; border: 1px solid rgba(206,17,38,0.4); }
-      .mon-badge.secondary { background: rgba(255,255,255,0.07); color: #aaa; border: 1px solid rgba(255,255,255,0.12); }
-      .mon-source-note {
-        font-size: 11px;
-        color: #777;
-        line-height: 1.6;
-        margin-top: 4px;
-        padding-top: 10px;
-        border-top: 1px solid rgba(255,255,255,0.06);
-      }
-
-      /* Chart zone */
-      .mon-chart-card {
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.07);
-        border-radius: 10px;
-        padding: 20px;
-      }
-      .mon-chart-card canvas { max-height: 160px; }
-      .mon-chart-note {
-        font-size: 10px;
-        color: #666;
-        margin-top: 10px;
-        text-align: center;
-      }
-
-      /* Variance badge */
-      .mon-variance-info {
-        font-size: 10px;
-        color: #777;
-        margin-top: 6px;
-      }
-    `
-    document.head.appendChild(style)
-  }
-
-  // ─── 4. RENDER ────────────────────────────────────────
-
-  BANDI_MONITORING.renderMonitoringTab = function () {
-    // ⚠️ Rendu dans #monAnalytics (sous-div du panel-monitoring)
-    const container = document.getElementById("monAnalytics")
-    if (!container) return
-
-    injectMonitoringStyles()
-
-    // Lecture des données depuis window.BANDI (read-only)
-    // Les champs buzz, ratings, history et score_monde sont préparés
-    // par initMonitoringTab() dans app.js avant cet appel.
-    const data = {
-      flixpatrolScore: (window.BANDI && window.BANDI.current && window.BANDI.current.score_monde)                      || 0,
-      tudumHours:      (window.BANDI && window.BANDI.tudumWeekly && window.BANDI.tudumWeekly[0] && window.BANDI.tudumWeekly[0].heures_vues) || 0,
-      buzzScore:       (window.BANDI && window.BANDI.buzz && window.BANDI.buzz.score)                                  || 0,
-      ratingsScore:    (window.BANDI && window.BANDI.ratings && window.BANDI.ratings.average)                          || 0
+    // Colonne "vues" Netflix si disponible (depuis le TSV Tudum)
+    if (vuesSem != null) {
+      s3.push({
+        id: 'vues',    label: 'Vues / Semaine',
+        display: fmtHeures(vuesSem),  unit: 'M FOYERS',
+        pct: pctVues,  color: gradColor(pctVues),
+        delta: '',
+        src: 'Netflix Tudum',  minL: '0', maxL: '20M',
+        tooltip: 'Nombre de foyers ayant regardé Bandi dans la semaine (données officielles Netflix)'
+      });
+    } else {
+      // Placeholder si vues non disponibles encore — jauge grisée
+      s3.push({
+        id: 'vues',    label: 'Vues / Semaine',
+        display: '—',  unit: 'M FOYERS',
+        pct: 0,        color: '#2a2a2a',
+        delta: '',
+        src: 'Netflix Tudum',  minL: '0', maxL: '20M',
+        tooltip: 'Données vues en attente — Netflix publie cette donnée sporadiquement'
+      });
     }
 
-    const history = (window.BANDI && window.BANDI.history) || []
-
-    const consistency = BANDI_MONITORING.computeConsistencyEngine(data)
-    const confidence  = BANDI_MONITORING.computeConfidenceIndex(consistency)
-    const timeline    = BANDI_MONITORING.computeConsistencyTimeline(history)
-
-    const scoreColor = confidenceColor(consistency.coherenceScore)
-    const confColor  = confidenceColor(confidence.confidenceScore)
-
-    const sourceConfig = [
-      { key: "flixpatrol", label: "FlixPatrol", color: "#CE1126" },
-      { key: "tudum",      label: "Tudum",      color: "#e87c1e" },
-      { key: "buzz",       label: "Buzz",        color: "#3498db" },
-      { key: "ratings",    label: "Critiques",   color: "#9b59b6" }
-    ]
-
-    const barsHTML = sourceConfig.map(src => {
-      const val = consistency.normalized[src.key]
-      return `
-        <div class="mon-bar-row">
-          <span class="mon-bar-name">${src.label}</span>
-          <div class="mon-bar-track">
-            <div class="mon-bar-fill" style="width:${val}%; background:${src.color};"></div>
-          </div>
-          <span class="mon-bar-val">${val}%</span>
-        </div>`
-    }).join("")
-
-    // Rang live pour la section source dominance
-    const rangLive = (window.BANDI && window.BANDI.current && window.BANDI.current.rang) || '—'
+    // ── Render HTML ───────────────────────────────────────────────────────
+    const allGauges = [...s1, ...s2, ...s3];
 
     container.innerHTML = `
-
-      <!-- SECTION 1 : COHÉRENCE -->
-      <p class="mon-section-title">Cohérence des sources</p>
-      <div class="mon-kpi-row">
-
-        <div class="mon-kpi-card">
-          <div class="mon-kpi-label">Score de cohérence</div>
-          <div class="mon-kpi-score" style="color:${scoreColor}">${consistency.coherenceScore}%</div>
-          <div class="mon-kpi-sublabel">${consistency.label}</div>
-          <div class="mon-variance-info">Variance inter-sources : ${consistency.variance}</div>
-          <span class="mon-tooltip-pill">Mesure si toutes les sources racontent la même tendance</span>
-          <div class="mon-source-bars">${barsHTML}</div>
-        </div>
-
-        <!-- SECTION 2 : CONFIANCE -->
-        <div class="mon-kpi-card">
-          <div class="mon-kpi-label">Indice de confiance</div>
-          <div class="mon-kpi-score" style="color:${confColor}">${confidence.confidenceScore}%</div>
-          <div class="mon-kpi-sublabel">${confidence.label}</div>
-          <div class="mon-variance-info">${confidence.sourcesPresent}/4 sources actives</div>
-          <span class="mon-tooltip-pill">Indique la fiabilité globale des données affichées</span>
-          <div class="mon-source-bars">
-            <div class="mon-bar-row">
-              <span class="mon-bar-name">Cohérence</span>
-              <div class="mon-bar-track">
-                <div class="mon-bar-fill" style="width:${consistency.coherenceScore}%; background:#CE1126;"></div>
-              </div>
-              <span class="mon-bar-val">${consistency.coherenceScore}%</span>
-            </div>
-            <div class="mon-bar-row">
-              <span class="mon-bar-name">Couverture</span>
-              <div class="mon-bar-track">
-                <div class="mon-bar-fill" style="width:${Math.round((confidence.sourcesPresent / 4) * 100)}%; background:#3498db;"></div>
-              </div>
-              <span class="mon-bar-val">${Math.round((confidence.sourcesPresent / 4) * 100)}%</span>
-            </div>
-          </div>
-        </div>
-
+      <div class="mg-topbar">
+        <span class="mg-topbar-title">Performance en temps réel</span>
+        <span class="mg-topbar-sub">↻ mise à jour automatique · 6h</span>
       </div>
+      ${section('Classement FlixPatrol', s1)}
+      ${section('Qualité &amp; Engagement', s2)}
+      ${section('Visionnage Netflix', s3)}
+      <div class="mg-sep"></div>
+    `;
 
-      <!-- SECTION 3 : TIMELINE -->
-      <p class="mon-section-title">Timeline de cohérence</p>
-      <div class="mon-chart-card">
-        ${timeline.length < 2
-          ? `<p style="color:#666;font-size:12px;text-align:center;padding:20px 0;">Historique insuffisant — au moins 2 snapshots requis.</p>`
-          : `<canvas id="monConsistencyChart"></canvas>`
-        }
-        <div class="mon-chart-note">Évolution de l'alignement des données dans le temps (14 derniers jours)</div>
-      </div>
-
-      <!-- SECTION 4 : SOURCE DOMINANCE -->
-      <p class="mon-section-title">Hiérarchie des sources</p>
-      <div class="mon-dominance-card">
-        <div class="mon-dominance-row">
-          <span class="mon-badge primary">Principale</span>
-          <span>FlixPatrol — Top TV Shows mondial</span>
-        </div>
-        <div class="mon-dominance-row">
-          <span class="mon-badge secondary">Secondaire</span>
-          <span>Netflix Tudum — Heures de visionnage officielles</span>
-        </div>
-        <div class="mon-source-note">
-          Classement basé sur FlixPatrol (Top TV Shows mondial). Position actuelle : <strong style="color:#fff">#${rangLive}</strong>.<br>
-          Les autres sources (Buzz, Critiques) alimentent le Taux de complétion — elles ne modifient pas le rang affiché.
-        </div>
-      </div>
-    `
-
-    // Chart.js — lazy, uniquement si timeline dispo
-    if (timeline.length >= 2) {
-      setTimeout(() => {
-        const ctx = document.getElementById("monConsistencyChart")
-        if (!ctx || typeof Chart === "undefined") return
-
-        if (ctx._chartInstance) ctx._chartInstance.destroy()
-
-        ctx._chartInstance = new Chart(ctx, {
-          type: "line",
-          data: {
-            labels: timeline.map(t => t.date),
-            datasets: [{
-              label: "Cohérence",
-              data: timeline.map(t => t.coherence),
-              borderColor: "#CE1126",
-              backgroundColor: "rgba(206,17,38,0.08)",
-              borderWidth: 2,
-              pointRadius: 3,
-              pointBackgroundColor: "#CE1126",
-              tension: 0.35,
-              fill: true
-            }]
-          },
-          options: {
-            responsive: true,
-            scales: {
-              y: {
-                min: 0, max: 100,
-                ticks: { color: "#666", font: { size: 10 }, callback: v => v + "%" },
-                grid: { color: "rgba(255,255,255,0.05)" }
-              },
-              x: {
-                ticks: { color: "#666", font: { size: 10 }, maxRotation: 45 },
-                grid: { display: false }
-              }
-            },
-            plugins: {
-              legend: { display: false },
-              tooltip: { callbacks: { label: c => ` Cohérence : ${c.parsed.y}%` } }
-            }
-          }
-        })
-      }, 120)
-    }
+    // ── Lancer les animations après le prochain paint ─────────────────────
+    requestAnimationFrame(() => {
+      allGauges.forEach(g => {
+        const arc  = document.getElementById(`arc-${g.id}`);
+        const glow = document.getElementById(`glow-${g.id}`);
+        if (arc) animArc(arc, glow, g.pct);
+      });
+    });
   }
 
-  // ─── INIT (appelé depuis app.js) ─────────────────────
+  // ── Export ─────────────────────────────────────────────────────────────────
+  window.BANDI_MONITORING = {
+    renderMonitoringTab,
+    initMonitoringTab: renderMonitoringTab   // alias de compatibilité
+  };
 
-  BANDI_MONITORING.initMonitoringTab = function () {
-    BANDI_MONITORING.renderMonitoringTab()
-  }
-
-  // ─── EXPORT ──────────────────────────────────────────
-
-  window.BANDI_MONITORING = BANDI_MONITORING
-
-  // injectTab() disponible mais non auto-appelée :
-  // la navigation est gérée par app.js / initTabs()
-  BANDI_MONITORING.injectTab = function () { /* géré par app.js */ }
-
-})()
+})();

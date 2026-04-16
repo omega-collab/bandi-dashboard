@@ -106,12 +106,12 @@ async function scrapeBandiPage() {
 
   // Tableau des pays : colonne "country" + colonnes jours + "Yesterday"
   const countries = [];
+  let joursTop10Cumul = 0;   // total country-days en top 10 (cellules non-vides)
+  let rangPeak        = null; // meilleur rang mondial jamais atteint sur la page
+
   $('table').each((_, table) => {
     const headerTexts = $(table).find('thead th, tr:first-child th').map((_, th) => $(th).text().trim().toLowerCase()).get();
     if (!headerTexts.some(h => h.includes('country'))) return;
-
-    const allHeaders = $(table).find('th').map((_, th) => $(th).text().trim()).get();
-    const yesterdayIdx = allHeaders.findIndex(h => h.toLowerCase().includes('yesterday'));
 
     $(table).find('tbody tr, tr').each((_, row) => {
       const cells = $(row).find('td').map((_, c) => $(c).text().trim()).get();
@@ -131,10 +131,20 @@ async function scrapeBandiPage() {
           region: REGIONS[pays] || 'Autre'
         });
       }
+
+      // Compter TOUTES les cellules non-vides (j-n à hier) = jours en top 10
+      for (let i = 1; i < cells.length; i++) {
+        const r = parseInt(cells[i].replace(/\D/g, ''), 10);
+        if (!isNaN(r) && r >= 1 && r <= 10) joursTop10Cumul++;
+      }
     });
   });
 
-  return { scoreMonde, rangMonde, countries };
+  // Rang peak depuis les snapshots précédents n'est pas disponible ici
+  // On stocke le rang du jour comme candidat minimum (le vrai peak est dans la DB)
+  rangPeak = rangMonde;
+
+  return { scoreMonde, rangMonde, countries, joursTop10Cumul, rangPeak };
 }
 
 // Titres caractéristiques de FILMS (guard anti-régression)
@@ -228,7 +238,7 @@ async function main() {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   try {
-    const { scoreMonde, rangMonde, countries } = await scrapeBandiPage();
+    const { scoreMonde, rangMonde, countries, joursTop10Cumul, rangPeak } = await scrapeBandiPage();
     const top10 = await scrapeWorldTop10();
 
     const today = new Date().toISOString().slice(0, 10);
@@ -242,18 +252,24 @@ async function main() {
     console.log(`🥇 Pays #1      : ${paysN1}`);
     console.log(`🌍 Top 10 pays  : ${countries.length}`);
     console.log(`📈 Rang moyen   : ${rangMoyen}`);
+    console.log(`📅 Jours top 10 : ${joursTop10Cumul} (pays×jours sur la page)`);
     console.log(`📺 Concurrents  : ${top10.length} séries`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    // Insert snapshot
-    const { error: e1 } = await supabase.from('bandi_snapshots').upsert({
+    // Insert snapshot (avec nouvelles colonnes jours_top10_cumul et rang_peak)
+    const snapshotRow = {
       date: today,
       score_monde: scoreMonde,
       rang_monde: rangMonde,
       pays_n1: paysN1,
       pays_top10: countries.length,
       rang_moyen: rangMoyen
-    }, { onConflict: 'date' });
+    };
+    // Ajouter les nouvelles colonnes seulement si elles existent en DB
+    if (joursTop10Cumul > 0) snapshotRow.jours_top10_cumul = joursTop10Cumul;
+    if (rangPeak)            snapshotRow.rang_peak          = rangPeak;
+
+    const { error: e1 } = await supabase.from('bandi_snapshots').upsert(snapshotRow, { onConflict: 'date' });
     if (e1) throw new Error(`Insert snapshot : ${e1.message}`);
     console.log('✅ Snapshot inséré');
 

@@ -200,6 +200,37 @@ async function loadLiveData() {
       }
     } catch (_) { /* table absente, pas critique */ }
 
+    // 10. Total country-days in top 10 (agrégat monitoring) — COUNT(*) sur bandi_country_rankings
+    let joursEnTop10 = 0;
+    try {
+      const cntRes = await fetch(
+        `${cfg.url}/rest/v1/bandi_country_rankings?select=id`,
+        { headers: { ...headers, 'Prefer': 'count=exact', 'Range': '0-0', 'Range-Unit': 'items' } }
+      );
+      if (cntRes.ok) {
+        const range = cntRes.headers.get('content-range'); // "0-0/12345"
+        if (range) joursEnTop10 = parseInt(range.split('/')[1], 10) || 0;
+      }
+      // Fallback : estimer depuis paysHist déjà chargé
+      if (!joursEnTop10 && Array.isArray(paysHist)) joursEnTop10 = paysHist.length;
+    } catch (_) { joursEnTop10 = Array.isArray(paysHist) ? paysHist.length : 0; }
+
+    // 11. Heures de visionnage cumulées Tudum pour Bandi (somme de toutes les semaines)
+    let heuresVuesCumul = null;
+    try {
+      const hcRes = await fetch(
+        `${cfg.url}/rest/v1/tudum_global_weekly?titre=ilike.%25bandi%25&select=heures_vues,views_millions`,
+        { headers }
+      );
+      if (hcRes.ok) {
+        const arr = await hcRes.json();
+        if (Array.isArray(arr) && arr.length > 0) {
+          heuresVuesCumul = arr.reduce((s, r) => s + (parseFloat(r.heures_vues) || 0), 0);
+          heuresVuesCumul = Math.round(heuresVuesCumul * 100) / 100;
+        }
+      }
+    } catch (_) { /* table absente, pas critique */ }
+
     // Construction de l'historique par pays (4 derniers jours)
     const historyByCountry = {};
     const datesDesc = [...new Set(paysHist.map(r => r.date))].sort().reverse().slice(0, 4).reverse();
@@ -335,7 +366,10 @@ async function loadLiveData() {
       rtAudience:     latestBySource.rt_audience     || null,
       filmaffinity:   latestBySource.filmaffinity    || null,
       // Wikipedia pageviews
-      wikipediaPageviews: Array.isArray(wikipediaPageviews) ? wikipediaPageviews : []
+      wikipediaPageviews: Array.isArray(wikipediaPageviews) ? wikipediaPageviews : [],
+      // Monitoring — agrégats visionnage
+      joursEnTop10,
+      heuresVuesCumul
     });
 
     // ── Cohérence hero ↔ rivals ──────────────────────────────────────────────
@@ -2420,6 +2454,13 @@ function initMonitoringTab() {
           ? +(norms.reduce((s, v) => s + v, 0) / norms.length).toFixed(1)
           : 0
       };
+    }
+    // completion score (score interne multi-sources)
+    if (BANDI.completionScore == null) {
+      try {
+        const cs = computeCompletionScore();
+        BANDI.completionScore = (cs && cs.score != null) ? cs.score : null;
+      } catch (_) { BANDI.completionScore = null; }
     }
   } catch (e) {
     console.warn('[monitoring] adaptateur données:', e);
