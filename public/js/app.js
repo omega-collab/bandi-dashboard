@@ -344,13 +344,31 @@ async function loadLiveData() {
       snapshots30: snapshots,
       countryPerf,
       martiniqueRanks,
-      rivals: top10Data.length > 0
-        ? top10Data.map(t => ({
-            titre: t.titre,
-            score: t.score,
-            isBandi: t.titre.toLowerCase().includes('bandi')
-          }))
-        : BANDI.rivals,
+      rivals: (() => {
+        // ── Source de vérité unique : bandi_snapshots.score_monde ──────────────
+        // netflix_tv_top10_world peut être d'un scrape antérieur → score décalé.
+        // On part de la liste DB, on injecte le score live de Bandi (snapshot),
+        // on re-trie par score DESC pour que la position reflète le classement réel.
+        const base = top10Data.length > 0
+          ? top10Data.map(t => ({
+              titre: t.titre,
+              score: t.score,
+              isBandi: t.titre.toLowerCase().includes('bandi')
+            }))
+          : BANDI.rivals.map(r => ({ ...r }));
+
+        if (current.score_monde) {
+          const bIdx = base.findIndex(r => r.isBandi);
+          if (bIdx !== -1) {
+            base[bIdx].score = current.score_monde; // score live
+          } else {
+            // Bandi absent de la DB top10 (scrape manqué) → on l'injecte
+            base.push({ titre: 'Bandi', score: current.score_monde, isBandi: true });
+          }
+          base.sort((a, b) => b.score - a.score); // re-trier par score réel
+        }
+        return base;
+      })(),
       tudumWeekly: Array.isArray(tudumData) ? tudumData : [],
       // Données pour Completion Score estimé
       buzzTrends7d: Array.isArray(buzzTrends7d) ? buzzTrends7d : [],
@@ -372,14 +390,15 @@ async function loadLiveData() {
       heuresVuesCumul
     });
 
-    // ── Cohérence hero ↔ rivals ──────────────────────────────────────────────
-    // Le rang affiché dans le hero doit correspondre exactement à la position de
-    // Bandi dans la liste Concurrence (netflix_tv_top10_world, TV shows uniquement).
-    // rang_monde dans bandi_snapshots = rang global toutes catégories FlixPatrol
-    // → peut diverger du rang TV shows → on écrase avec la position réelle.
+    // ── Hero rang : position réelle dans le Top TV Shows ────────────────────
+    // Rivals a été re-trié par score → l'index de Bandi = son rang TV shows réel.
+    // C'est la valeur qui s'affiche dans le hero (cohérent avec l'onglet Concurrence).
     const bandiRivalsIdx = BANDI.rivals.findIndex(r => r.isBandi);
     if (bandiRivalsIdx !== -1) {
       BANDI.current.rang = bandiRivalsIdx + 1;
+    } else {
+      // Fallback : rang_monde du snapshot (rang global FlixPatrol toutes catégories)
+      BANDI.current.rang = current.rang_monde || BANDI.current.rang;
     }
 
     // Badge sources croisées
@@ -398,41 +417,26 @@ async function loadLiveData() {
 
 async function renderSourcesBadge(cfg, headers) {
   try {
-    const [fpRes, tdRes] = await Promise.all([
-      fetch(`${cfg.url}/rest/v1/bandi_snapshots?order=date.desc&limit=2`, { headers }),
-      fetch(`${cfg.url}/rest/v1/bandi_tudum_weekly?order=week.desc&limit=2`, { headers })
-    ]);
+    // Uniquement FlixPatrol (snapshots) — Tudum manque encore de données live
+    const fpRes = await fetch(`${cfg.url}/rest/v1/bandi_snapshots?order=date.desc&limit=2`, { headers });
     const fp = await fpRes.json();
-    const td = await tdRes.json();
 
     const badge = document.getElementById('sourcesBadge');
-    if (!badge || !fp?.length || !td?.length) return;
+    if (!badge || !fp?.length) return;
 
     const fpRang = fp[0]?.rang_monde;
-    const tdRang = td[0]?.rank_noneng;
     const fpPrev = fp[1]?.rang_monde;
-    const tdPrev = td[1]?.rank_noneng;
+    const fpScore = fp[0]?.score_monde;
+
+    if (!fpRang) return;
 
     const fpInTop10 = fpRang <= 10;
-    const tdInTop10 = tdRang !== null && tdRang <= 10;
-    const fpTrend = fpPrev ? Math.sign(fpPrev - fpRang) : 0;
-    const tdTrend = (tdPrev && tdRang) ? Math.sign(tdPrev - tdRang) : 0;
-    const trendsOpposed = fpTrend !== 0 && tdTrend !== 0 && fpTrend !== tdTrend;
+    const fpTrend   = fpPrev ? Math.sign(fpPrev - fpRang) : 0;
+    const trendArrow = fpTrend > 0 ? ' ↑' : fpTrend < 0 ? ' ↓' : '';
 
-    let status, label, tooltip;
-    if (!tdInTop10 || !fpInTop10) {
-      status = 'divergent';
-      label = '⚠ Divergence';
-      tooltip = `FlixPatrol #${fpRang} mondial · Tudum ${tdRang ? '#' + tdRang + ' TV Non-Eng' : 'absent'}`;
-    } else if (trendsOpposed) {
-      status = 'warning';
-      label = '⚡ Vérifier';
-      tooltip = `Tendances opposées — FlixPatrol ${fpTrend > 0 ? '↑' : '↓'} / Tudum ${tdTrend > 0 ? '↑' : '↓'}`;
-    } else {
-      status = 'coherent';
-      label = '✓ Croisé';
-      tooltip = `FlixPatrol #${fpRang} mondial · Tudum #${tdRang} TV Non-Eng · ${(td[0].weekly_hours_viewed / 1e6).toFixed(1)}M h vues`;
-    }
+    const status = fpInTop10 ? 'coherent' : 'warning';
+    const label  = fpInTop10 ? `✓ #${fpRang}${trendArrow}` : `⚠ #${fpRang}`;
+    const tooltip = `FlixPatrol · Rang #${fpRang} · Score ${fpScore} pts · Mis à jour ${fp[0]?.date || '—'}`;
 
     badge.textContent = label;
     badge.className = `sources-badge ${status}`;
@@ -2659,20 +2663,19 @@ async function loadMonFreshness() {
 
   const grid = document.getElementById('monGrid');
   if (!grid) return;
+  // Rendu compact : une ligne par source, pas de grande carte
   grid.innerHTML = CARDS.map(c => {
     const { label: age, hours } = monTimeAgo(c.date);
     const cls = monFreshCls(hours, c.weekly);
+    const dotCls = cls === 'mon-ok' ? '#009739' : cls === 'mon-warn' ? '#D4A017' : '#555';
     return `
-      <div class="mon-card">
-        <div class="mon-card-head">
-          <span class="mon-card-icon">${c.icon}</span>
-          <div class="mon-card-dot ${cls}"></div>
-        </div>
-        <div class="mon-card-label">${c.label}</div>
-        <div class="mon-card-sub">${c.sub}</div>
-        <div class="mon-card-date">${monFmtDate(c.date)}</div>
-        <div class="mon-card-age ${cls}">${age}</div>
-        <div class="mon-card-detail">${c.detail}</div>
+      <div class="mon-fresh-row">
+        <span class="mon-fresh-icon">${c.icon}</span>
+        <span class="mon-fresh-label">${c.label}</span>
+        <span class="mon-fresh-sub">${c.sub}</span>
+        <span class="mon-fresh-detail">${c.detail}</span>
+        <span class="mon-fresh-age" style="color:${dotCls}">${age}</span>
+        <span class="mon-fresh-dot" style="background:${dotCls}"></span>
       </div>`;
   }).join('');
 }
@@ -2696,17 +2699,20 @@ function renderMonRatings() {
 
   const rows = SOURCES.map(src => {
     const r = R[src.key];
-    const has = r?.note != null;
-    const pct = has ? Math.round((r.note / src.max) * 100) : 0;
+    // La table external_ratings utilise la colonne "rating" (pas "note")
+    const val = r?.rating ?? r?.note ?? null;
+    const has = val != null;
+    const pct = has ? Math.round((val / src.max) * 100) : 0;
     const { label: age, hours } = monTimeAgo(r?.date);
     const cls = has ? monFreshCls(hours) : 'mon-stale';
-    const votes = r?.votes   ? `${r.votes.toLocaleString('fr-FR')} votes`
-                : r?.reviews ? `${r.reviews} critiques` : '';
+    const votes = r?.votes          ? `${Number(r.votes).toLocaleString('fr-FR')} votes`
+                : r?.reviews_count  ? `${r.reviews_count} critiques`
+                : r?.reviews        ? `${r.reviews} critiques` : '';
     return `
       <div class="mon-rating-row">
         <div class="mon-rating-dot ${cls}"></div>
         <span class="mon-rating-name">${src.label}</span>
-        <span class="mon-rating-val ${has ? '' : 'mon-no-data'}">${has ? r.note + src.unit : '—'}</span>
+        <span class="mon-rating-val ${has ? '' : 'mon-no-data'}">${has ? val + src.unit : '—'}</span>
         <div class="mon-rating-bar-wrap">
           <div class="mon-rating-bar" style="width:${pct}%;background:${src.color}33;border-right:2px solid ${src.color}99;"></div>
         </div>

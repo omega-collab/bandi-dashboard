@@ -2517,6 +2517,42 @@ button, .tab, .bnav-item, .region-btn, .country-row, .kpi-card, .highlight, .buz
   .mon-scraper-freq { display: none; }
 }
 
+/* ── Freshness compact rows ─────────────────────────────────────────── */
+.mon-fresh-panel .panel-head { padding-bottom: 12px; }
+.mon-fresh-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.mon-fresh-row {
+  display: grid;
+  grid-template-columns: 26px 1fr 1.4fr 2fr 90px 10px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 12px;
+}
+.mon-fresh-row:last-child { border-bottom: none; }
+.mon-fresh-icon  { font-size: 15px; text-align: center; }
+.mon-fresh-label { font-weight: 600; color: var(--text); white-space: nowrap; }
+.mon-fresh-sub   { color: var(--text-sub); font-size: 11px; }
+.mon-fresh-detail{ color: var(--muted); font-size: 11px; font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mon-fresh-age   { font-family: var(--font-mono); font-size: 11px; font-weight: 700; text-align: right; }
+.mon-fresh-dot   { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+/* Skeleton loader compact */
+.mon-skel-row span {
+  display: block; height: 12px; border-radius: 4px;
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: skelShimmer 1.4s infinite;
+}
+@keyframes skelShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@media (max-width: 700px) {
+  .mon-fresh-row { grid-template-columns: 26px 1fr 80px 8px; gap: 8px; }
+  .mon-fresh-sub, .mon-fresh-detail { display: none; }
+}
+
 /* Utilitaires */
 .mon-empty         { color: var(--dim); font-size: 13px; padding: 16px 0; }
 .mon-loading-inline { color: var(--muted); font-size: 13px; padding: 12px 0; }

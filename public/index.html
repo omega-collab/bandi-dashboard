@@ -362,10 +362,7 @@
   <!-- ============ TAB: MONITORING ============ -->
   <section class="tab-panel" id="panel-monitoring">
 
-    <!-- Module analytique : cohérence, confiance, timeline 14j -->
-    <div id="monAnalytics"></div>
-
-    <!-- Bannière connexion -->
+    <!-- ── Barre état + rafraîchir ────────────────────────────────── -->
     <div class="mon-connection" id="monConnection">
       <div class="mon-conn-dot mon-warn" id="monConnDot"></div>
       <span class="mon-conn-label" id="monConnLabel">Vérification…</span>
@@ -375,32 +372,35 @@
       </button>
     </div>
 
-    <!-- Fraîcheur des données -->
-    <div class="panel">
-      <div class="panel-head">
-        <h2>Fraîcheur des données</h2>
-        <span class="panel-sub">8 tables · mise à jour automatique</span>
-      </div>
-      <div class="mon-grid" id="monGrid">
-        <div class="mon-skeleton"></div><div class="mon-skeleton"></div>
-        <div class="mon-skeleton"></div><div class="mon-skeleton"></div>
-        <div class="mon-skeleton"></div><div class="mon-skeleton"></div>
-        <div class="mon-skeleton"></div><div class="mon-skeleton"></div>
-      </div>
-    </div>
+    <!-- ── Jauges performance (speedometers) ──────────────────────── -->
+    <div id="monAnalytics"></div>
 
-    <!-- Notes & avis -->
+    <!-- ── Notes & avis (données DB external_ratings) ─────────────── -->
     <div class="panel">
       <div class="panel-head">
         <h2>Notes &amp; avis du public</h2>
-        <span class="panel-sub">8 sources · scraping toutes les 6h</span>
+        <span class="panel-sub">8 sources · mise à jour toutes les 6h</span>
       </div>
       <div class="mon-ratings" id="monRatings">
         <p class="mon-loading-inline">Chargement…</p>
       </div>
     </div>
 
-    <!-- Scrapers GitHub Actions -->
+    <!-- ── Fraîcheur des données (compact) ───────────────────────── -->
+    <div class="panel mon-fresh-panel">
+      <div class="panel-head">
+        <h2>Fraîcheur des données</h2>
+        <span class="panel-sub">8 tables · scraping automatique</span>
+      </div>
+      <div class="mon-fresh-list" id="monGrid">
+        <!-- Rempli dynamiquement par loadMonFreshness() -->
+        <div class="mon-fresh-row mon-skel-row"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="mon-fresh-row mon-skel-row"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="mon-fresh-row mon-skel-row"><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- ── Scrapers GitHub Actions ────────────────────────────────── -->
     <div class="panel">
       <div class="panel-head">
         <h2>Scrapers</h2>
