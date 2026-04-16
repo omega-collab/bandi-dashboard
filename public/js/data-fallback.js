@@ -31,13 +31,14 @@ const BANDI = {
     "Cédric Camille"
   ],
 
-  // Score / rang actuel (16/04/2026)
+  // Score / rang actuel (16/04/2026) — source FlixPatrol
   current: {
-    score: 471,
-    rang: 2,
+    score: 539,
+    rang: 1,
     paysN1: 27,
     paysTop10: 57,
-    rangMoyen: 2.7
+    rangMoyen: 2.7,
+    date: '2026-04-16'
   },
 
   // Jour précédent pour calculer les deltas
@@ -59,7 +60,7 @@ const BANDI = {
     { jour: "13/04", label: "J+4",     score: 348,  rang: 6,    paysN1: 13, paysTop10: 37, rangMoyen: 4.8 },
     { jour: "14/04", label: "J+5",     score: 391,  rang: 5,    paysN1: 15, paysTop10: 39, rangMoyen: 3.5 },
     { jour: "15/04", label: "J+6",     score: 471,  rang: 2,    paysN1: 27, paysTop10: 57, rangMoyen: 2.7 },
-    { jour: "16/04", label: "J+7",     score: 471,  rang: 2,    paysN1: 27, paysTop10: 57, rangMoyen: 2.7 }
+    { jour: "16/04", label: "J+7",     score: 539,  rang: 1,    paysN1: 27, paysTop10: 57, rangMoyen: 2.7 }
   ],
 
   // Détail par pays (13/04/2026)
@@ -107,10 +108,10 @@ const BANDI = {
     { pays: "États-Unis",        code: "US", flag: "🇺🇸", region: "Amérique du Nord",   rang: 8,  entree: "12/04", historique: [null, null, 10, 8],  trend: "up" }
   ],
 
-  // Top TV Shows Netflix Monde au 16/04
+  // Top TV Shows Netflix Monde au 16/04 — source FlixPatrol
   rivals: [
-    { titre: "Trust Me: The False Prophet", score: 539, isBandi: false },
-    { titre: "Bandi",                        score: 471, isBandi: true  },
+    { titre: "Bandi",                        score: 539, isBandi: true  },
+    { titre: "Trust Me: The False Prophet",  score: 498, isBandi: false },
     { titre: "Salish & Jordan Matter",       score: 458, isBandi: false },
     { titre: "Bloodhounds",                  score: 445, isBandi: false },
     { titre: "The Cleaning Lady",            score: 386, isBandi: false },

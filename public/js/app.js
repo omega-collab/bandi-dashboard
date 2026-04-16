@@ -347,10 +347,10 @@ async function loadLiveData() {
       countryPerf,
       martiniqueRanks,
       rivals: (() => {
-        // ── Source de vérité unique : bandi_snapshots.score_monde ──────────────
-        // netflix_tv_top10_world peut être d'un scrape antérieur → score décalé.
-        // On part de la liste DB, on injecte le score live de Bandi (snapshot),
-        // on re-trie par score DESC pour que la position reflète le classement réel.
+        // ── Source de vérité : FlixPatrol ── netflix_tv_top10_world.rang ──
+        // On préserve l'ordre natif DB (ORDER BY rang ASC dans la requête).
+        // On met juste à jour le score live de Bandi depuis le snapshot (plus frais).
+        // On ne re-trie PAS : FlixPatrol fait autorité sur la position.
         const base = top10Data.length > 0
           ? top10Data.map(t => ({
               titre: t.titre,
@@ -362,12 +362,12 @@ async function loadLiveData() {
         if (current.score_monde) {
           const bIdx = base.findIndex(r => r.isBandi);
           if (bIdx !== -1) {
-            base[bIdx].score = current.score_monde; // score live
-          } else {
-            // Bandi absent de la DB top10 (scrape manqué) → on l'injecte
-            base.push({ titre: 'Bandi', score: current.score_monde, isBandi: true });
+            base[bIdx].score = current.score_monde; // score live, position préservée
+          } else if (current.rang_monde) {
+            // Bandi absent du top10 DB (scrape partiel) → injection à son rang FlixPatrol
+            const insertAt = Math.max(0, Math.min(current.rang_monde - 1, base.length));
+            base.splice(insertAt, 0, { titre: 'Bandi', score: current.score_monde, isBandi: true });
           }
-          base.sort((a, b) => b.score - a.score); // re-trier par score réel
         }
         return base;
       })(),
@@ -392,16 +392,19 @@ async function loadLiveData() {
       heuresVuesCumul
     });
 
-    // ── Hero rang : position réelle dans le Top TV Shows ────────────────────
-    // Rivals a été re-trié par score → l'index de Bandi = son rang TV shows réel.
-    // C'est la valeur qui s'affiche dans le hero (cohérent avec l'onglet Concurrence).
-    const bandiRivalsIdx = BANDI.rivals.findIndex(r => r.isBandi);
-    if (bandiRivalsIdx !== -1) {
-      BANDI.current.rang = bandiRivalsIdx + 1;
+    // ── Hero rang : autorité = FlixPatrol (snapshot.rang_monde) ──────────────
+    // Source unique et fiable. On ne recalcule plus depuis un tri : le rang
+    // affiché = le rang officiel FlixPatrol stocké par le scraper.
+    if (current.rang_monde) {
+      BANDI.current.rang = current.rang_monde;
     } else {
-      // Fallback : rang_monde du snapshot (rang global FlixPatrol toutes catégories)
-      BANDI.current.rang = current.rang_monde || BANDI.current.rang;
+      // Fallback : position de Bandi dans la liste rivals
+      const bIdx = BANDI.rivals.findIndex(r => r.isBandi);
+      if (bIdx !== -1) BANDI.current.rang = bIdx + 1;
+      console.warn('[BANDI] rang_monde absent du snapshot — fallback position rivals');
     }
+    // Exposer la date du snapshot pour l'affichage dynamique (footer, hero)
+    BANDI.current.date = today;
 
     // Badge sources croisées
     await renderSourcesBadge(cfg, headers);
@@ -589,7 +592,7 @@ function renderOverview() {
   const prev = BANDI.previous;
 
   const rankEl = $("rankNumber");
-  rankEl.textContent = "#" + cur.rang;
+  rankEl.textContent = (cur.rang != null && cur.rang > 0) ? `#${cur.rang}` : "#—";
   // Applique la classe de couleur selon la valeur du rang
   rankEl.classList.remove('rank-green', 'rank-orange', 'rank-red');
   rankEl.classList.add(getRankColor(cur.rang));
@@ -641,11 +644,18 @@ function renderOverview() {
   }
 
   $("tabCountCountries").textContent = BANDI.pays.length;
-  // ── Mise à jour date footer (dynamique)
-  const luEl = $("lastUpdate");
-  if (luEl && BANDI.current?.date) {
-    const [y, m, d] = BANDI.current.date.split('-');
-    luEl.textContent = `${d}/${m}/${y}`;
+  // ── Dates dynamiques (footer + hero) ───────────────────────────────
+  const fmtDate = (iso) => {
+    if (!iso) return null;
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  };
+  const dateFR = fmtDate(BANDI.current?.date);
+  if (dateFR) {
+    const luEl = $("lastUpdate");
+    if (luEl) luEl.textContent = dateFR;
+    const heroU = $("heroUpdate");
+    if (heroU) heroU.textContent = dateFR;
   }
 }
 
@@ -870,9 +880,11 @@ function renderRivals() {
       const prevR = bandiIdx > 0 ? BANDI.rivals[bandiIdx - 1] : null;
       const nextR = BANDI.rivals[bandiIdx + 1] || null;
       const bScore = BANDI.rivals[bandiIdx].score;
-      let txt = `Bandi se classe <strong>#${bandiRankNum} mondial</strong>`;
+      let txt = bandiRankNum === 1
+        ? `Bandi est <strong>#1 mondial</strong>`
+        : `Bandi se classe <strong>#${bandiRankNum} mondial</strong>`;
       if (prevR) txt += `, à <strong>${Math.abs(bScore - prevR.score)} pts</strong> de ${prevR.titre} (#${bandiIdx})`;
-      if (nextR) txt += ` et <strong>${Math.abs(bScore - nextR.score)} pts</strong> devant ${nextR.titre} (#${bandiIdx + 2})`;
+      if (nextR) txt += ` ${prevR ? 'et' : ','} <strong>${Math.abs(bScore - nextR.score)} pts</strong> devant ${nextR.titre} (#${bandiIdx + 2})`;
       const scoreDiff = (BANDI.current?.score ?? 0) - (BANDI.previous?.score ?? 0);
       if (scoreDiff !== 0 && (BANDI.previous?.score ?? 0) > 0) {
         const pct = Math.round((scoreDiff / BANDI.previous.score) * 100);

@@ -428,6 +428,36 @@ body::before {
 .hero-sub strong { color: var(--text); font-weight: 700; }
 .text-vert { color: var(--vert); font-weight: 600; }
 
+.hero-source {
+  margin-top: 10px;
+  color: var(--text-sub);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+  font-family: var(--font-mono);
+}
+.hero-source a {
+  color: var(--gold);
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(228, 184, 77, 0.4);
+}
+.hero-source a:hover { opacity: 0.85; }
+
+.rivals-source {
+  margin-top: 14px;
+  color: var(--text-sub);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+  font-family: var(--font-mono);
+  text-align: right;
+}
+.rivals-source a {
+  color: var(--gold);
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(228, 184, 77, 0.4);
+}
+
 /* ============ 7. KPI GRID ============ */
 .kpi-grid {
   display: grid;
