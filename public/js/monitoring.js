@@ -220,28 +220,44 @@
     const B    = window.BANDI    || {};
     const cur  = B.current       || {};
     const hist = B.historique    || [];
-    const t0   = (B.tudumWeekly  || [])[0] || {};
 
-    // Valeurs live
-    const rang         = cur.rang            || 0;
-    const score        = cur.score           || 0;
-    const paysN1       = cur.paysN1          ?? null;
-    const paysTop10    = cur.paysTop10       ?? null;
-    const completion   = B.completionScore   ?? null;
-    const buzzScore    = B.buzz?.score       ?? null;
-    const ratAvg       = B.ratings?.average  ?? null;
-    const heuresSem    = t0.heures_vues      ?? null;
-    const heuresCumul  = B.heuresVuesCumul   ?? null;
-    const joursTop10   = B.joursEnTop10      ?? null;
-    const semTop10     = t0.semaines_top10   ?? null;
-    const vuesSem      = t0.views_millions   ?? null; // colonne bonus Tudum si disponible
+    // Trouver la ligne Bandi dans Tudum (pas juste [0] qui est la série #1 du top)
+    const allTudum  = B.tudumWeekly || [];
+    const bandiTudum = allTudum.find(r =>
+      r.titre && r.titre.toLowerCase().includes('bandi')
+    ) || null;
+    const t0 = bandiTudum || {}; // fallback vide si Bandi absent cette semaine
 
-    // Deltas J vs J-1 depuis l'historique
+    // ── Fallback en cascade : snapshot30 si current vide ──────────────
+    const snap0 = (B.snapshots30 || [])[0] || {};
+
+    // Valeurs live avec fallback robuste
+    const rang      = cur.rang    || snap0.rang_monde  || 0;
+    const score     = cur.score   || snap0.score_monde || 0;
+    const paysN1    = cur.paysN1    ?? snap0.pays_n1   ?? null;
+    const paysTop10 = cur.paysTop10 ?? snap0.pays_top10 ?? null;
+    const completion  = B.completionScore   ?? null;
+    const buzzScore   = B.buzz?.score       ?? null;
+    const ratAvg      = B.ratings?.average  ?? null;
+    const heuresSem   = t0.heures_vues      != null ? parseFloat(t0.heures_vues)    : null;
+    const heuresCumul = B.heuresVuesCumul   ?? null;
+    const joursTop10  = B.joursEnTop10      ?? null;
+    const semTop10    = t0.semaines_top10   != null ? parseInt(t0.semaines_top10)   : null;
+    const vuesSem     = t0.views_millions   != null ? parseFloat(t0.views_millions) : null;
+
+    // Debug — visible dans la console du navigateur
+    console.log('[MONITORING] FlixPatrol →', { rang, score, paysN1, paysTop10 });
+    console.log('[MONITORING] Tudum Bandi →', bandiTudum ? `${bandiTudum.titre} rang#${bandiTudum.rang} ${heuresSem}M h` : 'absent');
+    console.log('[MONITORING] Complétion / Buzz / Note →', { completion, buzzScore, ratAvg });
+
+    // Deltas J vs J-1 depuis l'historique (safe si valeurs null)
     const prev   = hist.length >= 2 ? hist[hist.length - 2] : null;
-    const dRang  = prev ? (prev.rang  - rang)                     : null; // positif = amélioré
-    const dScore = prev ? (score - (prev.score  || 0))            : null;
-    const dPN1   = prev && paysN1   != null ? (paysN1   - (prev.paysN1   || 0)) : null;
-    const dPT10  = prev && paysTop10!= null ? (paysTop10 - (prev.paysTop10 || 0)) : null;
+    const prevRang  = prev?.rang   ?? prev?.rang_monde  ?? null;
+    const prevScore = prev?.score  ?? prev?.score_monde ?? null;
+    const dRang  = (prevRang  != null && rang)      ? (prevRang  - rang)           : null;
+    const dScore = (prevScore != null && score)     ? (score - prevScore)           : null;
+    const dPN1   = (prev && paysN1   != null)       ? (paysN1   - (prev.paysN1   ?? prev.pays_n1   ?? 0)) : null;
+    const dPT10  = (prev && paysTop10 != null)      ? (paysTop10 - (prev.paysTop10 ?? prev.pays_top10 ?? 0)) : null;
 
     // Pcts pour le remplissage de l'arc (0-100)
     const pctRang  = rang        ? clamp(Math.round((11 - rang) / 10 * 100), 0, 100) : 0;
