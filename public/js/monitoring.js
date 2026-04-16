@@ -44,31 +44,35 @@
     return `${Math.round(h * 1000)}K`;
   }
 
-  // ── Animation arc ─────────────────────────────────────────────────────────
+  // ── Animation arc (CSS transition sur stroke-dashoffset — plus fiable que RAF) ──
 
   function animArc(main, glow, pct) {
-    const target = ARC * clamp(pct, 0, 100) / 100;
-    const zero   = `0 ${ARC.toFixed(2)}`;
-    main.setAttribute('stroke-dasharray', zero);
-    if (glow) glow.setAttribute('stroke-dasharray', zero);
+    const full   = ARC.toFixed(2);
+    const target = (ARC * (1 - clamp(pct, 0, 100) / 100)).toFixed(2);
+    const els    = [main, glow].filter(Boolean);
 
-    let t0 = null;
-    function step(ts) {
-      if (!t0) t0 = ts;
-      const prog = clamp((ts - t0) / DUR, 0, 1);
-      const ease = 1 - Math.pow(1 - prog, 3); // ease-out cubic
-      const da   = `${(target * ease).toFixed(2)} ${ARC.toFixed(2)}`;
-      main.setAttribute('stroke-dasharray', da);
-      if (glow) glow.setAttribute('stroke-dasharray', da);
-      if (prog < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
+    // Réinitialise offset sans transition pour garantir l'état de départ
+    els.forEach(el => {
+      el.style.transition    = 'none';
+      el.style.strokeDashoffset = full;
+    });
+
+    // Double RAF : le navigateur peint l'état initial AVANT la transition
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      els.forEach(el => {
+        el.style.transition       = `stroke-dashoffset ${DUR}ms cubic-bezier(0.4,0,0.2,1)`;
+        el.style.strokeDashoffset = target;
+      });
+    }));
   }
 
   // ── Build une carte jauge ──────────────────────────────────────────────────
 
   function card(g) {
-    const z  = `0 ${ARC.toFixed(2)}`;
+    const full = ARC.toFixed(2);
+    // stroke-dashoffset initial = ARC (arc invisible) — animArc l'anime vers la cible
+    // stroke-dasharray = "ARC ARC" : un seul trait couvrant tout l'arc
+    const da = `${full} ${full}`;
     // Taille du texte selon longueur de la valeur affichée
     const fs = g.display.length > 6 ? 18
              : g.display.length > 4 ? 22
@@ -81,11 +85,11 @@
     <path d="${PATH}" fill="none" stroke="#1a1a1a" stroke-width="14" stroke-linecap="round"/>
     <!-- Arc lueur (wide, faible opacité) -->
     <path d="${PATH}" fill="none" stroke="${g.color}" stroke-width="28"
-          stroke-linecap="round" stroke-dasharray="${z}" opacity="0.13"
+          stroke-linecap="round" stroke-dasharray="${da}" stroke-dashoffset="${full}" opacity="0.13"
           id="glow-${g.id}"/>
-    <!-- Arc rempli (animé) -->
+    <!-- Arc rempli (animé via CSS transition sur stroke-dashoffset) -->
     <path d="${PATH}" fill="none" stroke="${g.color}" stroke-width="12"
-          stroke-linecap="round" stroke-dasharray="${z}"
+          stroke-linecap="round" stroke-dasharray="${da}" stroke-dashoffset="${full}"
           id="arc-${g.id}"/>
     <!-- Valeur centrale -->
     <text x="100" y="79" text-anchor="middle" class="mg-val" font-size="${fs}">${g.display}</text>
@@ -205,6 +209,15 @@
 
 /* ── Séparateur bas ── */
 .mg-sep  { height: 1px; background: rgba(255,255,255,.05); margin: 24px 0 20px; }
+
+/* ── Ligne données textuelles (toujours visible au-dessus des jauges) ── */
+.mg-dataline {
+  display: flex; gap: 20px; flex-wrap: wrap;
+  padding: 10px 14px; margin-bottom: 18px; border-radius: 8px;
+  background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07);
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #555;
+}
+.mg-dataline strong { color: #ccc; font-weight: 700; }
     `;
     document.head.appendChild(el);
   }
@@ -401,11 +414,22 @@
     // ── Render HTML ───────────────────────────────────────────────────────
     const allGauges = [...s1, ...s2, ...s3];
 
+    // Ligne de données textuelles — toujours visible, confirme l'arrivée des données
+    const dataLine = rang || score ? `
+      <div class="mg-dataline">
+        <span>Rang&nbsp;<strong>#${rang || '—'}</strong></span>
+        <span>Score&nbsp;<strong>${score || '—'}&thinsp;pts</strong></span>
+        <span>#1&nbsp;<strong>${paysN1 ?? '—'}&thinsp;pays</strong></span>
+        <span>Top10&nbsp;<strong>${paysTop10 ?? '—'}&thinsp;pays</strong></span>
+        ${semTop10 ? `<span>Tudum&nbsp;<strong>${semTop10} sem.</strong></span>` : ''}
+      </div>` : '';
+
     container.innerHTML = `
       <div class="mg-topbar">
         <span class="mg-topbar-title">Performance en temps réel</span>
         <span class="mg-topbar-sub">↻ mise à jour automatique · 6h</span>
       </div>
+      ${dataLine}
       ${section('Classement FlixPatrol', s1)}
       ${section('Qualité &amp; Engagement', s2)}
       ${section('Visionnage Netflix', s3)}
