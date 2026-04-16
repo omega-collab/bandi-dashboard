@@ -641,6 +641,12 @@ function renderOverview() {
   }
 
   $("tabCountCountries").textContent = BANDI.pays.length;
+  // ── Mise à jour date footer (dynamique)
+  const luEl = $("lastUpdate");
+  if (luEl && BANDI.current?.date) {
+    const [y, m, d] = BANDI.current.date.split('-');
+    luEl.textContent = `${d}/${m}/${y}`;
+  }
 }
 
 // ============ CHART ============
@@ -855,6 +861,26 @@ function renderRivals() {
       </div>
     `;
   }).join("");
+  // ── Mise à jour texte insight (dynamique)
+  const insightEl = document.getElementById("rivalsInsight");
+  if (insightEl && BANDI.rivals.length > 0) {
+    const bandiIdx = BANDI.rivals.findIndex(r => r.isBandi);
+    if (bandiIdx >= 0) {
+      const bandiRankNum = bandiIdx + 1;
+      const prevR = bandiIdx > 0 ? BANDI.rivals[bandiIdx - 1] : null;
+      const nextR = BANDI.rivals[bandiIdx + 1] || null;
+      const bScore = BANDI.rivals[bandiIdx].score;
+      let txt = `Bandi se classe <strong>#${bandiRankNum} mondial</strong>`;
+      if (prevR) txt += `, à <strong>${Math.abs(bScore - prevR.score)} pts</strong> de ${prevR.titre} (#${bandiIdx})`;
+      if (nextR) txt += ` et <strong>${Math.abs(bScore - nextR.score)} pts</strong> devant ${nextR.titre} (#${bandiIdx + 2})`;
+      const scoreDiff = (BANDI.current?.score ?? 0) - (BANDI.previous?.score ?? 0);
+      if (scoreDiff !== 0 && (BANDI.previous?.score ?? 0) > 0) {
+        const pct = Math.round((scoreDiff / BANDI.previous.score) * 100);
+        txt += `. Progression quotidienne ${pct > 0 ? '+' : ''}${pct}% vs hier.`;
+      }
+      insightEl.innerHTML = txt;
+    }
+  }
 }
 
 // ============ RIVALS TOGGLE ============
