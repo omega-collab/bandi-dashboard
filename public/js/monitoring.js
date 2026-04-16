@@ -213,9 +213,10 @@
 
   function renderMonitoringTab() {
     const container = document.getElementById('monAnalytics');
-    if (!container) return;
+    if (!container) { console.error('[BANDI_MONITORING] #monAnalytics introuvable dans le DOM'); return; }
     injectCSS();
 
+    try {
     // ── Lecture des données depuis BANDI (enrichi par initMonitoringTab dans app.js) ──
     const B    = window.BANDI    || {};
     const cur  = B.current       || {};
@@ -321,7 +322,7 @@
       },
       {
         id: 'buzz',      label: 'Buzz Presse',
-        display: buzzScore != null ? buzzScore.toString() : '—',  unit: 'TENDANCE GOOGLE',
+        display: (buzzScore != null && buzzScore > 0) ? buzzScore.toString() : '—',  unit: 'TENDANCE GOOGLE',
         pct: pctBuzz,    color: gradColor(pctBuzz),
         delta: '',
         src: 'Google Trends',  minL: '0', maxL: '100',
@@ -329,7 +330,7 @@
       },
       {
         id: 'rating',    label: 'Note Critique',
-        display: ratAvg != null ? ratAvg.toFixed(1) : '—',  unit: 'SUR 10',
+        display: (ratAvg != null && ratAvg > 0) ? ratAvg.toFixed(1) : '—',  unit: 'SUR 10',
         pct: pctRat,     color: gradColor(pctRat),
         delta: '',
         src: 'IMDb · Allociné · RT',  minL: '0', maxL: '10',
@@ -419,6 +420,12 @@
         if (arc) animArc(arc, glow, g.pct);
       });
     });
+
+    } catch (err) {
+      // Crash visible dans le DOM — ne reste jamais silencieux
+      console.error('[BANDI_MONITORING] renderMonitoringTab crash →', err);
+      container.innerHTML = `<div style="padding:16px;color:#CE1126;font-family:'JetBrains Mono',monospace;font-size:11px;border:1px solid #CE112633;border-radius:8px">⚠️ Erreur rendu jauges : ${err.message}</div>`;
+    }
   }
 
   // ── Export ─────────────────────────────────────────────────────────────────

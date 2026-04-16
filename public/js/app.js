@@ -313,13 +313,15 @@ async function loadLiveData() {
       : null;
 
     // Override BANDI (Object.assign pour muter la const déclarée dans data-fallback.js)
+    // ?? préserve les valeurs data-fallback.js si la DB retourne null
+    const _prevCur = BANDI.current || {};
     Object.assign(BANDI, {
       current: {
-        score: current.score_monde,
-        rang: current.rang_monde,
-        paysN1: enrichedPaysN1,
-        paysTop10: enrichedPaysTop10,
-        rangMoyen: enrichedRangMoyen
+        score:     current.score_monde     ?? _prevCur.score     ?? 0,
+        rang:      current.rang_monde      ?? _prevCur.rang      ?? 0,
+        paysN1:    enrichedPaysN1          ?? _prevCur.paysN1    ?? 0,
+        paysTop10: enrichedPaysTop10       ?? _prevCur.paysTop10 ?? 0,
+        rangMoyen: enrichedRangMoyen       ?? _prevCur.rangMoyen ?? null
       },
       previous: {
         score: previous.score_monde,
@@ -2498,7 +2500,20 @@ function initMonitoringTab() {
   // Le module monitoring.js lit des champs spécifiques sur BANDI
   // On les crée ici à partir des données live déjà chargées
   try {
-    // score_monde : score FlixPatrol normalisé (déjà dans BANDI.current.score)
+    // Fallback ultime : si le DB a retourné null pour les KPIs principaux,
+    // on s'assure que BANDI.current a au moins les valeurs data-fallback.js
+    if (BANDI.current) {
+      if (BANDI.current.score == null || BANDI.current.score === 0) {
+        BANDI.current.score = BANDI.current.score_monde ?? 348;
+      }
+      if (BANDI.current.rang == null || BANDI.current.rang === 0) {
+        BANDI.current.rang = 6;
+      }
+      if (BANDI.current.paysN1 == null)    BANDI.current.paysN1    = 13;
+      if (BANDI.current.paysTop10 == null) BANDI.current.paysTop10 = 37;
+    }
+
+    // score_monde : alias pour monitoring.js
     if (BANDI.current && BANDI.current.score_monde == null) {
       BANDI.current.score_monde = BANDI.current.score ?? 0;
     }
@@ -2515,7 +2530,7 @@ function initMonitoringTab() {
     // buzz : score de la dernière journée dans buzzTrends7d
     if (!BANDI.buzz) {
       const lastBuzz = (BANDI.buzzTrends7d || []).slice(-1)[0];
-      BANDI.buzz = { score: lastBuzz?.score ?? 0 };
+      BANDI.buzz = { score: lastBuzz?.score ?? null };
     }
     // ratings : moyenne normalisée des notes externes
     if (!BANDI.ratings) {
@@ -2525,7 +2540,7 @@ function initMonitoringTab() {
       BANDI.ratings = {
         average: norms.length
           ? +(norms.reduce((s, v) => s + v, 0) / norms.length).toFixed(1)
-          : 0
+          : null
       };
     }
     // completion score (score interne multi-sources)
@@ -2539,9 +2554,25 @@ function initMonitoringTab() {
     console.warn('[monitoring] adaptateur données:', e);
   }
 
-  // ── Module analytique (cohérence, confiance, timeline) ────
+  // Debug — visible dans la console du navigateur (F12)
+  console.log('[MON] current →', JSON.stringify(BANDI.current));
+  console.log('[MON] BANDI_MONITORING défini →', !!window.BANDI_MONITORING);
+  console.log('[MON] snapshots30 →', BANDI.snapshots30?.length, 'entrées');
+  console.log('[MON] tudumWeekly →', BANDI.tudumWeekly?.length, 'entrées');
+
+  // ── Module analytique (jauges speedometer) ────────────────
   if (window.BANDI_MONITORING) {
-    try { BANDI_MONITORING.renderMonitoringTab(); } catch (e) { console.warn('[BANDI_MONITORING]', e); }
+    try {
+      BANDI_MONITORING.renderMonitoringTab();
+    } catch (e) {
+      console.error('[BANDI_MONITORING] CRASH →', e);
+      const c = document.getElementById('monAnalytics');
+      if (c) c.innerHTML = `<div style="padding:16px;color:#CE1126;font-family:'JetBrains Mono',monospace;font-size:12px;border:1px solid #CE112644;border-radius:8px;margin-bottom:16px">⚠️ Erreur rendu jauges : ${e.message}<br><small style="color:#555">Voir console F12 pour les détails</small></div>`;
+    }
+  } else {
+    console.error('[MON] window.BANDI_MONITORING non défini — monitoring.js n\'a pas chargé');
+    const c = document.getElementById('monAnalytics');
+    if (c) c.innerHTML = `<div style="padding:16px;color:#D4A017;font-family:'JetBrains Mono',monospace;font-size:12px;border:1px solid #D4A01744;border-radius:8px;margin-bottom:16px">⚠️ Module monitoring non chargé — rechargez la page ou vérifiez la console F12</div>`;
   }
 
   // ── Sections opérationnelles ──────────────────────────────
