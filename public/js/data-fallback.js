@@ -114,7 +114,6 @@ const BANDI = {
     { titre: "Salish & Jordan Matter",       score: 458, isBandi: false },
     { titre: "Bloodhounds",                  score: 445, isBandi: false },
     { titre: "The Cleaning Lady",            score: 386, isBandi: false },
-    { titre: "Bandi",                        score: 348, isBandi: true  },
     { titre: "Detective Hole",               score: 215, isBandi: false },
     { titre: "Big Mistakes",                 score: 180, isBandi: false },
     { titre: "Something Very Bad...",        score: 153, isBandi: false },
