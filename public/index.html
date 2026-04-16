@@ -135,6 +135,10 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
               <span id="rankDeltaValue">—</span>
             </div>
+            <span class="rank-source-pill" title="Classement basé sur FlixPatrol. Le classement officiel Netflix (Tudum) sera intégré dès sa publication chaque mardi.">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              d'après flixpatrol.com
+            </span>
           </div>
           <p class="hero-sub">
             <strong id="heroScore">—</strong> pts de popularité
@@ -557,9 +561,10 @@
             <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
             FlixPatrol
           </button>
-          <button class="stoggle" data-source="tudum" id="stogTudum">
+          <button class="stoggle" data-source="tudum" id="stogTudum" title="Classement officiel Netflix · publié chaque mardi">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
             Tudum officiel
+            <span class="stoggle-hint" id="tudumHint">mardi</span>
           </button>
         </div>
       </div>

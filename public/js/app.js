@@ -902,17 +902,39 @@ function initRivalsToggle() {
   const viewFlix  = document.getElementById('rivalsViewFlix');
   const viewTudum = document.getElementById('rivalsViewTudum');
   const rivalsSub = document.getElementById('rivalsSub');
+  const tudumHint = document.getElementById('tudumHint');
   if (!stogFlix || !stogTudum) return;
+
+  // ── État Tudum : disponible uniquement si week data présente ───────
+  const tudumAvailable = Array.isArray(BANDI.tudumWeekly) && BANDI.tudumWeekly.length > 0;
+  if (!tudumAvailable) {
+    stogTudum.classList.add('stoggle-pending');
+    stogTudum.setAttribute('aria-disabled', 'true');
+    if (tudumHint) tudumHint.textContent = 'mardi';
+  } else {
+    stogTudum.classList.remove('stoggle-pending');
+    stogTudum.removeAttribute('aria-disabled');
+    if (tudumHint) tudumHint.textContent = '✓';
+  }
+
+  // Par défaut : toujours FlixPatrol (seule source fiable avant mardi)
+  stogFlix.classList.add('active');
+  stogTudum.classList.remove('active');
 
   stogFlix.addEventListener('click', () => {
     stogFlix.classList.add('active');
     stogTudum.classList.remove('active');
     viewFlix.style.display = '';
     viewTudum.style.display = 'none';
-    if (rivalsSub) rivalsSub.textContent = 'Position de Bandi face aux autres séries du classement mondial';
+    if (rivalsSub) rivalsSub.textContent = 'Position de Bandi face aux autres séries du classement mondial · source FlixPatrol';
   });
 
-  stogTudum.addEventListener('click', () => {
+  stogTudum.addEventListener('click', (e) => {
+    if (stogTudum.getAttribute('aria-disabled') === 'true') {
+      e.preventDefault();
+      if (rivalsSub) rivalsSub.textContent = 'Données Tudum indisponibles pour l\'instant — publication Netflix chaque mardi';
+      return;
+    }
     stogTudum.classList.add('active');
     stogFlix.classList.remove('active');
     viewFlix.style.display = 'none';

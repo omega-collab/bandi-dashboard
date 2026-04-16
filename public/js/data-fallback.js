@@ -32,12 +32,15 @@ const BANDI = {
   ],
 
   // Score / rang actuel (16/04/2026) — source FlixPatrol
+  // Note : paysN1 et paysTop10 sont recalculés à partir de la liste `pays`
+  //        côté app.js (Object.assign après fetch Supabase) — les valeurs
+  //        ci-dessous servent uniquement de fallback offline.
   current: {
     score: 539,
     rang: 1,
-    paysN1: 27,
-    paysTop10: 57,
-    rangMoyen: 2.7,
+    paysN1: 13,
+    paysTop10: 37,
+    rangMoyen: 4.7,
     date: '2026-04-16'
   },
 
@@ -45,9 +48,9 @@ const BANDI = {
   previous: {
     score: 471,
     rang: 2,
-    paysN1: 27,
-    paysTop10: 57,
-    rangMoyen: 2.7
+    paysN1: 12,
+    paysTop10: 36,
+    rangMoyen: 4.9
   },
 
   // Historique jour par jour depuis la sortie
@@ -59,8 +62,8 @@ const BANDI = {
     { jour: "12/04", label: "J+3",     score: 209,  rang: 7,    paysN1: 8,  paysTop10: 37, rangMoyen: 5.4 },
     { jour: "13/04", label: "J+4",     score: 348,  rang: 6,    paysN1: 13, paysTop10: 37, rangMoyen: 4.8 },
     { jour: "14/04", label: "J+5",     score: 391,  rang: 5,    paysN1: 15, paysTop10: 39, rangMoyen: 3.5 },
-    { jour: "15/04", label: "J+6",     score: 471,  rang: 2,    paysN1: 27, paysTop10: 57, rangMoyen: 2.7 },
-    { jour: "16/04", label: "J+7",     score: 539,  rang: 1,    paysN1: 27, paysTop10: 57, rangMoyen: 2.7 }
+    { jour: "15/04", label: "J+6",     score: 471,  rang: 2,    paysN1: 12, paysTop10: 36, rangMoyen: 4.9 },
+    { jour: "16/04", label: "J+7",     score: 539,  rang: 1,    paysN1: 13, paysTop10: 37, rangMoyen: 4.7 }
   ],
 
   // Détail par pays (13/04/2026)
