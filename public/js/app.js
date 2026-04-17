@@ -1874,28 +1874,11 @@ function renderZonesDomination() {
 
 // ── Forecast S2 ───────────────────────────────────────────────
 // ============================================================
-// Completion Score — méthode à 5 étapes
-//
-// Étape 1 : Equivalent Viewers
-//   = HeuresCumulées (Tudum) / DuréeSérie — nombre estimé de spectateurs complets
-//
-// Étape 2 : Starter Index
-//   Estimation pondérée du nombre de spectateurs ayant commencé :
-//   RangPic (FlixPatrol) 35% · JoursTop10 30% · Buzz 20% · HeuresCumul 15%
-//
-// Étape 3 : BaseCompletion
-//   = EquivViewers / StarterIndex × 100 — ratio normalisé [0, 100]
-//
-// Étape 4 : Signal de décroissance
-//   Analyse la vitesse de chute du classement historique :
-//   Chute rapide (<7j) → pénalité 0.80 · Stabilité (14j+) → bonus 1.10 · Neutre → 1.0
-//
-// Étape 5 : Ratio Proxy avancé
-//   = HeuresCumulées × 1000 / PicPopularité (heures par point de score)
-//   Ratio élevé → forte complétion · Intégré comme correcteur (20 %)
-//
-// Score final = 0,60·BaseDecay + 0,20·RatioProxy + 0,12·Notes + 0,08·Recherche
-// Si heures absentes → fallback 0,60·Notes + 0,40·Recherche
+// Completion Score v2 — popularité live dominante
+//   40 % POPULARITÉ LIVE  (rang mondial + pays #1 + pays top 10)
+//   25 % ENGAGEMENT        (Tudum heures ou proxy jours/pays)
+//   20 % BUZZ              (Trends + Wikipedia + presse + social)
+//   15 % QUALITÉ           (moyenne pondérée 8 sources notes)
 // ============================================================
 function computeCompletionScore() {
   const out = {
@@ -1903,279 +1886,215 @@ function computeCompletionScore() {
     components: {},
     signalsAvailable: [],
     signalsMissing: [],
-    formula: 'Score = 0,60·(EquivViewers÷StarterIndex×Décroissance) + 0,20·RatioProxy + 0,12·Notes + 0,08·Recherche'
+    formula: 'Score = 0,40·Popularité + 0,25·Engagement + 0,20·Buzz + 0,15·Qualité'
   };
 
-  // ── Constantes contexte Bandi ──────────────────────────────────────────
-  const SERIE_DUREE_H = 8;    // 8 épisodes × ~60 min = durée totale (heures)
-  const MAX_VIEWERS_M = 15;   // cap normalisation équivalent-viewers (millions)
-  const MAX_JOURS     = 200;  // cap normalisation jours en top 10
-  const MAX_HEURES_SI = 120;  // cap heures pour Starter Index
-
-  // ── Lecture des données disponibles ───────────────────────────────────
-  const hist       = Array.isArray(BANDI.historique) ? BANDI.historique : [];
-  const rangs      = hist.map(h => h.rang ).filter(r => typeof r === 'number' && r > 0);
-  const scores     = hist.map(h => h.score).filter(s => typeof s === 'number' && s > 0);
+  // ── Lecture des données ───────────────────────────────────────────────
+  const hist        = Array.isArray(BANDI.historique)        ? BANDI.historique        : [];
+  const paysArr     = Array.isArray(BANDI.pays)              ? BANDI.pays              : [];
+  const social      = Array.isArray(BANDI.buzzSocialRecent)  ? BANDI.buzzSocialRecent  : [];
+  const trends      = Array.isArray(BANDI.buzzTrends7d)      ? BANDI.buzzTrends7d      : [];
+  const wiki        = Array.isArray(BANDI.wikipediaPageviews)? BANDI.wikipediaPageviews: [];
+  const rangsHist   = hist.map(h => h.rang).filter(r => typeof r === 'number' && r > 0);
+  const rangMonde   = BANDI.current?.rang   ?? null;
+  const paysN1      = BANDI.current?.paysN1  ?? paysArr.filter(p => p.rang === 1).length;
+  const paysTop10   = BANDI.current?.paysTop10 ?? paysArr.filter(p => p.rang > 0 && p.rang <= 10).length;
   const heuresCumul = typeof BANDI.heuresVuesCumul === 'number' ? BANDI.heuresVuesCumul : 0;
-  const joursTop10  = typeof BANDI.joursEnTop10    === 'number' ? BANDI.joursEnTop10    : 0;
-  const buzzSc      = (BANDI.buzz && typeof BANDI.buzz.score === 'number') ? BANDI.buzz.score : 0;
-  const rankPic     = rangs.length  ? Math.min(...rangs)  : null;
-  const picScore    = scores.length ? Math.max(...scores) : 0;
+  const joursTop10  = typeof BANDI.joursEnTop10    === 'number' ? BANDI.joursEnTop10    : hist.length;
+  const rankPic     = rangsHist.length ? Math.min(...rangsHist) : null;
+  const SERIE_DUREE_H = 8;
 
   // ─────────────────────────────────────────────────────────────────────
-  // ÉTAPE 1 — Equivalent Viewers (normalisé 0-100)
+  // 1. POPULARITÉ LIVE (40 %)
+  //    Rang mondial (45 %) + pays N°1 (35 %) + pays top 10 (20 %)
+  // ─────────────────────────────────────────────────────────────────────
+  const normRangMonde = rangMonde ? Math.max(0, Math.round(100 - (rangMonde - 1) * 6)) : 0;
+  const normPaysN1    = Math.min(100, Math.round(paysN1   / 15 * 100));
+  const normTop10     = Math.min(100, Math.round(paysTop10 / 50 * 100));
+  const popularityScore = Math.round(0.45 * normRangMonde + 0.35 * normPaysN1 + 0.20 * normTop10);
+  const popAvail = rangMonde != null || paysN1 > 0 || paysTop10 > 0;
+  if (popAvail) out.signalsAvailable.push('Popularité live');
+  else          out.signalsMissing.push('Popularité live');
+
+  // ─────────────────────────────────────────────────────────────────────
+  // 2. ENGAGEMENT (25 %)
+  //    Tudum heures → équivalent-viewers ; sinon proxy jours×pays
   // ─────────────────────────────────────────────────────────────────────
   const equivViewersMil  = heuresCumul > 0 ? heuresCumul / SERIE_DUREE_H : 0;
-  const equivViewersNorm = Math.min(100, Math.round(equivViewersMil / MAX_VIEWERS_M * 100));
-  const equivViewersAvail = heuresCumul > 0;
-  if (equivViewersAvail) out.signalsAvailable.push('Équivalent-viewers');
-  else                   out.signalsMissing.push('Équivalent-viewers');
+  const MAX_VIEWERS_M = 15;
+  const engTudumAvail = heuresCumul > 0;
 
-  // ─────────────────────────────────────────────────────────────────────
-  // ÉTAPE 2 — Starter Index (normalisé 0-100)
-  // Pondération : rang pic 35% · jours top10 30% · buzz 20% · heures 15%
-  // ─────────────────────────────────────────────────────────────────────
-  const normRankPic  = rankPic != null ? Math.min(100, Math.round((11 - rankPic) / 10 * 100)) : 50;
-  const normJours    = Math.min(100, Math.round(joursTop10 / MAX_JOURS * 100));
-  const normBuzz     = Math.min(100, Math.round(buzzSc));
-  const normHSI      = Math.min(100, Math.round(heuresCumul / MAX_HEURES_SI * 100));
-  const starterIndex = Math.max(1, Math.round(
-    0.35 * normRankPic + 0.30 * normJours + 0.20 * normBuzz + 0.15 * normHSI
-  ));
-  const starterAvail = rankPic != null || joursTop10 > 0 || buzzSc > 0;
-  if (starterAvail) out.signalsAvailable.push('Starter Index');
-  else              out.signalsMissing.push('Starter Index');
-
-  // ─────────────────────────────────────────────────────────────────────
-  // ÉTAPE 3 — Base Completion = EquivViewers / StarterIndex × 100
-  // ─────────────────────────────────────────────────────────────────────
-  const baseCompletion = equivViewersAvail
-    ? Math.min(100, Math.round(equivViewersNorm / starterIndex * 100))
-    : 0;
-
-  // ─────────────────────────────────────────────────────────────────────
-  // ÉTAPE 4 — Signal de décroissance (proxy vitesse de chute du classement)
-  // rankDropRate = (rankFinal - rankInitial) / rankInitial
-  //   > 0 : chute (rang aggravé) · < 0 : progression · = 0 : stable
-  // ─────────────────────────────────────────────────────────────────────
-  let decayFactor  = 1.0;
-  let decayLabel   = 'Neutre';
-  let rankDropRate = null;
-  const decayAvail = rangs.length >= 2;
-  if (decayAvail) {
-    const rankInitial = rangs[0];
-    const rankFinal   = rangs[rangs.length - 1];
-    rankDropRate = (rankFinal - rankInitial) / Math.max(rankInitial, 1);
-    const daysPresent = rangs.length;
-    if (rankDropRate > 1.0 && daysPresent < 7) {
-      decayFactor = 0.80; decayLabel = 'Chute rapide (<7j)';
-    } else if (daysPresent >= 14 && rankDropRate <= 0.5) {
-      decayFactor = 1.10; decayLabel = `Présence stable (${daysPresent}j)`;
-    } else if (rankDropRate < -0.2) {
-      decayFactor = 1.05; decayLabel = 'En progression';
-    }
-    decayFactor = Math.max(0.6, Math.min(1.2, decayFactor));
-    out.signalsAvailable.push('Décroissance');
-  } else {
-    out.signalsMissing.push('Décroissance');
+  // Décroissance (bonus/pénalité sur engagement)
+  let decayFactor = 1.0, decayLabel = 'Neutre', rankDropRate = null;
+  if (rangsHist.length >= 2) {
+    const rI = rangsHist[0], rF = rangsHist[rangsHist.length - 1];
+    rankDropRate = (rF - rI) / Math.max(rI, 1);
+    const days = rangsHist.length;
+    if (rankDropRate > 1.0 && days < 7)                   { decayFactor = 0.85; decayLabel = 'Chute rapide'; }
+    else if (days >= 14 && Math.abs(rankDropRate) <= 0.3) { decayFactor = 1.10; decayLabel = `Stable ${days}j`; }
+    else if (rankDropRate < -0.2)                          { decayFactor = 1.05; decayLabel = 'En progression'; }
   }
-  const withDecay = Math.min(100, Math.round(baseCompletion * decayFactor));
+
+  let engagementScore = 0;
+  if (engTudumAvail) {
+    engagementScore = Math.min(100, Math.round(equivViewersMil / MAX_VIEWERS_M * 100));
+    out.signalsAvailable.push('Engagement (Tudum)');
+  } else if (joursTop10 > 0 || paysTop10 > 0) {
+    const nJ = Math.min(100, Math.round(joursTop10 / 60 * 100));
+    const nP = Math.min(100, Math.round(paysTop10 / 50 * 100));
+    engagementScore = Math.round(0.60 * nJ + 0.40 * nP);
+    out.signalsAvailable.push('Engagement (proxy)');
+  } else {
+    out.signalsMissing.push('Engagement');
+  }
+  engagementScore = Math.min(100, Math.round(engagementScore * decayFactor));
 
   // ─────────────────────────────────────────────────────────────────────
-  // ÉTAPE 5 — Ratio Proxy avancé
-  // Ratio = HeuresCumul × 1000 / PicScore (milliers d'heures par point)
-  // Ratio élevé → engagement durable → forte complétion
+  // 3. BUZZ (20 %) — Trends + Wikipedia + Presse + Social
   // ─────────────────────────────────────────────────────────────────────
-  let ratioProxyNorm = 0;
-  let ratioRaw       = null;
-  const ratioAvail   = picScore > 0 && heuresCumul > 0;
-  if (ratioAvail) {
-    ratioRaw       = heuresCumul * 1000 / picScore;
-    ratioProxyNorm = Math.min(100, Math.round(ratioRaw));
-    out.signalsAvailable.push('Ratio Proxy');
+  const cutoff7 = new Date(Date.now() - 7 * 86400 * 1000).toISOString().slice(0, 10);
+
+  let trendsMax = null, trendsScore = 0;
+  if (trends.length) {
+    const vals = trends.map(t => Number(t.score) || Number(t.interest_score) || 0).filter(v => v > 0);
+    if (vals.length) { trendsMax = Math.max(...vals); trendsScore = trendsMax; }
+  }
+
+  const wiki7 = wiki.filter(w => w.date >= cutoff7);
+  const wikiViews7d = wiki7.reduce((s, w) => s + (Number(w.views) || 0), 0);
+  const wikiScore = wikiViews7d > 0 ? Math.min(100, Math.round(Math.log10(wikiViews7d + 1) * 20)) : 0;
+
+  const pressCount30d = typeof BANDI.pressCount30d === 'number' ? BANDI.pressCount30d : 0;
+  const pressScore    = Math.min(100, pressCount30d);
+
+  const social7 = social.filter(p => p.published_at && p.published_at.slice(0, 10) >= cutoff7);
+  const socialCount7d  = social7.length;
+  const socialEngTotal = social7.reduce((s, p) => s + (Number(p.engagement_score) || 0), 0);
+  const socialScore    = Math.min(100, Math.round(socialCount7d / 50 * 70 + Math.log10(socialEngTotal + 1) * 6));
+
+  const buzzParts = [];
+  if (trendsScore > 0)  buzzParts.push({ val: trendsScore, w: 0.30, lbl: 'Google Trends' });
+  if (wikiScore > 0)    buzzParts.push({ val: wikiScore,   w: 0.25, lbl: 'Wikipedia' });
+  if (pressScore > 0)   buzzParts.push({ val: pressScore,  w: 0.25, lbl: 'Presse 30j' });
+  if (socialScore > 0)  buzzParts.push({ val: socialScore, w: 0.20, lbl: 'Social 7j' });
+
+  let buzzScoreFinal = 0;
+  const buzzAvail = buzzParts.length > 0;
+  if (buzzAvail) {
+    const tw = buzzParts.reduce((s, p) => s + p.w, 0);
+    buzzScoreFinal = Math.round(buzzParts.reduce((s, p) => s + p.val * p.w, 0) / tw);
+    out.signalsAvailable.push('Buzz');
   } else {
-    out.signalsMissing.push('Ratio Proxy');
+    out.signalsMissing.push('Buzz');
   }
 
   // ─────────────────────────────────────────────────────────────────────
-  // SIGNAL NOTES (calcul multi-sources inchangé)
+  // 4. QUALITÉ — notes 8 sources (15 %)
   // ─────────────────────────────────────────────────────────────────────
-  let sNotes = 50, notesAvail = false;
   const notesDetail = {
     imdb: null, tmdb: null, allocinePublic: null, allocinePress: null,
     senscritique: null, rtCritics: null, rtAudience: null, filmaffinity: null
   };
-  const notesSources = [];
-  const notesUsed    = [];
-
-  function addNote(key, src, scaleMax, defaultWeight, label, detailKey, extraFields = {}) {
+  const notesSources = [], notesUsed = [];
+  function addNote(src, weight, label, key) {
     if (src && src.rating_norm != null && src.rating_norm > 0) {
-      notesDetail[detailKey] = {
-        note: Number(src.rating), max: Number(src.rating_max || scaleMax),
-        norm: Number(src.rating_norm), ...extraFields,
-        votes: src.votes || null, reviews: src.reviews_count || null
+      notesDetail[key] = {
+        note: Number(src.rating), max: Number(src.rating_max || 10),
+        norm: Number(src.rating_norm), votes: src.votes || null, reviews: src.reviews_count || null
       };
-      notesUsed.push({ norm: Number(src.rating_norm), weight: defaultWeight, label });
+      notesUsed.push({ norm: Number(src.rating_norm), weight, label });
       notesSources.push(label);
-      return true;
-    }
-    return false;
-  }
-
-  addNote('imdb',       BANDI.imdb,           10,  0.22, 'IMDb',                     'imdb');
-  addNote('tmdb',       BANDI.tmdb,           10,  0.18, 'TMDB',                     'tmdb');
-  addNote('rt_critics', BANDI.rtCritics,      100, 0.15, 'Rotten Tomatoes (presse)', 'rtCritics');
-  addNote('rt_aud',     BANDI.rtAudience,     100, 0.10, 'Rotten Tomatoes (public)', 'rtAudience');
-  addNote('ac_pub',     BANDI.allocinePublic, 5,   0.10, 'Allociné Spectateurs',     'allocinePublic');
-  addNote('ac_press',   BANDI.allocinePress,  5,   0.10, 'Allociné Presse',          'allocinePress');
-  addNote('sc',         BANDI.senscritique,   10,  0.10, 'SensCritique',             'senscritique');
-  addNote('fa',         BANDI.filmaffinity,   10,  0.05, 'Filmaffinity',             'filmaffinity');
-
-  const NOTES_TOTAL_SOURCES = 8;
-  if (notesUsed.length > 0) {
-    const totalW      = notesUsed.reduce((s, n) => s + n.weight, 0);
-    const weightedNorm = notesUsed.reduce((s, n) => s + n.norm * n.weight, 0) / totalW;
-    sNotes     = Math.max(0, Math.min(100, Math.round(weightedNorm * 10)));
-    notesAvail = true;
-    out.signalsAvailable.push('Notes critiques');
-  } else {
-    out.signalsMissing.push('Notes critiques');
-  }
-
-  // ─────────────────────────────────────────────────────────────────────
-  // SIGNAL RECHERCHE (inchangé — Google Trends + Wikipedia)
-  // ─────────────────────────────────────────────────────────────────────
-  let sSearch = 50, searchAvail = false;
-  const searchRaw = { trendsMax: null, trendsDays: 0, wikiViews7d: 0, wikiDays: 0, wikiArticles: [] };
-  const searchParts = [];
-  const searchSourceList = [];
-
-  const trends = Array.isArray(BANDI.buzzTrends7d) ? BANDI.buzzTrends7d : [];
-  searchRaw.trendsDays = trends.length;
-  if (trends.length > 0) {
-    const tScores = trends.map(t => Number(t.score) || 0).filter(s => s > 0);
-    if (tScores.length > 0) {
-      searchRaw.trendsMax = Math.max(...tScores);
-      searchParts.push({ value: searchRaw.trendsMax, weight: 0.6, label: 'Google Trends' });
-      searchSourceList.push('Google Trends');
     }
   }
-  const wiki = Array.isArray(BANDI.wikipediaPageviews) ? BANDI.wikipediaPageviews : [];
-  if (wiki.length > 0) {
-    const cutoff     = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-    const recentWiki = wiki.filter(w => w.date >= cutoff);
-    searchRaw.wikiDays    = recentWiki.length;
-    searchRaw.wikiViews7d = recentWiki.reduce((s, w) => s + (Number(w.views) || 0), 0);
-    const articlesSet = new Set();
-    recentWiki.forEach(w => articlesSet.add(`${w.project}/${w.article}`));
-    searchRaw.wikiArticles = [...articlesSet];
-    if (searchRaw.wikiViews7d > 0) {
-      const wikiScore = Math.max(0, Math.min(100, Math.round(Math.log10(searchRaw.wikiViews7d + 1) * 20)));
-      searchParts.push({ value: wikiScore, weight: 0.4, label: 'Wikipedia' });
-      searchSourceList.push('Wikipedia pageviews');
-    }
-  }
-  if (searchParts.length > 0) {
-    const tw = searchParts.reduce((s, p) => s + p.weight, 0);
-    sSearch     = Math.max(0, Math.min(100, Math.round(
-      searchParts.reduce((s, p) => s + p.value * p.weight, 0) / tw
+  addNote(BANDI.imdb,           0.22, 'IMDb',                     'imdb');
+  addNote(BANDI.tmdb,           0.18, 'TMDB',                     'tmdb');
+  addNote(BANDI.rtCritics,      0.15, 'Rotten Tomatoes (presse)', 'rtCritics');
+  addNote(BANDI.rtAudience,     0.10, 'Rotten Tomatoes (public)', 'rtAudience');
+  addNote(BANDI.allocinePublic, 0.10, 'Allociné Spectateurs',     'allocinePublic');
+  addNote(BANDI.allocinePress,  0.10, 'Allociné Presse',          'allocinePress');
+  addNote(BANDI.senscritique,   0.10, 'SensCritique',             'senscritique');
+  addNote(BANDI.filmaffinity,   0.05, 'Filmaffinity',             'filmaffinity');
+
+  const NOTES_TOTAL = 8;
+  let qualityScore = 50;
+  const qualityAvail = notesUsed.length > 0;
+  if (qualityAvail) {
+    const tw = notesUsed.reduce((s, n) => s + n.weight, 0);
+    qualityScore = Math.round(Math.max(0, Math.min(100,
+      notesUsed.reduce((s, n) => s + n.norm * n.weight, 0) / tw * 10
     )));
-    searchAvail = true;
-    out.signalsAvailable.push('Intérêt recherche');
+    out.signalsAvailable.push('Qualité');
   } else {
-    out.signalsMissing.push('Intérêt recherche');
+    out.signalsMissing.push('Qualité');
   }
 
   // ─────────────────────────────────────────────────────────────────────
-  // SCORE FINAL
-  // 60 % cœur (EquivViewers ÷ StarterIndex × décroissance)
-  // 20 % Ratio Proxy (heures / pic popularité)
-  // 12 % Notes critiques
-  //  8 % Intérêt recherche
-  // Fallback si aucune donnée heures : 60 % Notes + 40 % Recherche
+  // SCORE FINAL — poids normalisés si signal manquant
   // ─────────────────────────────────────────────────────────────────────
-  const hasMainSignals = equivViewersAvail || starterAvail;
-  let finalScore;
-  if (hasMainSignals) {
-    finalScore = Math.round(
-      0.60 * withDecay      +
-      0.20 * ratioProxyNorm +
-      0.12 * sNotes         +
-      0.08 * sSearch
-    );
-  } else {
-    // Fallback données heures absentes (début de vie de la série)
-    finalScore = Math.round(0.60 * sNotes + 0.40 * sSearch);
+  const engAvail = engTudumAvail || joursTop10 > 0 || paysTop10 > 0;
+  const parts = [
+    { val: popularityScore, w: 0.40, ok: popAvail  },
+    { val: engagementScore, w: 0.25, ok: engAvail  },
+    { val: buzzScoreFinal,  w: 0.20, ok: buzzAvail },
+    { val: qualityScore,    w: 0.15, ok: qualityAvail }
+  ];
+  const active = parts.filter(p => p.ok);
+  let finalScore = 0;
+  if (active.length) {
+    const totW = active.reduce((s, p) => s + p.w, 0);
+    finalScore = Math.round(active.reduce((s, p) => s + p.val * p.w, 0) / totW);
   }
   out.score = Math.max(0, Math.min(100, finalScore));
 
-  // ─────────────────────────────────────────────────────────────────────
-  // Mapping vers les composants (conserve les clés pour renderCompletionBreakdown)
-  // rank       → Starter Index  (visibilité & portée — signaux 2)
-  // engagement → EquivViewers × Décroissance  (complétion effective — signaux 1+4)
-  // notes      → Ratio Proxy + Notes critiques  (correcteur qualité — signaux 5)
-  // search     → Intérêt recherche  (inchangé)
-  // ─────────────────────────────────────────────────────────────────────
-  const notesComponentVal = ratioAvail
-    ? Math.round(ratioProxyNorm * 0.40 + sNotes * 0.60)
-    : sNotes;
-
+  // ─── Composants (keys préservées : rank/engagement/notes/search) ─────
   out.components.rank = {
-    value: starterIndex, weight: 0.35,
-    available: starterAvail,
-    raw: { rankPic, joursTop10, buzzSc, normRankPic, normJours, normBuzz },
+    value: popularityScore, weight: 0.40, available: popAvail,
+    raw: { rangMonde, paysN1, paysTop10, rankPic, normRangMonde, normPaysN1, normTop10 },
     sources: 3,
-    sourceList: ['FlixPatrol (rang pic)', 'FlixPatrol (jours top 10)', 'Google Trends (buzz)'],
-    dataPoints: (rankPic != null ? 1 : 0) + (joursTop10 > 0 ? 1 : 0) + (buzzSc > 0 ? 1 : 0),
-    dataLabel: starterAvail
-      ? `Rang pic : #${rankPic ?? '—'} · ${joursTop10} pays-jours · Buzz : ${buzzSc}`
-      : 'données insuffisantes'
+    sourceList: ['FlixPatrol rang mondial', 'FlixPatrol pays #1', 'FlixPatrol pays top 10'],
+    dataPoints: (rangMonde != null ? 1 : 0) + (paysN1 > 0 ? 1 : 0) + (paysTop10 > 0 ? 1 : 0),
+    dataLabel: popAvail
+      ? `#${rangMonde ?? '—'} mondial · ${paysN1} pays N°1 · ${paysTop10} pays top 10`
+      : 'données pays en attente'
   };
-
   out.components.engagement = {
-    value: withDecay, weight: 0.60,
-    available: equivViewersAvail,
-    raw: {
-      equivViewersMil: Math.round(equivViewersMil * 100) / 100,
-      baseCompletion, decayFactor,
-      decayLabel,
-      rankDropRate: rankDropRate != null ? Math.round(rankDropRate * 100) / 100 : null,
-      count: 0, total: 0   // conserve la forme attendue par renderCompletionBreakdown
-    },
+    value: engagementScore, weight: 0.25, available: engAvail,
+    raw: { equivViewersMil: Math.round(equivViewersMil * 100) / 100,
+           decayFactor, decayLabel, rankDropRate: rankDropRate != null ? Math.round(rankDropRate * 100) / 100 : null,
+           joursTop10, paysTop10, count: 0, total: 0 },
     sources: 2,
-    sourceList: ['Netflix Tudum (heures vues cumulées)', 'FlixPatrol (historique classement)'],
-    dataPoints: (equivViewersAvail ? 1 : 0) + (decayAvail ? 1 : 0),
-    dataLabel: equivViewersAvail
-      ? `${equivViewersMil.toFixed(1)}M spectateurs complets estimés · ${decayLabel}`
-      : 'heures de visionnage non disponibles'
+    sourceList: engTudumAvail
+      ? ['Netflix Tudum (heures vues)', 'FlixPatrol (décroissance)']
+      : ['FlixPatrol (jours top 10)', 'FlixPatrol (couverture pays)'],
+    dataPoints: (engTudumAvail ? 1 : 0) + (rangsHist.length >= 2 ? 1 : 0),
+    dataLabel: engTudumAvail
+      ? `${equivViewersMil.toFixed(1)}M spectateurs complets · ${decayLabel}`
+      : engAvail ? `${joursTop10}j top 10 · ${paysTop10} pays · ${decayLabel}` : 'en attente'
   };
-
   out.components.notes = {
-    value: notesComponentVal, weight: 0.20,
-    available: notesAvail || ratioAvail,
+    value: qualityScore, weight: 0.15, available: qualityAvail,
     raw: notesDetail,
-    sources: notesSources.length || NOTES_TOTAL_SOURCES,
-    sourceList: notesSources.length
-      ? notesSources
+    sources: notesSources.length || NOTES_TOTAL,
+    sourceList: notesSources.length ? notesSources
       : ['IMDb', 'TMDB', 'Rotten Tomatoes (presse)', 'Rotten Tomatoes (public)',
          'Allociné Spectateurs', 'Allociné Presse', 'SensCritique', 'Filmaffinity'],
     dataPoints: notesSources.length,
-    dataLabel: notesSources.length
-      ? `${notesSources.length}/${NOTES_TOTAL_SOURCES} sources · Ratio proxy : ${ratioRaw != null ? ratioRaw.toFixed(1) : '—'}`
-      : `0/${NOTES_TOTAL_SOURCES} sources — en attente`
+    dataLabel: notesSources.length ? `${notesSources.length}/${NOTES_TOTAL} sources actives` : `0/${NOTES_TOTAL} — en attente`
   };
-
   out.components.search = {
-    value: sSearch, weight: 0.08,
-    available: searchAvail,
-    raw: searchRaw,
-    sources: searchSourceList.length || 2,
-    sourceList: searchSourceList.length ? searchSourceList : ['Google Trends', 'Wikipedia pageviews'],
-    dataPoints: searchRaw.trendsDays + searchRaw.wikiDays,
-    dataLabel: searchAvail
+    value: buzzScoreFinal, weight: 0.20, available: buzzAvail,
+    raw: { trendsMax, wikiViews7d, pressCount30d, socialCount7d, socialEngTotal,
+           trendsScore, wikiScore, pressScore, socialScore,
+           trendsDays: trends.length, wikiDays: wiki7.length, wikiArticles: [] },
+    sources: 4,
+    sourceList: ['Google Trends', 'Wikipedia pageviews', 'Presse (25+ RSS)', 'Social (Reddit+YT+Bsky+IG)'],
+    dataPoints: buzzParts.length,
+    dataLabel: buzzAvail
       ? [
-          searchRaw.trendsMax != null ? `Google pic ${searchRaw.trendsMax}` : null,
-          searchRaw.wikiViews7d > 0   ? `Wiki ${searchRaw.wikiViews7d.toLocaleString('fr-FR')} vues 7j` : null
+          trendsMax != null   ? `Trends pic ${trendsMax}` : null,
+          wikiViews7d > 0     ? `Wiki ${wikiViews7d.toLocaleString('fr-FR')} vues/7j` : null,
+          pressCount30d > 0   ? `${pressCount30d} articles/30j` : null,
+          socialCount7d > 0   ? `${socialCount7d} posts/7j` : null
         ].filter(Boolean).join(' · ')
       : 'en attente'
   };
@@ -2187,61 +2106,117 @@ function computeCompletionScore() {
   return out;
 }
 
-// Explication épinglée — méthode à 5 étapes (ton factuel, neutre)
 function formatCompletionTooltip(c) {
   const lines = [];
   const e  = c.components.engagement.raw || {};
   const r  = c.components.rank.raw       || {};
   const sr = c.components.search.raw     || {};
 
-  lines.push(`Taux de complétion estimé : ${c.score}%`);
+  lines.push(`Score de complétion : ${c.score}%`);
   lines.push('');
-
-  // Étapes 1+2 : EquivViewers / StarterIndex
-  if (c.components.engagement.available) {
-    lines.push(`📺 Spectateurs complets estimés : ${e.equivViewersMil != null ? e.equivViewersMil.toFixed(1) + 'M' : '—'}`);
-    lines.push(`   (heures de visionnage cumulées ÷ durée totale de la série)`);
-    lines.push(`🎯 Starter Index : ${c.components.rank.value} / 100`);
-    lines.push(`   Rang pic #${r.rankPic ?? '—'} (35 %) · ${r.joursTop10 ?? 0} pays-jours (30 %) · buzz ${r.buzzSc ?? 0}/100 (20 %) · heures (15 %)`);
-    lines.push(`   Base brute : ${e.baseCompletion ?? '—'}%`);
+  lines.push(`🏆 Popularité live (40 %) → ${c.components.rank.value}%`);
+  lines.push(`   #${r.rangMonde ?? '—'} mondial · ${r.paysN1 ?? 0} pays N°1 · ${r.paysTop10 ?? 0} pays top 10`);
+  lines.push('');
+  lines.push(`📺 Engagement (25 %) → ${c.components.engagement.value}%`);
+  if (e.equivViewersMil > 0) {
+    lines.push(`   ${e.equivViewersMil.toFixed(1)}M spectateurs complets (Tudum) · ${e.decayLabel ?? 'Neutre'}`);
   } else {
-    lines.push(`📺 Données de visionnage Tudum : en attente`);
-    lines.push(`🎯 Starter Index : ${c.components.rank.value} / 100 · rang pic #${r.rankPic ?? '—'} · ${r.joursTop10 ?? 0} pays-jours`);
+    lines.push(`   ${e.joursTop10 ?? 0}j en top 10 · ${e.paysTop10 ?? 0} pays · ${e.decayLabel ?? 'Neutre'}`);
   }
   lines.push('');
-
-  // Étape 4 : Décroissance
-  lines.push(`📉 Signal de décroissance : ${e.decayLabel ?? 'non calculé'}`);
-  if (e.rankDropRate != null) {
-    lines.push(`   Variation rang : ${e.rankDropRate > 0 ? '+' : ''}${e.rankDropRate} → facteur ×${e.decayFactor ?? 1} → score ajusté : ${c.components.engagement.value}%`);
-  }
+  lines.push(`📣 Buzz (20 %) → ${c.components.search.value}%`);
+  lines.push(`   ${c.components.search.dataLabel || 'en attente'}`);
   lines.push('');
-
-  // Étape 5 : Ratio Proxy + Notes
-  lines.push(`⚖️  Ratio proxy (heures ÷ pic popularité) + notes critiques → ${c.components.notes.value}%`);
+  lines.push(`⭐ Qualité (15 %) → ${c.components.notes.value}%`);
   lines.push(`   ${c.components.notes.dataLabel}`);
   lines.push('');
-
-  // Recherche
-  const searchLine = c.components.search.available
-    ? [
-        sr.trendsMax != null ? `Google Trends pic : ${sr.trendsMax}/100` : null,
-        sr.wikiViews7d > 0   ? `Wikipedia : ${sr.wikiViews7d.toLocaleString('fr-FR')} vues/7j` : null
-      ].filter(Boolean).join(' · ') + ` → ${c.components.search.value}%`
-    : 'en attente';
-  lines.push(`🔍 Intérêt en ligne · ${searchLine}`);
-  lines.push('');
-
-  lines.push(`Méthode : EquivViewers÷StarterIndex×Décroissance (60 %) + RatioProxy (20 %) + Notes (12 %) + Recherche (8 %)`);
+  lines.push(`Méthode v2 : Popularité (40 %) + Engagement (25 %) + Buzz (20 %) + Qualité (15 %)`);
   lines.push(`${c.totalActiveSources} source${c.totalActiveSources > 1 ? 's' : ''} active${c.totalActiveSources > 1 ? 's' : ''} sur ${c.totalSources}`);
   return lines.join('\n');
+}
+
+// Forecast S2 dynamique
+// Base 30 (taux renouvellement Netflix séries non-anglophones)
+// + bonus structurels calculés depuis les données live
+function computeForecastS2() {
+  const c         = computeCompletionScore();
+  const rangMonde = BANDI.current?.rang ?? null;
+  const paysN1    = BANDI.current?.paysN1 ?? 0;
+  const paysTop10 = BANDI.current?.paysTop10 ?? 0;
+  const hist      = Array.isArray(BANDI.historique) ? BANDI.historique : [];
+  const rangsH    = hist.map(h => h.rang).filter(r => typeof r === 'number' && r > 0);
+  const usaPays   = (Array.isArray(BANDI.pays) ? BANDI.pays : [])
+    .find(p => p.code === 'US' || p.pays === 'États-Unis' || p.pays === 'United States');
+  const usaRang   = usaPays?.rang ?? BANDI.strategique?.usaRang ?? null;
+
+  let prob = 30;
+  const bonuses = [];
+
+  if (rangMonde === 1) {
+    prob += 15;
+    bonuses.push({ label: '#1 mondial atteint', pts: '+15', ok: true });
+  } else if (rangMonde != null && rangMonde <= 5) {
+    prob += 10;
+    bonuses.push({ label: `Top 5 mondial (#${rangMonde})`, pts: '+10', ok: true });
+  } else {
+    bonuses.push({ label: 'Rang mondial', pts: '+0', ok: false });
+  }
+
+  if (usaRang != null && usaRang <= 10) {
+    prob += 12;
+    bonuses.push({ label: `Top 10 USA (#${usaRang})`, pts: '+12', ok: true });
+  } else {
+    bonuses.push({ label: 'Top 10 USA', pts: '+0', ok: usaRang != null && usaRang <= 10 });
+  }
+
+  if (paysN1 >= 10) {
+    prob += 10;
+    bonuses.push({ label: `${paysN1} pays N°1`, pts: '+10', ok: true });
+  } else if (paysN1 >= 5) {
+    prob += 5;
+    bonuses.push({ label: `${paysN1} pays N°1`, pts: '+5', ok: true });
+  } else {
+    bonuses.push({ label: 'Pays N°1 (seuil ≥10)', pts: '+0', ok: false });
+  }
+
+  const joursStable = rangsH.length;
+  if (joursStable >= 14 && (rangMonde ?? 99) <= 5) {
+    prob += 8;
+    bonuses.push({ label: `Stabilité ${joursStable}j en top 5`, pts: '+8', ok: true });
+  } else if (joursStable >= 7) {
+    prob += 4;
+    bonuses.push({ label: `${joursStable}j en top 10`, pts: '+4', ok: true });
+  } else {
+    bonuses.push({ label: 'Stabilité (seuil ≥7j)', pts: '+0', ok: false });
+  }
+
+  if (c.score >= 75) {
+    prob += 10;
+    bonuses.push({ label: `Complétion ${c.score}% ≥75`, pts: '+10', ok: true });
+  } else if (c.score >= 50) {
+    prob += 5;
+    bonuses.push({ label: `Complétion ${c.score}%`, pts: '+5', ok: true });
+  } else {
+    bonuses.push({ label: `Complétion ${c.score}% (seuil ≥75)`, pts: '+0', ok: false });
+  }
+
+  if (paysTop10 >= 30) {
+    prob += 5;
+    bonuses.push({ label: `${paysTop10} pays top 10`, pts: '+5', ok: true });
+  } else {
+    bonuses.push({ label: 'Couverture top 10 (seuil ≥30)', pts: '+0', ok: false });
+  }
+
+  return { prob: Math.min(95, Math.max(20, prob)), bonuses, completion: c };
 }
 
 function renderForecastS2() {
   const fc = BANDI.strategique?.forecastS2;
   if (!fc) return;
 
-  const prob = fc.probabilite || 85;
+  // Calcul dynamique — remplace la constante 85
+  const forecast = computeForecastS2();
+  const prob = forecast.prob;
 
   // Bento mini bar
   const miniBar = document.getElementById('forecastBar');
@@ -2360,35 +2335,35 @@ function renderCompletionBreakdown() {
   const rows = [
     {
       key: 'rank',
-      label: 'Stabilité du classement',
+      label: 'Popularité live',
       icon: '🏆',
-      desc: 'Rang moyen de Bandi dans le Top 10 Netflix mondial sur les 7 derniers jours.',
-      formula: '100 − (rang moyen × 10)'
+      desc: 'Rang mondial actuel + nombre de pays où Bandi est N°1 + nombre de pays dans le top 10 — les 3 signaux de popularité temps réel.',
+      formula: '45 %·rang mondial + 35 %·pays N°1 + 20 %·pays top 10'
     },
     {
       key: 'engagement',
-      label: 'Engagement social',
-      icon: '💬',
-      desc: 'Volume + interactions (likes, commentaires, vues) sur les posts récents parlant de Bandi.',
-      formula: 'log₁₀(engagement total + 1) × 20'
+      label: 'Engagement audience',
+      icon: '📺',
+      desc: 'Heures de visionnage Tudum converties en spectateurs complets estimés (si dispo) ; sinon proxy jours en top 10 × couverture pays.',
+      formula: 'Tudum : heures ÷ 8h × cap(15M) ; Proxy : 60 %·jours + 40 %·pays'
     },
     {
       key: 'notes',
-      label: 'Notes critiques',
+      label: 'Qualité perçue',
       icon: '⭐',
       desc: 'Moyenne pondérée de 8 sources de notes (presse & audience, toutes ramenées sur /10).',
-      formula: '(IMDb·0,22 + TMDB·0,18 + RT presse·0,15 + RT public·0,10 + Allociné pub·0,10 + Allociné presse·0,10 + SensCritique·0,10 + Filmaffinity·0,05) × 10'
+      formula: 'IMDb·0,22 + TMDB·0,18 + RT·0,25 + Allociné·0,20 + SensCritique·0,10 + Filmaffinity·0,05'
     },
     {
       key: 'search',
-      label: 'Intérêt recherche',
-      icon: '🔍',
-      desc: 'Combine Google Trends (0-100) et Wikipedia pageviews 7j — signaux d\'intérêt complémentaires.',
-      formula: 'moyenne pondérée (Google Trends · 0,6 + Wikipedia · 0,4)'
+      label: 'Buzz & intérêt en ligne',
+      icon: '📣',
+      desc: 'Google Trends + Wikipedia pageviews + volume presse (30j, 25+ flux RSS) + activité sociale (Reddit, YouTube, Bluesky, Instagram, 7j).',
+      formula: 'Trends·0,30 + Wikipedia·0,25 + Presse·0,25 + Social·0,20'
     }
   ];
 
-  const weightLabels = { rank: '40 %', engagement: '30 %', notes: '20 %', search: '10 %' };
+  const weightLabels = { rank: '40 %', engagement: '25 %', notes: '15 %', search: '20 %' };
 
   const rowsHtml = rows.map(r => {
     const comp = c.components[r.key];
@@ -2447,8 +2422,8 @@ function renderCompletionBreakdown() {
       <div class="cb-head-left">
         <span class="cb-tag">Score en direct</span>
         <h4 class="cb-title">Comment ce score est calculé</h4>
-        <p class="cb-sub">4 informations récoltées automatiquement toutes les 6 h,
-          combinées pour donner un score de 0 à 100.</p>
+        <p class="cb-sub">4 signaux récoltés automatiquement (rang toutes les 2h · buzz toutes les 30min),
+          combinés pour donner un score de 0 à 100.</p>
       </div>
       <div class="cb-head-right">
         <div class="cb-score">${pct}<span class="cb-score-max">%</span></div>

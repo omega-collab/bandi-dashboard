@@ -8,37 +8,32 @@
  *   1) Apify (acteurs Instagram Hashtag/Profile Scraper) si APIFY_API_TOKEN défini
  *   2) RSSHub instances publiques (gratuit, best-effort) sinon
  *
- * Sans APIFY_API_TOKEN et sans RSSHub accessible, le script exit 0 proprement
- * avec un message — ne casse jamais le workflow.
- *
- * Mapping buzz_social (colonnes réelles Supabase) :
- *   platform        = 'instagram'
- *   post_id         = shortcode Instagram (unique avec platform)
- *   content         = caption tronquée (280)
- *   url             = https://www.instagram.com/p/{shortcode}/
- *   author_name     = ownerUsername
- *   published_at    = ISO8601
- *   engagement_score = likesCount + commentsCount
- *   thumbnail_url   = displayUrl
+ * FILTRAGE STRICT :
+ *   - hashtag #bandi seul = rejeté (trop générique : Bandi = bandit IT, BD, etc.)
+ *   - Doit satisfaire ≥ 1 critère de pertinence + seuil d'engagement minimum
  */
 
 import Parser from 'rss-parser';
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_URL       = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const APIFY_API_TOKEN = process.env.APIFY_API_TOKEN;
+const APIFY_API_TOKEN    = process.env.APIFY_API_TOKEN;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error('[instagram] SUPABASE_URL / SUPABASE_SERVICE_KEY manquants');
   process.exit(0);
 }
 
-// Cibles : hashtags + comptes à surveiller
-const HASHTAGS = ['bandi', 'bandinetflix', 'bandiserie', 'seriebandi', 'bandimartinique'];
-const USERS    = ['yoottle', 'netflixfr', 'netflix'];
+// Hashtags ciblés (on exclut le générique #bandi seul — voir filtre)
+const HASHTAGS = ['bandinetflix', 'bandiserie', 'seriebandi', 'bandimartinique', 'bandinetflixserie'];
+const USERS    = ['yoottle', 'netflixfr'];  // Netflix global trop générique → retiré
 
-const RESULTS_PER_TAG  = 40;
-const RESULTS_PER_USER = 20;
+const RESULTS_PER_TAG  = 50;
+const RESULTS_PER_USER = 30;
+
+// Seuil d'engagement minimum pour qu'un post entre en DB
+// (likes + commentaires) — évite le bruit de comptes confidentiels
+const MIN_ENGAGEMENT = 10;
 
 // Instances RSSHub publiques (fallback)
 const RSSHUB_INSTANCES = [
@@ -46,6 +41,36 @@ const RSSHUB_INSTANCES = [
   'https://rss.shab.it',
   'https://rsshub.rssforever.com',
 ];
+
+// ─── Filtre de pertinence strict ─────────────────────────────────────────────
+// Retourne true si le post est RÉELLEMENT lié à la série Bandi Netflix
+function isRelevantBandi(caption = '', author = '') {
+  const text = (caption + ' ' + author).toLowerCase();
+
+  // Hashtags ou expressions spécifiques Netflix / série → pertinent
+  const STRONG_SIGNALS = [
+    'bandinetflix', 'bandi netflix', 'bandi serie', 'bandi série',
+    '#bandiserie', 'bandiserie', '#seriebandi', 'seriebandi',
+    '#bandimartinique', 'bandimartinique', '#bandinetflixserie',
+    'netflix martinique', 'serie martinique', 'série martinique',
+    'martinique netflix', 'première série martiniquaise',
+    'maui entertainment', 'bandi saison', 'bandi s1', 'bandi s2',
+    'bandi ep', 'episode bandi', 'regarder bandi',
+  ];
+  if (STRONG_SIGNALS.some(s => text.includes(s))) return true;
+
+  // "bandi" + contexte série/film/martinique = pertinent
+  const hasBandi = /\bbandi\b/.test(text);
+  if (!hasBandi) return false;
+
+  const CONTEXT_KEYWORDS = [
+    'netflix', 'série', 'serie', 'saison', 'episode', 'épisode',
+    'martinique', 'martiniquais', 'antilles', 'caribéen', 'caribbean',
+    'streaming', 'casting', 'tournage', 'diffusion', 'maui',
+    'scénariste', 'réalisateur', 'acteur', 'actrice',
+  ];
+  return CONTEXT_KEYWORDS.some(k => text.includes(k));
+}
 
 // ─── Helpers Supabase ─────────────────────────────────────────────────────────
 async function upsertSocial(rows) {
@@ -71,7 +96,7 @@ async function upsertSocial(rows) {
 
 function toRow({ shortcode, caption, owner, ts, likes, comments, thumb }) {
   if (!shortcode) return null;
-  const likesNum = Number.isFinite(likes) ? likes : 0;
+  const likesNum    = Number.isFinite(likes)    ? likes    : 0;
   const commentsNum = Number.isFinite(comments) ? comments : 0;
   return {
     platform: 'instagram',
@@ -104,22 +129,22 @@ async function scrapeViaApify() {
   console.log('[instagram] → Apify');
   const rows = [];
 
-  // Hashtag scraper (acteur public "apify/instagram-hashtag-scraper")
+  // Hashtag scraper
   try {
     const items = await runApifyActor('apify~instagram-hashtag-scraper', {
       hashtags: HASHTAGS,
       resultsLimit: RESULTS_PER_TAG,
     });
-    console.log(`[instagram]   hashtags → ${items.length} posts`);
+    console.log(`[instagram]   hashtags bruts → ${items.length} posts`);
     for (const it of items) {
       const row = toRow({
         shortcode: it.shortCode || it.shortcode,
-        caption: it.caption,
-        owner: it.ownerUsername || it.ownerFullName,
-        ts: it.timestamp,
-        likes: it.likesCount,
-        comments: it.commentsCount,
-        thumb: it.displayUrl,
+        caption:   it.caption,
+        owner:     it.ownerUsername || it.ownerFullName,
+        ts:        it.timestamp,
+        likes:     it.likesCount,
+        comments:  it.commentsCount,
+        thumb:     it.displayUrl,
       });
       if (row) rows.push(row);
     }
@@ -127,25 +152,24 @@ async function scrapeViaApify() {
     console.warn('[instagram]   hashtags KO:', e.message);
   }
 
-  // Profile scraper (acteur public "apify/instagram-profile-scraper")
+  // Profile scraper (comptes clés seulement)
   try {
     const items = await runApifyActor('apify~instagram-profile-scraper', {
       usernames: USERS,
       resultsLimit: RESULTS_PER_USER,
     });
-    console.log(`[instagram]   profils → ${items.length} posts`);
+    console.log(`[instagram]   profils bruts → ${items.length} posts`);
     for (const it of items) {
-      // format varie légèrement selon l'acteur
       const posts = Array.isArray(it.latestPosts) ? it.latestPosts : [it];
       for (const p of posts) {
         const row = toRow({
           shortcode: p.shortCode || p.shortcode,
-          caption: p.caption,
-          owner: p.ownerUsername || it.username,
-          ts: p.timestamp,
-          likes: p.likesCount,
-          comments: p.commentsCount,
-          thumb: p.displayUrl,
+          caption:   p.caption,
+          owner:     p.ownerUsername || it.username,
+          ts:        p.timestamp,
+          likes:     p.likesCount,
+          comments:  p.commentsCount,
+          thumb:     p.displayUrl,
         });
         if (row) rows.push(row);
       }
@@ -154,18 +178,14 @@ async function scrapeViaApify() {
     console.warn('[instagram]   profils KO:', e.message);
   }
 
-  // Filtre mention "bandi" dans le caption pour les profils génériques
-  const filtered = rows.filter(r =>
-    /bandi/i.test(r.content || '') || /bandi/i.test(r.author_name || '')
-  );
-  return dedupe(filtered);
+  return filterAndDedupe(rows);
 }
 
-// ─── Stratégie 2 : RSSHub (fallback gratuit, best-effort) ─────────────────────
+// ─── Stratégie 2 : RSSHub ─────────────────────────────────────────────────────
 async function scrapeViaRsshub() {
   console.log('[instagram] → RSSHub (fallback)');
   const parser = new Parser({ timeout: 15000 });
-  const rows = [];
+  const rows   = [];
   const targets = [
     ...HASHTAGS.map(t => `/instagram/tag/${t}`),
     ...USERS.map(u => `/instagram/user/${u}`),
@@ -181,30 +201,37 @@ async function scrapeViaRsshub() {
           if (!m) continue;
           const row = toRow({
             shortcode: m[1],
-            caption: it.contentSnippet || it.title,
-            owner: (feed.title || '').replace(/^Instagram - /, ''),
-            ts: it.isoDate || it.pubDate,
+            caption:   it.contentSnippet || it.title,
+            owner:     (feed.title || '').replace(/^Instagram - /, ''),
+            ts:        it.isoDate || it.pubDate,
             likes: 0, comments: 0,
             thumb: (it.enclosure && it.enclosure.url) || null,
           });
           if (row) rows.push(row);
         }
         ok = true;
-        break; // instance fonctionne, on passe à la cible suivante
-      } catch (e) {
-        // instance HS, on essaie la suivante
-      }
+        break;
+      } catch (_) {}
     }
     if (!ok) console.warn(`[instagram]   RSSHub ${path} → toutes instances KO`);
   }
-  // Filtre mention bandi
-  const filtered = rows.filter(r => /bandi/i.test(r.content || '') || /bandi/i.test(r.author_name || ''));
-  return dedupe(filtered);
+  return filterAndDedupe(rows);
 }
 
-function dedupe(rows) {
+// ─── Filtre + déduplication ───────────────────────────────────────────────────
+function filterAndDedupe(rows) {
+  const before = rows.length;
+  const filtered = rows.filter(r => {
+    // 1. Pertinence sémantique stricte
+    if (!isRelevantBandi(r.content || '', r.author_name || '')) return false;
+    // 2. Engagement minimum (sauf si vient d'un compte whitelisté)
+    const isWhitelisted = ['yoottle', 'netflixfr'].includes((r.author_name || '').toLowerCase());
+    if (!isWhitelisted && r.engagement_score < MIN_ENGAGEMENT) return false;
+    return true;
+  });
+  console.log(`[instagram]   filtre pertinence : ${before} → ${filtered.length} posts retenus`);
   const map = new Map();
-  for (const r of rows) if (r.post_id && !map.has(r.post_id)) map.set(r.post_id, r);
+  for (const r of filtered) if (r.post_id && !map.has(r.post_id)) map.set(r.post_id, r);
   return [...map.values()];
 }
 
@@ -215,16 +242,16 @@ function dedupe(rows) {
     if (APIFY_API_TOKEN) {
       rows = await scrapeViaApify();
       if (!rows.length) {
-        console.log('[instagram] Apify → 0 résultat, fallback RSSHub');
+        console.log('[instagram] Apify → 0 résultat après filtre, fallback RSSHub');
         rows = await scrapeViaRsshub();
       }
     } else {
-      console.log('[instagram] APIFY_API_TOKEN absent — fallback RSSHub direct');
+      console.log('[instagram] APIFY_API_TOKEN absent — fallback RSSHub');
       rows = await scrapeViaRsshub();
     }
 
     if (!rows.length) {
-      console.log('[instagram] Aucun post récupéré — exit 0 (non bloquant)');
+      console.log('[instagram] Aucun post retenu — exit 0 (non bloquant)');
       return;
     }
 
