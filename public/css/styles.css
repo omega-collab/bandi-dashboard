@@ -1019,6 +1019,95 @@ body::before {
 .map-popup-hist { font-size: 11px; color: var(--muted-light); font-family: var(--font-mono); }
 
 /* ============ 17. SERIES ============ */
+.series-stats-panel {
+  margin-bottom: 20px;
+}
+.series-stats-group {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.series-stats-group:first-of-type {
+  margin-top: 8px;
+  padding-top: 0;
+  border-top: none;
+}
+.series-stats-subtitle {
+  font-family: var(--font-display);
+  font-size: 20px; font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+.series-stats-tagline {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vert);
+  margin: 0 0 18px;
+  opacity: 0.9;
+}
+.series-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.series-stats-grid .stat-card {
+  display: flex; flex-direction: column;
+  align-items: flex-start;
+  padding: 18px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--rouge);
+  border-radius: var(--radius);
+  transition: transform var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.series-stats-grid .stat-card:hover {
+  transform: translateY(-2px);
+  border-left-color: var(--gold);
+}
+.series-stats-grid .stat-num {
+  font-family: var(--font-display);
+  font-size: 40px; font-weight: 400;
+  line-height: 1;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+.series-stats-grid .stat-label {
+  margin-top: 8px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+.series-stats-grid .stat-label small {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+.series-stats-source {
+  margin-top: 20px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  text-align: right;
+}
+.series-stats-source a {
+  color: var(--gold);
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(228, 184, 77, 0.4);
+}
+
 .series-hero {
   display: grid; grid-template-columns: 300px 1fr;
   gap: 36px; padding: 36px;
