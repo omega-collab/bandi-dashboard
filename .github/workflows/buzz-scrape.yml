@@ -1,9 +1,9 @@
-name: Scrape Buzz (presse + social)
+name: Scrape Buzz presse (RSS + Google News + GDELT)
 
 on:
   schedule:
-    # Toutes les 6 heures
-    - cron: '0 */6 * * *'
+    # Toutes les 30 minutes
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -21,19 +21,11 @@ jobs:
       - name: Install deps
         run: npm ci || npm install
 
-      - name: Scrape presse (Google News + RSS Antilles)
+      - name: Scrape presse (Google News + RSS Antilles + presse spécialisée)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: node scripts/scrape-press.js
 
-      - name: Scrape social (Reddit + Bluesky + YouTube optionnel)
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-        run: node scripts/scrape-social.js
-        continue-on-error: true  # social peut échouer sans bloquer le workflow
-
       - if: always()
-        run: echo "Buzz scrape terminé à $(date -u)"
+        run: echo "Buzz presse scrape terminé à $(date -u)"

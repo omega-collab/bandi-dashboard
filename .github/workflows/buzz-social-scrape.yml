@@ -2,14 +2,14 @@ name: Scrape Social Bandi
 
 on:
   schedule:
-    # Toutes les 6h : 00h, 06h, 12h, 18h UTC
-    - cron: '30 */6 * * *'
+    # Toutes les heures à :15 (décalé du scrape presse)
+    - cron: '15 * * * *'
   workflow_dispatch:
 
 jobs:
   scrape-social:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +27,15 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: node scripts/scrape-social.js
+        continue-on-error: true
+
+      - name: Scrape Instagram (Apify ou RSSHub fallback)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
+        run: node scripts/scrape-instagram.js
+        continue-on-error: true
 
       - if: always()
         run: echo "Social scrape terminé à $(date -u)"

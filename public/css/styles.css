@@ -1108,6 +1108,36 @@ body::before {
   border-bottom: 1px dotted rgba(228, 184, 77, 0.4);
 }
 
+/* Carrousel mobile : swipe horizontal isolé (ne bouge PAS la page) */
+@media (max-width: 900px) {
+  .series-stats-grid {
+    display: flex;
+    grid-template-columns: none;
+    gap: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 4px;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
+    padding: 4px 2px 12px;
+    margin: 0 -2px;
+    scrollbar-width: none;
+  }
+  .series-stats-grid::-webkit-scrollbar { display: none; }
+  .series-stats-grid .stat-card {
+    flex: 0 0 62%;
+    min-width: 0;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+}
+@media (max-width: 480px) {
+  .series-stats-grid .stat-card { flex-basis: 72%; }
+}
+
 .series-hero {
   display: grid; grid-template-columns: 300px 1fr;
   gap: 36px; padding: 36px;
