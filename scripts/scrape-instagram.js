@@ -11,16 +11,15 @@
  * Sans APIFY_API_TOKEN et sans RSSHub accessible, le script exit 0 proprement
  * avec un message — ne casse jamais le workflow.
  *
- * Mapping buzz_social :
- *   platform     = 'instagram'
- *   post_id      = shortcode Instagram (unique)
- *   title        = caption tronquée (280)
- *   url          = https://www.instagram.com/p/{shortcode}/
- *   author       = ownerUsername
- *   published_at = ISO8601
- *   score        = likesCount
- *   comments     = commentsCount
- *   thumbnail    = displayUrl
+ * Mapping buzz_social (colonnes réelles Supabase) :
+ *   platform        = 'instagram'
+ *   post_id         = shortcode Instagram (unique avec platform)
+ *   content         = caption tronquée (280)
+ *   url             = https://www.instagram.com/p/{shortcode}/
+ *   author_name     = ownerUsername
+ *   published_at    = ISO8601
+ *   engagement_score = likesCount + commentsCount
+ *   thumbnail_url   = displayUrl
  */
 
 import Parser from 'rss-parser';
@@ -51,7 +50,7 @@ const RSSHUB_INSTANCES = [
 // ─── Helpers Supabase ─────────────────────────────────────────────────────────
 async function upsertSocial(rows) {
   if (!rows.length) return 0;
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/buzz_social`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/buzz_social?on_conflict=platform,post_id`, {
     method: 'POST',
     headers: {
       apikey: SUPABASE_SERVICE_KEY,
@@ -72,16 +71,17 @@ async function upsertSocial(rows) {
 
 function toRow({ shortcode, caption, owner, ts, likes, comments, thumb }) {
   if (!shortcode) return null;
+  const likesNum = Number.isFinite(likes) ? likes : 0;
+  const commentsNum = Number.isFinite(comments) ? comments : 0;
   return {
     platform: 'instagram',
     post_id: shortcode,
-    title: (caption || '').slice(0, 280),
+    content: (caption || '').slice(0, 280),
     url: `https://www.instagram.com/p/${shortcode}/`,
-    author: owner || null,
+    author_name: owner || null,
     published_at: ts ? new Date(ts).toISOString() : null,
-    score: Number.isFinite(likes) ? likes : 0,
-    comments: Number.isFinite(comments) ? comments : 0,
-    thumbnail: thumb || null,
+    engagement_score: likesNum + commentsNum,
+    thumbnail_url: thumb || null,
   };
 }
 
@@ -156,7 +156,7 @@ async function scrapeViaApify() {
 
   // Filtre mention "bandi" dans le caption pour les profils génériques
   const filtered = rows.filter(r =>
-    /bandi/i.test(r.title || '') || /bandi/i.test(r.author || '') || /#bandi/i.test(r.title || '')
+    /bandi/i.test(r.content || '') || /bandi/i.test(r.author_name || '')
   );
   return dedupe(filtered);
 }
@@ -198,7 +198,7 @@ async function scrapeViaRsshub() {
     if (!ok) console.warn(`[instagram]   RSSHub ${path} → toutes instances KO`);
   }
   // Filtre mention bandi
-  const filtered = rows.filter(r => /bandi/i.test(r.title || '') || /bandi/i.test(r.author || ''));
+  const filtered = rows.filter(r => /bandi/i.test(r.content || '') || /bandi/i.test(r.author_name || ''));
   return dedupe(filtered);
 }
 
