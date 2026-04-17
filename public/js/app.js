@@ -97,7 +97,7 @@ async function loadLiveData() {
     // 1. Historique (30 derniers snapshots)
     const snapRes = await fetch(
       `${cfg.url}/rest/v1/bandi_snapshots?order=date.desc&limit=30`,
-      { headers }
+      { headers, cache: 'no-store' }
     );
     const snapshots = await snapRes.json();
 
@@ -113,14 +113,14 @@ async function loadLiveData() {
     // 2. Pays du jour
     const paysRes = await fetch(
       `${cfg.url}/rest/v1/bandi_country_rankings?date=eq.${today}&order=rang.asc`,
-      { headers }
+      { headers, cache: 'no-store' }
     );
     const paysData = await paysRes.json();
 
     // 3. Top 10 monde du jour
     const top10Res = await fetch(
       `${cfg.url}/rest/v1/netflix_tv_top10_world?date=eq.${today}&order=rang.asc`,
-      { headers }
+      { headers, cache: 'no-store' }
     );
     const top10Data = await top10Res.json();
 
@@ -131,7 +131,7 @@ async function loadLiveData() {
     try {
       const bhRes = await fetch(
         `${cfg.url}/rest/v1/netflix_tv_top10_world?titre=ilike.%25bandi%25&order=date.desc&limit=30`,
-        { headers }
+        { headers, cache: 'no-store' }
       );
       if (bhRes.ok) bandiTvHist = await bhRes.json();
     } catch (_) { /* pas critique */ }
@@ -139,7 +139,7 @@ async function loadLiveData() {
     // 4. Historique par pays (pour calculer trend)
     const paysHistRes = await fetch(
       `${cfg.url}/rest/v1/bandi_country_rankings?order=date.desc&limit=500`,
-      { headers }
+      { headers, cache: 'no-store' }
     );
     const paysHist = await paysHistRes.json();
     window._paysHistCache = paysHist; // exposé pour initMapTab momentum
@@ -149,7 +149,7 @@ async function loadLiveData() {
     try {
       const tudumRes = await fetch(
         `${cfg.url}/rest/v1/tudum_global_weekly?order=week_start.desc%2Crang.asc&limit=40`,
-        { headers }
+        { headers, cache: 'no-store' }
       );
       if (tudumRes.ok) tudumData = await tudumRes.json();
     } catch (_) { /* table absente ou réseau, pas critique */ }
@@ -159,7 +159,7 @@ async function loadLiveData() {
     try {
       const tRes = await fetch(
         `${cfg.url}/rest/v1/buzz_trends?order=date.desc&limit=7`,
-        { headers }
+        { headers, cache: 'no-store' }
       );
       if (tRes.ok) buzzTrends7d = await tRes.json();
     } catch (_) { /* table absente, pas critique */ }
@@ -169,7 +169,7 @@ async function loadLiveData() {
     try {
       const sRes = await fetch(
         `${cfg.url}/rest/v1/buzz_social?order=published_at.desc&limit=100`,
-        { headers }
+        { headers, cache: 'no-store' }
       );
       if (sRes.ok) buzzSocialRecent = await sRes.json();
     } catch (_) { /* table absente, pas critique */ }
@@ -183,7 +183,7 @@ async function loadLiveData() {
     try {
       const erRes = await fetch(
         `${cfg.url}/rest/v1/external_ratings?order=date.desc&limit=80`,
-        { headers }
+        { headers, cache: 'no-store' }
       );
       if (erRes.ok) {
         const arr = await erRes.json();
@@ -204,7 +204,7 @@ async function loadLiveData() {
     try {
       const wpRes = await fetch(
         `${cfg.url}/rest/v1/wikipedia_pageviews?order=date.desc&limit=60`,
-        { headers }
+        { headers, cache: 'no-store' }
       );
       if (wpRes.ok) {
         const arr = await wpRes.json();
@@ -217,7 +217,7 @@ async function loadLiveData() {
     try {
       const cntRes = await fetch(
         `${cfg.url}/rest/v1/bandi_country_rankings?select=id`,
-        { headers: { ...headers, 'Prefer': 'count=exact', 'Range': '0-0', 'Range-Unit': 'items' } }
+        { headers: { ...headers, 'Prefer': 'count=exact', 'Range': '0-0', 'Range-Unit': 'items' }, cache: 'no-store' }
       );
       if (cntRes.ok) {
         const range = cntRes.headers.get('content-range'); // "0-0/12345"
@@ -232,7 +232,7 @@ async function loadLiveData() {
     try {
       const hcRes = await fetch(
         `${cfg.url}/rest/v1/tudum_global_weekly?titre=ilike.%25bandi%25&select=heures_vues,views_millions`,
-        { headers }
+        { headers, cache: 'no-store' }
       );
       if (hcRes.ok) {
         const arr = await hcRes.json();
@@ -453,7 +453,7 @@ async function loadLiveData() {
 async function renderSourcesBadge(cfg, headers) {
   try {
     // Uniquement FlixPatrol (snapshots) — Tudum manque encore de données live
-    const fpRes = await fetch(`${cfg.url}/rest/v1/bandi_snapshots?order=date.desc&limit=2`, { headers });
+    const fpRes = await fetch(`${cfg.url}/rest/v1/bandi_snapshots?order=date.desc&limit=2`, { headers, cache: 'no-store' });
     const fp = await fpRes.json();
 
     const badge = document.getElementById('sourcesBadge');
@@ -681,11 +681,16 @@ function renderOverview() {
     return `${d}/${m}/${y}`;
   };
   const dateFR = fmtDate(BANDI.current?.date);
+  // Heure locale de la dernière synchro (HH:mm) — permet de voir le live pulse.
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const timeFR = `${hh}:${mm}`;
   if (dateFR) {
     const luEl = $("lastUpdate");
-    if (luEl) luEl.textContent = dateFR;
+    if (luEl) luEl.textContent = `${dateFR} · ${timeFR}`;
     const heroU = $("heroUpdate");
-    if (heroU) heroU.textContent = dateFR;
+    if (heroU) heroU.textContent = `${dateFR} · ${timeFR}`;
   }
 }
 
@@ -1531,9 +1536,9 @@ const ENGAGE_ICONS = { reddit: '↑', youtube: '▶', bluesky: '♥', press: '' 
 
 async function loadBuzzData(cfg, headers) {
   const [artRes, socRes, trendsRes] = await Promise.all([
-    fetch(`${cfg.url}/rest/v1/buzz_articles?order=published_at.desc&limit=500`, { headers }),
-    fetch(`${cfg.url}/rest/v1/buzz_social?order=published_at.desc&limit=500`, { headers }),
-    fetch(`${cfg.url}/rest/v1/buzz_trends?order=date.asc&limit=31`, { headers }),
+    fetch(`${cfg.url}/rest/v1/buzz_articles?order=published_at.desc&limit=500`, { headers, cache: 'no-store' }),
+    fetch(`${cfg.url}/rest/v1/buzz_social?order=published_at.desc&limit=500`, { headers, cache: 'no-store' }),
+    fetch(`${cfg.url}/rest/v1/buzz_trends?order=date.asc&limit=31`, { headers, cache: 'no-store' }),
   ]);
   const articles = await artRes.json();
   const social   = await socRes.json();
@@ -2909,4 +2914,36 @@ document.addEventListener("DOMContentLoaded", async () => {
   try { renderZonesDomination(); } catch (e) { console.error('[BANDI] renderZonesDomination:', e); }
   try { renderForecastS2(); }      catch (e) { console.error('[BANDI] renderForecastS2:', e); }
   try { renderMethodologySources(); } catch (e) { console.error('[BANDI] renderMethodologySources:', e); }
+
+  // ── Auto-refresh hero (live FlixPatrol) ──────────────────────────────
+  // Le scraper FlixPatrol tourne toutes les 2h côté GitHub Actions. On
+  // resynchronise le dashboard toutes les 5 min pour que le hero et les
+  // modules dépendants (Forecast, USA, Zones, Concurrence) reflètent le
+  // snapshot le plus récent sans recharger la page.
+  const HERO_REFRESH_MS = 5 * 60 * 1000;
+  setInterval(async () => {
+    if (document.hidden) return; // économie batterie mobile
+    try {
+      await loadLiveData();
+      try { renderOverview(); }        catch (e) { console.error('[BANDI] refresh renderOverview:', e); }
+      try { renderRivals(); }          catch (e) { console.error('[BANDI] refresh renderRivals:', e); }
+      try { renderBreakthroughUSA(); } catch (e) { console.error('[BANDI] refresh renderBreakthroughUSA:', e); }
+      try { renderZonesDomination(); } catch (e) { console.error('[BANDI] refresh renderZonesDomination:', e); }
+      try { renderForecastS2(); }      catch (e) { console.error('[BANDI] refresh renderForecastS2:', e); }
+      try { renderAuthenticiteMini(); }catch (e) { console.error('[BANDI] refresh renderAuthenticiteMini:', e); }
+      console.log('[BANDI] 🔄 hero resynchronisé');
+    } catch (e) {
+      console.warn('[BANDI] refresh KO (non bloquant):', e.message);
+    }
+  }, HERO_REFRESH_MS);
+
+  // Resync immédiate au retour sur l'onglet (onglet mis en arrière-plan)
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    loadLiveData().then(() => {
+      try { renderOverview(); } catch (_) {}
+      try { renderRivals(); } catch (_) {}
+      try { renderForecastS2(); } catch (_) {}
+    }).catch(() => {});
+  });
 });
