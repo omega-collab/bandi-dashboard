@@ -410,28 +410,28 @@ async function loadLiveData() {
     // ── Hero rang : rang TV Shows officiel FlixPatrol ────────────────────────
     // Source : netflix_tv_top10_world.rang (scrape de /top10/netflix/world/).
     // ATTENTION : snapshot.rang_monde = rang TOUTES catégories (Films+TV mélangés)
-    //   → ne PAS utiliser pour le hero qui annonce "TV SHOWS NETFLIX".
-    // Ordre de priorité :
-    //   1. bandiTvHist[0].rang (Bandi dans netflix_tv_top10_world, date la + récente)
-    //   2. top10Data.find(bandi).rang (même table, filtré sur today)
-    //   3. snapshot.rang_monde (fallback si Bandi hors TV top 10)
-    //   4. Position dans BANDI.rivals (fallback ultime offline)
-    const bandiTvToday = (Array.isArray(bandiTvHist) && bandiTvHist[0]?.date === today)
-      ? bandiTvHist[0]
-      : (Array.isArray(top10Data)
-          ? top10Data.find(t => t?.titre && t.titre.toLowerCase().includes('bandi'))
-          : null);
+    //   → ne JAMAIS l'utiliser pour le hero qui annonce "TV SHOWS NETFLIX".
+    //     Il peut afficher #1 quand Bandi est #3 en TV Shows (bug visible pour Allan).
+    // Ordre de priorité (strict TV Shows uniquement) :
+    //   1. top10Data.find(bandi).rang (TV Shows du jour)
+    //   2. bandiTvHist[0].rang (dernière entrée TV Shows connue, même si J-1/J-2)
+    //   3. Position dans BANDI.rivals (fallback offline)
+    const bandiInTodayTop10 = Array.isArray(top10Data)
+      ? top10Data.find(t => t?.titre && t.titre.toLowerCase().includes('bandi'))
+      : null;
+    const bandiLastTv = Array.isArray(bandiTvHist) && bandiTvHist.length ? bandiTvHist[0] : null;
 
-    if (bandiTvToday && bandiTvToday.rang) {
-      BANDI.current.rang = bandiTvToday.rang;
-      console.log(`[BANDI] Rang TV Shows : #${bandiTvToday.rang} (netflix_tv_top10_world, date ${bandiTvToday.date || today})`);
-    } else if (current.rang_monde) {
-      BANDI.current.rang = current.rang_monde;
-      console.warn(`[BANDI] Bandi absent de netflix_tv_top10_world — fallback rang_monde=#${current.rang_monde} (toutes catégories, hero moins précis)`);
+    if (bandiInTodayTop10 && bandiInTodayTop10.rang) {
+      BANDI.current.rang = bandiInTodayTop10.rang;
+      console.log(`[BANDI] Rang TV Shows : #${bandiInTodayTop10.rang} (top10 du jour ${today})`);
+    } else if (bandiLastTv && bandiLastTv.rang) {
+      BANDI.current.rang = bandiLastTv.rang;
+      const stale = bandiLastTv.date !== today ? ` ⚠ stale (${bandiLastTv.date})` : '';
+      console.log(`[BANDI] Rang TV Shows : #${bandiLastTv.rang} (netflix_tv_top10_world ${bandiLastTv.date})${stale}`);
     } else {
       const bIdx = BANDI.rivals.findIndex(r => r.isBandi);
       if (bIdx !== -1) BANDI.current.rang = bIdx + 1;
-      console.warn('[BANDI] Aucune source de rang — fallback position rivals');
+      console.warn(`[BANDI] Aucune source TV Shows — fallback rivals #${BANDI.current.rang}. rang_monde brut (all-content) = #${current.rang_monde} NON utilisé (trompeur).`);
     }
     // Exposer la date du snapshot pour l'affichage dynamique (footer, hero)
     BANDI.current.date = today;
