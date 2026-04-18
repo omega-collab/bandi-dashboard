@@ -1666,9 +1666,23 @@ function renderBuzzTimeline() {
   const em   = $('buzzEmpty');
   const pg   = $('buzzPagination');
 
-  if (total < 5) {
+  // Compteur résultats — toujours visible (même 0) pour transparence
+  const ct = $('buzzResultCount');
+  if (ct) ct.textContent = `${total} résultat${total > 1 ? 's' : ''}`;
+
+  // Aucun résultat — message explicite (audit : seuil arbitraire <5 supprimé)
+  if (total === 0) {
     if (tl) tl.innerHTML = '';
-    if (em) em.style.display = '';
+    if (em) {
+      em.style.display = '';
+      em.innerHTML = `
+        <p>Aucun résultat avec ces filtres.</p>
+        <p style="font-size:11px;opacity:.6;margin-top:6px;">
+          Essaie de combiner différemment ou utilise <button type="button" id="buzzReset" class="buzz-btn" style="display:inline-block;margin-left:4px;">Réinitialiser</button>
+        </p>`;
+      const rb = document.getElementById('buzzReset');
+      if (rb) rb.addEventListener('click', resetBuzzFilters);
+    }
     if (pg) pg.style.display = 'none';
     return;
   }
@@ -1683,6 +1697,24 @@ function renderBuzzTimeline() {
   const nextBtn = $('buzzNext');
   if (prevBtn) prevBtn.disabled = buzzPage === 0;
   if (nextBtn) nextBtn.disabled = buzzPage >= totalPages - 1;
+}
+
+// Reset complet des filtres Buzz (utilisé par le bouton vide + bouton dédié)
+function resetBuzzFilters() {
+  buzzFilters.type = 'all';
+  buzzFilters.source = 'all';
+  buzzFilters.platform = 'all';
+  buzzFilters.period = 'all';
+  buzzPage = 0;
+  document.querySelectorAll('.buzz-btn[data-filter]').forEach(b => {
+    b.classList.toggle('active', b.dataset.val === 'all');
+    b.disabled = false;
+    b.classList.remove('disabled');
+  });
+  const sr = $('buzzSourceRow'), pr = $('buzzPlatformRow');
+  if (sr) { sr.style.display = ''; sr.style.opacity = ''; sr.style.pointerEvents = ''; }
+  if (pr) { pr.style.display = ''; pr.style.opacity = ''; pr.style.pointerEvents = ''; }
+  renderBuzzTimeline();
 }
 
 function renderBuzzTrendsChart(trendsData) {
@@ -1757,19 +1789,43 @@ async function initBuzzTab() {
     if (loading) loading.style.display = 'none';
     renderBuzzTimeline();
 
-    // Filtres
+    // Filtres avec auto-exclusivité (Source ⇒ Presse, Plateforme ⇒ Social)
     document.querySelectorAll('.buzz-btn[data-filter]').forEach(btn => {
       btn.addEventListener('click', () => {
         const f = btn.dataset.filter, v = btn.dataset.val;
         buzzFilters[f] = v;
         buzzPage = 0;
-        document.querySelectorAll(`.buzz-btn[data-filter="${f}"]`).forEach(b => b.classList.toggle('active', b.dataset.val === v));
-        // Masquer filtres source/plateforme selon le type
-        const sr = $('buzzSourceRow'), pr = $('buzzPlatformRow');
-        if (f === 'type') {
-          if (sr) sr.style.display = v === 'social' ? 'none' : '';
-          if (pr) pr.style.display = v === 'press'  ? 'none' : '';
+
+        // Auto-promotion du type selon la dimension cliquée
+        // - Cliquer une Source spécifique impose type=press (sinon le filtre serait ignoré)
+        // - Cliquer une Plateforme spécifique impose type=social
+        // - Inverse : si on revient à "all" sur source/plateforme, on ne touche pas au type
+        if (f === 'source' && v !== 'all' && buzzFilters.type !== 'press') {
+          buzzFilters.type = 'press';
+          buzzFilters.platform = 'all';
         }
+        if (f === 'platform' && v !== 'all' && buzzFilters.type !== 'social') {
+          buzzFilters.type = 'social';
+          buzzFilters.source = 'all';
+        }
+
+        // Sync visuel des boutons actifs (toutes dimensions, car on a pu modifier type)
+        document.querySelectorAll('.buzz-btn[data-filter]').forEach(b => {
+          b.classList.toggle('active', buzzFilters[b.dataset.filter] === b.dataset.val);
+        });
+
+        // Masquer/désactiver les lignes de filtres incompatibles avec le type
+        const sr = $('buzzSourceRow'), pr = $('buzzPlatformRow');
+        const t = buzzFilters.type;
+        if (sr) {
+          sr.style.opacity = t === 'social' ? '0.35' : '';
+          sr.style.pointerEvents = t === 'social' ? 'none' : '';
+        }
+        if (pr) {
+          pr.style.opacity = t === 'press' ? '0.35' : '';
+          pr.style.pointerEvents = t === 'press' ? 'none' : '';
+        }
+
         renderBuzzTimeline();
       });
     });
