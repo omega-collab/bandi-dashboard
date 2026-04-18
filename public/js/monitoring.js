@@ -256,7 +256,8 @@
     const heuresSem   = t0.heures_vues      != null ? parseFloat(t0.heures_vues)    : null;
     const heuresCumul = B.heuresVuesCumul   ?? null;
     const joursTop10  = B.joursEnTop10      ?? null;
-    const semTop10    = t0.semaines_top10   != null ? parseInt(t0.semaines_top10)   : null;
+    // semaines_top10 n'existe pas en base → calculé côté app.js depuis tudumWeekly
+    const semTop10    = B.semTop10 ?? (t0.semaines_top10 != null ? parseInt(t0.semaines_top10) : null);
     const vuesSem     = t0.views_millions   != null ? parseFloat(t0.views_millions) : null;
 
     // Debug — visible dans la console du navigateur

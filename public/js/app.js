@@ -1558,6 +1558,18 @@ function igIsRelevant(content = '', author = '') {
   return ['netflix', 'série', 'serie', 'martinique', 'streaming', 'episode', 'saison'].some(k => t.includes(k));
 }
 
+// Classifie un post social (Reddit/YouTube/Bluesky/Instagram) en local/national/international
+// par heuristique sur author_name + content. Utilisé par loadBuzzData() pour
+// uniformiser le filtre Source entre presse et réseaux.
+const SOCIAL_LOCAL_RE = /(martiniqu|guadeloup|guyan|antill|caraib|\bmq\b|\bgp\b|\bgf\b|kreyol|créole|creole|madinina|gwada|\bkarib)/i;
+const SOCIAL_NATIONAL_RE = /(\bfrance\b|\bfr\b|paris|konbini|brut|allocin|premier|journaldugeek|numerama|ecranlarge|\bfrench\b|francais|français)/i;
+function classifySocialSource(s) {
+  const blob = `${s.author_name || ''} ${s.content || ''}`;
+  if (SOCIAL_LOCAL_RE.test(blob))    return 'local';
+  if (SOCIAL_NATIONAL_RE.test(blob)) return 'national';
+  return 'international';
+}
+
 async function loadBuzzData(cfg, headers) {
   const [artRes, socRes, trendsRes] = await Promise.all([
     fetch(`${cfg.url}/rest/v1/buzz_articles?order=published_at.desc&limit=500`, { headers, cache: 'no-store' }),
@@ -1582,7 +1594,7 @@ async function loadBuzzData(cfg, headers) {
     .filter(s => s.platform !== 'instagram' || igIsRelevant(s.content || '', s.author_name || ''))
     .map(s => ({
       id: 's' + s.id, itemType: 'social', platform: s.platform,
-      sourceType: null,
+      sourceType: classifySocialSource(s),
       url: s.url, title: s.content || '(sans contenu)',
       excerpt: null, source: s.author_name || '',
       publishedAt: s.published_at ? new Date(s.published_at) : null,
@@ -1605,7 +1617,8 @@ function buzzFiltered() {
   return buzzAllItems.filter(i => {
     if (buzzFilters.type === 'press'  && i.itemType !== 'press')  return false;
     if (buzzFilters.type === 'social' && i.itemType !== 'social') return false;
-    if (buzzFilters.source   !== 'all' && i.itemType === 'press' && i.sourceType !== buzzFilters.source) return false;
+    // Source (local/national/international) : s'applique maintenant à presse ET social
+    if (buzzFilters.source !== 'all' && i.sourceType !== buzzFilters.source) return false;
     if (buzzFilters.platform !== 'all' && i.itemType === 'social' && i.platform !== buzzFilters.platform) return false;
     if (buzzFilters.period   !== 'all') {
       const days = parseInt(buzzFilters.period);
@@ -1656,6 +1669,66 @@ function renderBuzzCard(item) {
   </a>`;
 }
 
+// Calcule les quantités par filtre — pour afficher "(N)" sur chaque bouton.
+// Les compteurs respectent la période sélectionnée (utile : on veut voir
+// "Local (3)" sur 7j, pas "Local (250)" total) mais ignorent la dimension
+// en cours de comptage pour indiquer l'impact potentiel d'un clic.
+function computeBuzzFilterCounts() {
+  const now = Date.now();
+  const days = buzzFilters.period === 'all' ? null : parseInt(buzzFilters.period);
+  const inPeriod = i => !days || (now - i.publishedAt.getTime()) <= days * 86400000;
+  const base = buzzAllItems.filter(inPeriod);
+
+  // Pour chaque bouton, on compte les items correspondant si on cliquait dessus
+  // (en ignorant les dimensions hors-type). La période est toujours appliquée.
+  const counts = {
+    type: {
+      all:    base.length,
+      press:  base.filter(i => i.itemType === 'press').length,
+      social: base.filter(i => i.itemType === 'social').length,
+    },
+    source: {
+      all:           base.length,
+      local:         base.filter(i => i.sourceType === 'local').length,
+      national:      base.filter(i => i.sourceType === 'national').length,
+      international: base.filter(i => i.sourceType === 'international').length,
+    },
+    platform: {
+      all:       base.filter(i => i.itemType === 'social').length,
+      reddit:    base.filter(i => i.platform === 'reddit').length,
+      youtube:   base.filter(i => i.platform === 'youtube').length,
+      bluesky:   base.filter(i => i.platform === 'bluesky').length,
+      instagram: base.filter(i => i.platform === 'instagram').length,
+    },
+    period: {
+      '1':   buzzAllItems.filter(i => (now - i.publishedAt.getTime()) <=  1 * 86400000).length,
+      '7':   buzzAllItems.filter(i => (now - i.publishedAt.getTime()) <=  7 * 86400000).length,
+      '30':  buzzAllItems.filter(i => (now - i.publishedAt.getTime()) <= 30 * 86400000).length,
+      'all': buzzAllItems.length,
+    }
+  };
+  return counts;
+}
+
+// Met à jour les badges "(N)" sur chaque bouton de filtre Buzz.
+function renderBuzzFilterCounts() {
+  const counts = computeBuzzFilterCounts();
+  document.querySelectorAll('.buzz-btn[data-filter]').forEach(btn => {
+    const f = btn.dataset.filter;
+    const v = btn.dataset.val;
+    const n = counts[f]?.[v];
+    if (n === undefined) return;
+    // On retire l'ancien badge avant d'ajouter le nouveau
+    btn.querySelectorAll('.buzz-btn-count').forEach(e => e.remove());
+    const badge = document.createElement('span');
+    badge.className = 'buzz-btn-count';
+    badge.textContent = n > 999 ? `${Math.round(n/100)/10}k` : n;
+    if (n === 0) btn.classList.add('buzz-btn-empty');
+    else btn.classList.remove('buzz-btn-empty');
+    btn.appendChild(badge);
+  });
+}
+
 function renderBuzzTimeline() {
   const filtered = buzzFiltered();
   const start = buzzPage * BUZZ_PAGE;
@@ -1669,6 +1742,9 @@ function renderBuzzTimeline() {
   // Compteur résultats — toujours visible (même 0) pour transparence
   const ct = $('buzzResultCount');
   if (ct) ct.textContent = `${total} résultat${total > 1 ? 's' : ''}`;
+
+  // Compteurs par filtre (Local (12) / National (45) / …)
+  try { renderBuzzFilterCounts(); } catch (_) {}
 
   // Aucun résultat — message explicite (audit : seuil arbitraire <5 supprimé)
   if (total === 0) {
@@ -2666,26 +2742,27 @@ function initMonitoringTab() {
 
   // ── Adaptateur données pour BANDI_MONITORING ──────────────
   // Le module monitoring.js lit des champs spécifiques sur BANDI
-  // On les crée ici à partir des données live déjà chargées
+  // On les DÉRIVE à partir des données live — jamais de fallback hardcodé
+  // (les valeurs demo sont dans data-fallback.js et visibles via BANDI._fallback)
   try {
-    // Fallback ultime : si le DB a retourné null pour les KPIs principaux,
-    // on s'assure que BANDI.current a au moins les valeurs data-fallback.js
     if (BANDI.current) {
-      if (BANDI.current.score == null || BANDI.current.score === 0) {
-        BANDI.current.score = BANDI.current.score_monde ?? 348;
+      // Alias score_monde ↔ score pour monitoring.js
+      if (BANDI.current.score_monde == null && BANDI.current.score != null) {
+        BANDI.current.score_monde = BANDI.current.score;
       }
-      if (BANDI.current.rang == null || BANDI.current.rang === 0) {
-        BANDI.current.rang = 6;
+      if (BANDI.current.score == null && BANDI.current.score_monde != null) {
+        BANDI.current.score = BANDI.current.score_monde;
       }
-      if (BANDI.current.paysN1 == null)    BANDI.current.paysN1    = 13;
-      if (BANDI.current.paysTop10 == null) BANDI.current.paysTop10 = 37;
+      // Dérive paysN1 / paysTop10 depuis bandi_country_rankings live si manquant
+      const pays = Array.isArray(BANDI.pays) ? BANDI.pays : [];
+      if (BANDI.current.paysN1 == null && pays.length) {
+        BANDI.current.paysN1 = pays.filter(p => p.rang === 1).length;
+      }
+      if (BANDI.current.paysTop10 == null && pays.length) {
+        BANDI.current.paysTop10 = pays.length;
+      }
     }
-
-    // score_monde : alias pour monitoring.js
-    if (BANDI.current && BANDI.current.score_monde == null) {
-      BANDI.current.score_monde = BANDI.current.score ?? 0;
-    }
-    // history : tableau de snapshots pour la timeline 14j
+    // history : timeline pour les deltas J / J-1
     if (!BANDI.history || BANDI.history.length === 0) {
       BANDI.history = (BANDI.historique || []).map(h => ({
         date: h.jour,
@@ -2718,6 +2795,16 @@ function initMonitoringTab() {
         BANDI.completionScore = (cs && cs.score != null) ? cs.score : null;
       } catch (_) { BANDI.completionScore = null; }
     }
+    // semaines_top10 dérivé du nombre réel de semaines où Bandi est listé
+    if (BANDI.semTop10 == null) {
+      const wks = new Set();
+      (BANDI.tudumWeekly || []).forEach(r => {
+        if (r?.titre && r.titre.toLowerCase().includes('bandi') && r.week_start) {
+          wks.add(r.week_start);
+        }
+      });
+      BANDI.semTop10 = wks.size || null;
+    }
   } catch (e) {
     console.warn('[monitoring] adaptateur données:', e);
   }
@@ -2745,7 +2832,22 @@ function initMonitoringTab() {
 
   // ── Sections opérationnelles ──────────────────────────────
   const btn = document.getElementById('monRefreshBtn');
-  if (btn) btn.addEventListener('click', () => { monitoringLoaded = false; initMonitoringTab(); });
+  if (btn && !btn.dataset.bound) {
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', async () => {
+      btn.classList.add('mon-spin');
+      try {
+        await loadLiveData();
+        monitoringLoaded = false;
+        initMonitoringTab();
+        if (typeof window.BANDI_HEALTH?.scan === 'function') window.BANDI_HEALTH.scan();
+      } catch (e) {
+        console.warn('[monitoring] refresh KO:', e);
+      } finally {
+        setTimeout(() => btn.classList.remove('mon-spin'), 600);
+      }
+    });
+  }
   renderMonScrapers();
   renderMonRatings();
   loadMonFreshness();
@@ -2811,6 +2913,19 @@ async function loadMonFreshness() {
     if (artC.status === 'fulfilled') buzzArtCount = parseInt(artC.value.headers.get('content-range')?.split('/')[1]) || '—';
     if (socC.status === 'fulfilled') buzzSocCount = parseInt(socC.value.headers.get('content-range')?.split('/')[1]) || '—';
   }
+
+  // Partage des dates avec renderMonScrapers (calcul statuts en temps réel)
+  BANDI._freshness = {
+    snap: BANDI.snapshots30?.[0]?.date,
+    tudum: BANDI.tudumWeekly?.[0]?.week_start,
+    ratings: Object.values(BANDI.externalRatings ?? {}).find(r => r?.date)?.date,
+    buzzArt: buzzArtDate,
+    buzzSoc: buzzSocDate,
+    wiki: wikiDate
+  };
+  // Re-render scrapers avec les dates désormais disponibles (loadMonFreshness
+  // étant async, renderMonScrapers a déjà tourné une première fois sans ces dates)
+  try { renderMonScrapers(); } catch (_) {}
 
   const CARDS = [
     {
@@ -2925,16 +3040,34 @@ function renderMonRatings() {
 }
 
 // ── Scrapers GitHub Actions ────────────────────────────────
+// Les statuts "Actif / Retard / Hors-ligne" sont calculés depuis la fraîcheur
+// réelle des données écrites en DB (pas un status UI statique).
 function renderMonScrapers() {
   const root = document.getElementById('monScrapers');
   if (!root) return;
 
+  // Dates les plus récentes disponibles côté frontend
+  const snapDate    = BANDI.snapshots30?.[0]?.date;
+  const tudumDate   = BANDI.tudumWeekly?.[0]?.week_start;
+  const ratingsDate = Object.values(BANDI.externalRatings ?? {}).find(r => r?.date)?.date;
+  const buzzArtDate = BANDI._freshness?.buzzArt ?? null;
+  const buzzSocDate = BANDI._freshness?.buzzSoc ?? null;
+
+  // Statut calculé : âge data → {cls, badge}
+  const status = (date, weekly = false) => {
+    if (!date) return { cls: 'mon-stale', badge: 'Hors-ligne' };
+    const { hours } = monTimeAgo(date);
+    const cls = monFreshCls(hours, weekly);
+    const badge = cls === 'mon-ok' ? 'Actif' : cls === 'mon-warn' ? 'Retard' : 'Hors-ligne';
+    return { cls, badge };
+  };
+
   const WF = [
-    { name: 'scrape.yml',             label: 'Classements FlixPatrol',      freq: 'Toutes les 6h',  icon: '📊', cls: 'mon-ok',   badge: 'Actif',  url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/scrape.yml' },
-    { name: 'tudum-scrape.yml',       label: 'Netflix Tudum officiel',      freq: 'Mardi 15h UTC',  icon: '✅', cls: 'mon-warn', badge: 'Hebdo',  url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/tudum-scrape.yml' },
-    { name: 'buzz-scrape.yml',        label: 'Presse + GDELT (23 flux)',    freq: 'Toutes les 6h',  icon: '📰', cls: 'mon-ok',   badge: 'Actif',  url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/buzz-scrape.yml' },
-    { name: 'buzz-social-scrape.yml', label: 'Reddit · YouTube · Bluesky', freq: 'Toutes les 6h',  icon: '💬', cls: 'mon-ok',   badge: 'Actif',  url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/buzz-social-scrape.yml' },
-    { name: 'ratings-scrape.yml',     label: '8 sources notes + Wikipedia', freq: 'Toutes les 6h', icon: '⭐', cls: 'mon-ok',   badge: 'Actif',  url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/ratings-scrape.yml' },
+    { name: 'scrape.yml',             label: 'Classements FlixPatrol',      freq: 'Toutes les 6h',  icon: '📊', st: status(snapDate),          url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/scrape.yml' },
+    { name: 'tudum-scrape.yml',       label: 'Netflix Tudum officiel',      freq: 'Mardi 15h UTC',  icon: '✅', st: status(tudumDate, true),   url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/tudum-scrape.yml' },
+    { name: 'buzz-scrape.yml',        label: 'Presse + GDELT (23 flux)',    freq: 'Toutes les 6h',  icon: '📰', st: status(buzzArtDate),       url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/buzz-scrape.yml' },
+    { name: 'buzz-social-scrape.yml', label: 'Reddit · YouTube · Bluesky', freq: 'Toutes les 6h',  icon: '💬', st: status(buzzSocDate),       url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/buzz-social-scrape.yml' },
+    { name: 'ratings-scrape.yml',     label: '8 sources notes + Wikipedia', freq: 'Toutes les 6h', icon: '⭐', st: status(ratingsDate),       url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/ratings-scrape.yml' },
   ];
 
   root.innerHTML = WF.map(w => `
@@ -2945,8 +3078,8 @@ function renderMonScrapers() {
         <span class="mon-scraper-label">${w.label}</span>
       </div>
       <span class="mon-scraper-freq">↻ ${w.freq}</span>
-      <div class="mon-scraper-status ${w.cls}">
-        <div class="mon-card-dot ${w.cls}"></div>${w.badge}
+      <div class="mon-scraper-status ${w.st.cls}">
+        <div class="mon-card-dot ${w.st.cls}"></div>${w.st.badge}
       </div>
     </a>`).join('');
 }
@@ -2961,13 +3094,24 @@ window.addEventListener('scroll', () => {
 // Expose les fonctions de calcul pour que health-guard.js puisse les scanner.
 window.computeCompletionScore = computeCompletionScore;
 window.computeForecastS2      = computeForecastS2;
-// Hook déclenché par health-guard après auto-heal (paysN1/paysTop10/USA rang)
+// Hook déclenché par health-guard après auto-heal (paysN1/paysTop10/USA rang
+// + agrégats monitoring). Re-render uniquement les modules visibles pour éviter
+// les crashs côté panels lazy (Buzz, Map, Historique).
 window.BANDI_HEALTH_RERENDER = function () {
   try { renderOverview(); }        catch (_) {}
   try { renderSourcesBadge(); }    catch (_) {}
   try { renderBreakthroughUSA(); } catch (_) {}
   try { renderForecastS2(); }      catch (_) {}
   try { renderZonesDomination(); } catch (_) {}
+  // Monitoring : rerender uniquement si l'onglet est déjà initialisé et visible.
+  try {
+    const panel = document.getElementById('panel-monitoring');
+    if (monitoringLoaded && panel && panel.classList.contains('active')) {
+      if (window.BANDI_MONITORING) BANDI_MONITORING.renderMonitoringTab();
+      renderMonScrapers();
+      renderMonRatings();
+    }
+  } catch (_) {}
 };
 
 // ============ INIT ============
@@ -3016,6 +3160,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       try { renderZonesDomination(); } catch (e) { console.error('[BANDI] refresh renderZonesDomination:', e); }
       try { renderForecastS2(); }      catch (e) { console.error('[BANDI] refresh renderForecastS2:', e); }
       try { renderAuthenticiteMini(); }catch (e) { console.error('[BANDI] refresh renderAuthenticiteMini:', e); }
+      // Monitoring : rerender si l'onglet est actif pour voir live les deltas
+      try {
+        const panel = document.getElementById('panel-monitoring');
+        if (monitoringLoaded && panel && panel.classList.contains('active')) {
+          if (window.BANDI_MONITORING) BANDI_MONITORING.renderMonitoringTab();
+          loadMonFreshness();
+        }
+      } catch (_) {}
       console.log('[BANDI] 🔄 hero resynchronisé');
     } catch (e) {
       console.warn('[BANDI] refresh KO (non bloquant):', e.message);

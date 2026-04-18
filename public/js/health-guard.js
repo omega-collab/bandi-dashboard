@@ -210,6 +210,70 @@
     return null;
   }
 
+  // Monitoring — rang et score doivent correspondre au snapshot le plus récent
+  function checkMonitoringRangScore(autoHeal) {
+    const cur = window.BANDI?.current;
+    const snap0 = (window.BANDI?.snapshots30 || [])[0];
+    if (!cur || !snap0) return null;
+    const missing = (cur.rang == null || cur.score == null);
+    const hasSnap = (snap0.rang_monde != null || snap0.score_monde != null);
+    if (missing && hasSnap) {
+      const msg = `Monitoring: current.{rang,score} absent alors que snapshots30[0] existe`;
+      if (autoHeal) {
+        if (cur.rang == null  && snap0.rang_monde  != null) cur.rang  = snap0.rang_monde;
+        if (cur.score == null && snap0.score_monde != null) cur.score = snap0.score_monde;
+        if (cur.paysN1    == null && snap0.pays_n1    != null) cur.paysN1    = snap0.pays_n1;
+        if (cur.paysTop10 == null && snap0.pays_top10 != null) cur.paysTop10 = snap0.pays_top10;
+        state.healed.push(issue('important', 'MON_CURRENT_EMPTY', msg, 'Rechargé depuis snapshots30', true));
+        return null;
+      }
+      return issue('important', 'MON_CURRENT_EMPTY', msg);
+    }
+    return null;
+  }
+
+  // Monitoring — si heures cumulées ou jours top10 peuvent être recalculés → heal
+  function checkMonitoringAggregates(autoHeal) {
+    const B = window.BANDI;
+    if (!B) return null;
+    let healedAnything = false;
+
+    // heuresVuesCumul recalculable depuis tudumWeekly
+    const weekly = Array.isArray(B.tudumWeekly) ? B.tudumWeekly : [];
+    if (B.heuresVuesCumul == null && weekly.length) {
+      const sum = weekly
+        .filter(r => r?.titre && r.titre.toLowerCase().includes('bandi'))
+        .reduce((s, r) => s + (parseFloat(r.heures_vues) || 0), 0);
+      if (sum > 0) {
+        if (autoHeal) {
+          B.heuresVuesCumul = Math.round(sum * 100) / 100;
+          healedAnything = true;
+        }
+      }
+    }
+
+    // semTop10 recalculable depuis tudumWeekly
+    if (B.semTop10 == null && weekly.length) {
+      const wks = new Set();
+      weekly.forEach(r => {
+        if (r?.titre && r.titre.toLowerCase().includes('bandi') && r.week_start) wks.add(r.week_start);
+      });
+      if (wks.size) {
+        if (autoHeal) {
+          B.semTop10 = wks.size;
+          healedAnything = true;
+        }
+      }
+    }
+
+    if (healedAnything && autoHeal) {
+      state.healed.push(issue('minor', 'MON_AGG_RECOMPUTED',
+        'Agrégats monitoring recalculés (heures cumul / sem top10)',
+        'Depuis tudumWeekly live', true));
+    }
+    return null;
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   //  AUTO-HEAL
   // ─────────────────────────────────────────────────────────────────────────
@@ -220,6 +284,8 @@
     checkPaysN1Coherence(true);
     checkPaysTop10Coherence(true);
     checkUsaRankCoherence(true);
+    checkMonitoringRangScore(true);
+    checkMonitoringAggregates(true);
 
     // Re-render des modules impactés après auto-heal
     if (state.healed.length && typeof window.BANDI_HEALTH_RERENDER === 'function') {
