@@ -4,6 +4,17 @@
    Fallback sur data-fallback.js si échec
    ======================================== */
 
+// Exposition défensive de BANDI sur window : indispensable pour monitoring.js
+// et health-guard.js. `const BANDI` dans data-fallback.js ne s'attache pas à
+// globalThis automatiquement ; un cache navigateur sur l'ancien data-fallback.js
+// rendrait window.BANDI undefined et casserait toutes les jauges.
+try {
+  if (typeof BANDI !== 'undefined' && typeof window !== 'undefined') {
+    window.BANDI = BANDI;
+    if (typeof REGION_COLORS !== 'undefined') window.REGION_COLORS = REGION_COLORS;
+  }
+} catch (_) { /* data-fallback.js absent → impossible */ }
+
 // ============ UTILS ============
 function $(id) { return document.getElementById(id); }
 
@@ -1570,6 +1581,34 @@ function classifySocialSource(s) {
   return 'international';
 }
 
+// Reclassification de la presse côté frontend depuis source_name.
+// Indispensable : les articles stockés en DB avant la refonte ont presque
+// tous source_type='international' (classification par host Google News).
+// On override source_type dynamiquement à chaque fetch pour que le filtre
+// Local/National affiche du contenu sans attendre la réexécution des scrapers.
+const PRESS_LOCAL_KEYWORDS = [
+  'france-antilles', 'antilles', 'martinique', 'guadeloupe', 'guyane',
+  'zayactu', 'bondamanjak', 'rci martinique', 'rci guadeloupe', 'rci ',
+  'karib', 'coconews', 'madinin', 'antilla', 'blada', 'la 1ère', 'la1ere',
+  'linfo.re', 'réunion', 'reunion',
+];
+const PRESS_NATIONAL_KEYWORDS = [
+  'le monde', 'le figaro', 'liberation', 'libération', 'télérama', 'telerama',
+  'allocine', 'allociné', 'première', 'premiere', 'le parisien', 'les inrocks',
+  'numerama', 'journal du geek', 'journaldugeek', 'écran large', 'ecran large',
+  'programme-tv', '20 minutes', 'bfm', 'tf1', 'france tv', 'france info',
+  'francetv', 'franceinfo', 'rfi', 'rtl', 'europe 1', 'europe1', 'cnews',
+  'huffington', 'variety france', 'puremedias', 'lepoint', 'le point',
+  'lexpress', "l'express", 'radiofrance',
+];
+function classifyPressByName(name) {
+  if (!name) return null;
+  const n = name.toLowerCase();
+  if (PRESS_LOCAL_KEYWORDS.some(k => n.includes(k)))    return 'local';
+  if (PRESS_NATIONAL_KEYWORDS.some(k => n.includes(k))) return 'national';
+  return null;
+}
+
 async function loadBuzzData(cfg, headers) {
   const [artRes, socRes, trendsRes] = await Promise.all([
     fetch(`${cfg.url}/rest/v1/buzz_articles?order=published_at.desc&limit=500`, { headers, cache: 'no-store' }),
@@ -1580,14 +1619,20 @@ async function loadBuzzData(cfg, headers) {
   const social   = await socRes.json();
   const trends   = await trendsRes.json();
 
-  const press = (Array.isArray(articles) ? articles : []).map(a => ({
-    id: 'p' + a.id, itemType: 'press', platform: 'press',
-    sourceType: a.source_type || 'international',
-    url: a.url, title: a.title || '(sans titre)',
-    excerpt: a.description, source: a.source_name || '',
-    publishedAt: a.published_at ? new Date(a.published_at) : null,
-    thumbnail: a.image_url || null, engagement: null,
-  }));
+  const press = (Array.isArray(articles) ? articles : []).map(a => {
+    // Priorité au nom de source (règle tout le legacy "via Google News" mal
+    // classé en international avant le fix des scrapers). Fallback DB si
+    // nom inconnu.
+    const byName = classifyPressByName(a.source_name);
+    return {
+      id: 'p' + a.id, itemType: 'press', platform: 'press',
+      sourceType: byName || a.source_type || 'international',
+      url: a.url, title: a.title || '(sans titre)',
+      excerpt: a.description, source: a.source_name || '',
+      publishedAt: a.published_at ? new Date(a.published_at) : null,
+      thumbnail: a.image_url || null, engagement: null,
+    };
+  });
 
   const soc = (Array.isArray(social) ? social : [])
     // Filtre client-side : rejette les posts Instagram hors-sujet encore en DB
@@ -2733,11 +2778,14 @@ function renderMethodologySources() {
 // ============================================================
 // MONITORING TAB
 // Fraîcheur des données · Notes externes · Scrapers GitHub Actions
+// Rerender autorisé à chaque clic sur l'onglet (pas de cache interne) —
+// sinon un clic précoce avant la fin de loadLiveData() fige des jauges vides
 // ============================================================
 let monitoringLoaded = false;
 
 function initMonitoringTab() {
-  if (monitoringLoaded) return;
+  // Flag utile uniquement pour debug / BANDI_HEALTH_RERENDER qui vérifie si
+  // l'onglet a déjà été ouvert au moins une fois. PAS de garde early-return.
   monitoringLoaded = true;
 
   // ── Adaptateur données pour BANDI_MONITORING ──────────────
