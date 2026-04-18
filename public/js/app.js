@@ -3162,6 +3162,20 @@ window.BANDI_HEALTH_RERENDER = function () {
   } catch (_) {}
 };
 
+// ============ SPLASH SCREEN ============
+// Masque l'écran de chargement avec un fondu. Idempotent : on peut appeler
+// plusieurs fois sans dommage. Un hard timeout de sécurité garantit que le
+// splash ne reste jamais collé si un render échoue.
+function hideBandiSplash() {
+  const splash = document.getElementById('bandiSplash');
+  if (!splash || splash.classList.contains('is-hidden')) return;
+  splash.classList.add('is-hidden');
+  // Retire l'élément du DOM après le fondu pour libérer les ressources
+  setTimeout(() => { try { splash.remove(); } catch (_) {} }, 500);
+}
+// Filet : au pire 6s d'affichage même si tout crash côté render
+setTimeout(hideBandiSplash, 6000);
+
 // ============ INIT ============
 document.addEventListener("DOMContentLoaded", async () => {
   // Chaque call isolé pour qu'une erreur n'empêche pas les suivants
@@ -3184,6 +3198,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   try { renderZonesDomination(); } catch (e) { console.error('[BANDI] renderZonesDomination:', e); }
   try { renderForecastS2(); }      catch (e) { console.error('[BANDI] renderForecastS2:', e); }
   try { renderMethodologySources(); } catch (e) { console.error('[BANDI] renderMethodologySources:', e); }
+
+  // Retrait du splash dès que l'overview est rendu (on attend un RAF pour que
+  // le premier paint soit effectif avant le fondu, évite un "flash of unstyled")
+  requestAnimationFrame(() => requestAnimationFrame(hideBandiSplash));
 
   // Déclencher le scan health-guard dès que tout le rendu initial est terminé
   // (évite les faux positifs BANDI_EMPTY qui survenaient si le scan précédait loadLiveData)
