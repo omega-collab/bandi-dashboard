@@ -113,6 +113,15 @@
   <!-- ============ TAB: OVERVIEW ============ -->
   <section class="tab-panel active" id="panel-overview">
 
+    <!-- Bannière "data stale" — affichée par health-guard.js si fallback actif -->
+    <div id="hgStaleBanner" class="hg-stale-banner" hidden>
+      <span class="hg-stale-icon">⚠</span>
+      <span class="hg-stale-text">
+        <strong>Données non live</strong> —
+        <span id="hgStaleDetail">le scraper ne répond pas, affichage du dernier snapshot connu.</span>
+      </span>
+    </div>
+
     <!-- HERO: affiche + rang mondial -->
     <div class="hero">
       <div class="hero-bg" style="background-image: url('assets/bandi-poster.jpeg');"></div>
@@ -936,6 +945,7 @@
 <script src="js/config.js"></script>
 <script src="js/monitoring.js"></script>
 <script src="js/app.js"></script>
+<script src="js/health-guard.js"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {

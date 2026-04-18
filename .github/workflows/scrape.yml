@@ -36,6 +36,24 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: node scripts/scraper-tudum.mjs
 
+      # I2 (audit) : validation post-scrape — fail le workflow si la DB
+      # ne contient PAS le snapshot du jour. Évite les workflows verts
+      # alors que le scrape a silencieusement échoué.
+      - name: Verify today's snapshot in DB
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          TODAY=$(date -u +%Y-%m-%d)
+          RES=$(curl -sf -H "apikey: $SUPABASE_SERVICE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+            "$SUPABASE_URL/rest/v1/bandi_snapshots?date=eq.$TODAY&select=date,score_monde,rang_monde")
+          COUNT=$(echo "$RES" | grep -c '"date"' || true)
+          if [ "$COUNT" -eq 0 ]; then
+            echo "::error::Snapshot du $TODAY absent dans bandi_snapshots — scraper KO silencieux"
+            exit 1
+          fi
+          echo "✓ Snapshot $TODAY présent : $RES"
+
       - name: Log execution
         if: always()
         run: echo "Scrape terminé à $(date -u)"

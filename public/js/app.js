@@ -227,6 +227,19 @@ async function loadLiveData() {
       if (!joursEnTop10 && Array.isArray(paysHist)) joursEnTop10 = paysHist.length;
     } catch (_) { joursEnTop10 = Array.isArray(paysHist) ? paysHist.length : 0; }
 
+    // ── C3 (audit) : resync USA rang depuis données live ────────────────
+    // bandi_country_rankings = source de vérité, BANDI.strategique.usaRang
+    // n'est plus qu'un fallback offline
+    try {
+      const usaLive = (paysData || []).find(p =>
+        p.code_pays === 'US' || p.pays === 'États-Unis' || p.pays === 'United States'
+      );
+      if (usaLive?.rang && BANDI.strategique) {
+        BANDI.strategique.usaRang = usaLive.rang;
+        BANDI.strategique.usaDate = today.slice(8,10) + '/' + today.slice(5,7) + '/' + today.slice(0,4);
+      }
+    } catch (_) {}
+
     // 11. Heures de visionnage cumulées Tudum pour Bandi (somme de toutes les semaines)
     let heuresVuesCumul = null;
     try {
@@ -327,6 +340,8 @@ async function loadLiveData() {
     // Override BANDI (Object.assign pour muter la const déclarée dans data-fallback.js)
     // ?? préserve les valeurs data-fallback.js si la DB retourne null
     const _prevCur = BANDI.current || {};
+    // M1 (audit) : on marque explicitement que les données ne sont plus du fallback
+    BANDI._fallback = false;
     Object.assign(BANDI, {
       current: {
         score:     current.score_monde     ?? _prevCur.score     ?? 0,
@@ -1824,7 +1839,11 @@ function renderAuthenticiteMini() {
   }
 
   const pctEl = document.getElementById('authPctMini');
-  if (pctEl) pctEl.textContent = `${auth.pctCasting}%`;
+  if (pctEl) {
+    // C2 (audit) : flag visuel "non vérifié" tant que _verified !== true
+    const tag = auth._verified ? '' : ' <sup class="auth-unverified" title="Estimation interne — à confirmer par la production">●</sup>';
+    pctEl.innerHTML = `${auth.pctCasting}%${tag}`;
+  }
 }
 
 // ── Authenticité complète (panel-series) ──────────────────────
@@ -2321,9 +2340,12 @@ function renderForecastS2() {
     }).join('');
   }
 
-  // Disclaimer
+  // Disclaimer — préfixe "heuristique non validée" tant que _validated !== true (I7 audit)
   const disclaimerEl = document.getElementById('forecastDisclaimer');
-  if (disclaimerEl && fc.disclaimer) disclaimerEl.textContent = fc.disclaimer;
+  if (disclaimerEl && fc.disclaimer) {
+    const prefix = fc._validated ? '' : '⚠ Modèle heuristique non calibré · ';
+    disclaimerEl.textContent = `${prefix}${fc.disclaimer}`;
+  }
 
   // Panneau pédagogique « Méthode & sources »
   try { renderCompletionBreakdown(); } catch (e) { console.error('[BANDI] renderCompletionBreakdown:', e); }
@@ -2878,6 +2900,19 @@ window.addEventListener('scroll', () => {
   const header = document.querySelector('.header');
   if (header) header.classList.toggle('scrolled', window.scrollY > 20);
 }, { passive: true });
+
+// ============ HEALTH GUARD — hooks globaux ============
+// Expose les fonctions de calcul pour que health-guard.js puisse les scanner.
+window.computeCompletionScore = computeCompletionScore;
+window.computeForecastS2      = computeForecastS2;
+// Hook déclenché par health-guard après auto-heal (paysN1/paysTop10/USA rang)
+window.BANDI_HEALTH_RERENDER = function () {
+  try { renderOverview(); }        catch (_) {}
+  try { renderSourcesBadge(); }    catch (_) {}
+  try { renderBreakthroughUSA(); } catch (_) {}
+  try { renderForecastS2(); }      catch (_) {}
+  try { renderZonesDomination(); } catch (_) {}
+};
 
 // ============ INIT ============
 document.addEventListener("DOMContentLoaded", async () => {
