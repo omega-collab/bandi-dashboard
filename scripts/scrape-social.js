@@ -67,35 +67,33 @@ async function fetchReddit() {
 }
 
 // ─── 2. YouTube ───────────────────────────────────────────────────────────────
-async function fetchYouTube() {
-  const key = process.env.YOUTUBE_API_KEY;
-  if (!key) {
-    console.log('  YouTube : clé absente (YOUTUBE_API_KEY), skip proprement');
-    return [];
-  }
+// Stratégie : API officielle si YOUTUBE_API_KEY présent, sinon fallback Invidious
+// (API publique open-source — aucune clé nécessaire).
 
+const INVIDIOUS_INSTANCES = [
+  'https://invidious.io',
+  'https://y.com.sb',
+  'https://iv.datura.network',
+  'https://invidious.nerdvpn.de',
+];
+const YT_QUERIES = ['Bandi Netflix', 'Bandi série Netflix', 'Bandi serie Netflix'];
+
+async function fetchYouTubeAPI(key) {
   const posts = [];
-  const queries = ['Bandi Netflix', 'Bandi série Netflix'];
-
-  for (const q of queries) {
+  for (const q of YT_QUERIES) {
     try {
       const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&type=video&order=date&maxResults=50&key=${key}`;
       const res = await fetch(searchUrl, { signal: AbortSignal.timeout(10000) });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err?.error?.message || `HTTP ${res.status}`);
-      }
+      if (!res.ok) { const e = await res.json(); throw new Error(e?.error?.message || `HTTP ${res.status}`); }
       const data = await res.json();
       const items = data.items || [];
-      console.log(`  YouTube "${q}": ${items.length} vidéos`);
+      console.log(`  YouTube API "${q}": ${items.length} vidéos`);
 
-      // Récupérer les stats en batch
       const ids = items.map(i => i.id.videoId).filter(Boolean).join(',');
       let statsMap = {};
       if (ids) {
         try {
-          const statsUrl = `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${ids}&key=${key}`;
-          const sr = await fetch(statsUrl, { signal: AbortSignal.timeout(10000) });
+          const sr = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${ids}&key=${key}`, { signal: AbortSignal.timeout(10000) });
           const sd = await sr.json();
           (sd.items || []).forEach(v => { statsMap[v.id] = v.statistics; });
         } catch { /* stats optionnelles */ }
@@ -106,8 +104,7 @@ async function fetchYouTube() {
         if (!vid) continue;
         const stats = statsMap[vid] || {};
         posts.push({
-          platform: 'youtube',
-          post_id: vid,
+          platform: 'youtube', post_id: vid,
           url: `https://www.youtube.com/watch?v=${vid}`,
           author_name: item.snippet?.channelTitle || null,
           content: truncate(item.snippet?.title + (item.snippet?.description ? '\n' + item.snippet.description : '')),
@@ -116,11 +113,40 @@ async function fetchYouTube() {
           thumbnail_url: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || null,
         });
       }
-    } catch (err) {
-      console.warn(`  ⚠️ YouTube "${q}" échoué : ${err.message}`);
-    }
+    } catch (err) { console.warn(`  ⚠️ YouTube API "${q}" : ${err.message}`); }
   }
   return posts;
+}
+
+async function fetchYouTubeInvidious() {
+  for (const base of INVIDIOUS_INSTANCES) {
+    try {
+      const url = `${base}/api/v1/search?q=${encodeURIComponent('Bandi Netflix')}&type=video&sort_by=upload_date&page=1`;
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) continue;
+      const items = await res.json();
+      if (!Array.isArray(items) || items.length === 0) continue;
+      console.log(`  YouTube (Invidious ${base}): ${items.length} vidéos`);
+      return items.slice(0, 30).map(v => ({
+        platform: 'youtube', post_id: v.videoId,
+        url: `https://www.youtube.com/watch?v=${v.videoId}`,
+        author_name: v.author || null,
+        content: truncate((v.title || '') + (v.description ? '\n' + v.description : '')),
+        engagement_score: v.viewCount || 0,
+        published_at: parseDate(v.published ? v.published * 1000 : null),
+        thumbnail_url: v.videoThumbnails?.[0]?.url || null,
+      }));
+    } catch (_) {}
+  }
+  console.log('  YouTube Invidious: toutes instances KO — skip');
+  return [];
+}
+
+async function fetchYouTube() {
+  const key = process.env.YOUTUBE_API_KEY;
+  if (key) return fetchYouTubeAPI(key);
+  console.log('  YouTube : clé absente → fallback Invidious (sans clé)');
+  return fetchYouTubeInvidious();
 }
 
 // ─── 3. Bluesky ───────────────────────────────────────────────────────────────

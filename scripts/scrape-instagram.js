@@ -8,46 +8,57 @@
  *   1) Apify (acteurs Instagram Hashtag/Profile Scraper) si APIFY_API_TOKEN défini
  *   2) RSSHub instances publiques (gratuit, best-effort) sinon
  *
- * FILTRAGE STRICT :
- *   - hashtag #bandi seul = rejeté (trop générique : Bandi = bandit IT, BD, etc.)
- *   - Doit satisfaire ≥ 1 critère de pertinence + seuil d'engagement minimum
+ * FILTRAGE ULTRA-STRICT :
+ *   - hashtag #bandi seul = rejeté (trop générique)
+ *   - Signaux négatifs explicites (bandi = appel d'offres IT/ES, contexte indien…)
+ *   - Doit satisfaire ≥ 1 signal fort OU (mot "bandi" + contexte série/Martinique)
+ *   - Engagement minimum (sauf comptes whitelistés)
+ * PURGE au démarrage : supprime de la DB les posts IG qui ne passent plus le filtre.
  */
 
 import Parser from 'rss-parser';
 
-const SUPABASE_URL       = process.env.SUPABASE_URL;
+const SUPABASE_URL        = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const APIFY_API_TOKEN    = process.env.APIFY_API_TOKEN;
+const APIFY_API_TOKEN     = process.env.APIFY_API_TOKEN;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error('[instagram] SUPABASE_URL / SUPABASE_SERVICE_KEY manquants');
   process.exit(0);
 }
 
-// Hashtags ciblés (on exclut le générique #bandi seul — voir filtre)
 const HASHTAGS = ['bandinetflix', 'bandiserie', 'seriebandi', 'bandimartinique', 'bandinetflixserie'];
-const USERS    = ['yoottle', 'netflixfr'];  // Netflix global trop générique → retiré
+const USERS    = ['yoottle', 'netflixfr'];
 
 const RESULTS_PER_TAG  = 50;
 const RESULTS_PER_USER = 30;
+const MIN_ENGAGEMENT   = 10;
 
-// Seuil d'engagement minimum pour qu'un post entre en DB
-// (likes + commentaires) — évite le bruit de comptes confidentiels
-const MIN_ENGAGEMENT = 10;
-
-// Instances RSSHub publiques (fallback)
 const RSSHUB_INSTANCES = [
   'https://rsshub.app',
   'https://rss.shab.it',
   'https://rsshub.rssforever.com',
 ];
 
-// ─── Filtre de pertinence strict ─────────────────────────────────────────────
-// Retourne true si le post est RÉELLEMENT lié à la série Bandi Netflix
+// ─── Filtre de pertinence ultra-strict ───────────────────────────────────────
 function isRelevantBandi(caption = '', author = '') {
   const text = (caption + ' ' + author).toLowerCase();
 
-  // Hashtags ou expressions spécifiques Netflix / série → pertinent
+  // ── Signaux négatifs — à éliminer avant tout ──────────────────────────────
+  // "bandi" en italien = appel d'offres / subvention / décret
+  // "bandi" en hindi/ourdou = contexte religieux indien
+  const NEGATIVE_SIGNALS = [
+    'decreto fiscale', 'decreto legge', 'gazzetta ufficiale',
+    'bandi dedicati', 'bandi di gara', 'bandi europei', 'bandi regionali',
+    'bandi comunali', 'comuni piemontesi', 'bando pubblico',
+    'intervento sr', 'smart village', 'alto monferrato',
+    'darul uloom', 'nooria', 'dinajpur', 'dastaar', 'aslam warsi',
+    'madrasa', 'masjid',
+    'euroservis', 'team_euroservis',
+  ];
+  if (NEGATIVE_SIGNALS.some(s => text.includes(s))) return false;
+
+  // ── Signaux forts — suffisants seuls ──────────────────────────────────────
   const STRONG_SIGNALS = [
     'bandinetflix', 'bandi netflix', 'bandi serie', 'bandi série',
     '#bandiserie', 'bandiserie', '#seriebandi', 'seriebandi',
@@ -59,9 +70,8 @@ function isRelevantBandi(caption = '', author = '') {
   ];
   if (STRONG_SIGNALS.some(s => text.includes(s))) return true;
 
-  // "bandi" + contexte série/film/martinique = pertinent
-  const hasBandi = /\bbandi\b/.test(text);
-  if (!hasBandi) return false;
+  // ── "bandi" + contexte série/Martinique — pertinent ──────────────────────
+  if (!/\bbandi\b/.test(text)) return false;
 
   const CONTEXT_KEYWORDS = [
     'netflix', 'série', 'serie', 'saison', 'episode', 'épisode',
@@ -73,31 +83,77 @@ function isRelevantBandi(caption = '', author = '') {
 }
 
 // ─── Helpers Supabase ─────────────────────────────────────────────────────────
+const SB_HEADERS = {
+  apikey: SUPABASE_SERVICE_KEY,
+  Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+  'Content-Type': 'application/json',
+};
+
 async function upsertSocial(rows) {
   if (!rows.length) return 0;
   const res = await fetch(`${SUPABASE_URL}/rest/v1/buzz_social?on_conflict=platform,post_id`, {
     method: 'POST',
-    headers: {
-      apikey: SUPABASE_SERVICE_KEY,
-      Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
-      'Content-Type': 'application/json',
-      Prefer: 'resolution=merge-duplicates,return=representation',
-    },
+    headers: { ...SB_HEADERS, Prefer: 'resolution=merge-duplicates,return=representation' },
     body: JSON.stringify(rows),
   });
   if (!res.ok) {
-    const txt = await res.text();
-    console.warn(`[instagram] upsert KO (${res.status}): ${txt.slice(0, 300)}`);
+    console.warn(`[instagram] upsert KO (${res.status}): ${(await res.text()).slice(0, 300)}`);
     return 0;
   }
-  const data = await res.json();
-  return data.length;
+  return (await res.json()).length;
+}
+
+// ─── Purge des posts stale en DB ─────────────────────────────────────────────
+// Récupère tous les posts instagram de buzz_social, applique le filtre strict,
+// et supprime ceux qui ne passent plus (hors-sujet, ou anciens non filtrés).
+async function cleanupStaleInstagram() {
+  console.log('[instagram] ── Purge posts stale ──────────────────────────────');
+  try {
+    // Fetch all IG posts (pagination PostgREST : limite 1000)
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/buzz_social?platform=eq.instagram&select=post_id,content,author_name&limit=1000`,
+      { headers: SB_HEADERS }
+    );
+    if (!res.ok) { console.warn('[instagram] purge fetch KO'); return 0; }
+    const posts = await res.json();
+    if (!Array.isArray(posts) || posts.length === 0) {
+      console.log('[instagram] Aucun post instagram en DB → purge inutile');
+      return 0;
+    }
+
+    const staleIds = posts
+      .filter(p => !isRelevantBandi(p.content || '', p.author_name || ''))
+      .map(p => p.post_id);
+
+    if (!staleIds.length) {
+      console.log(`[instagram] ${posts.length} posts vérifiés — aucun stale`);
+      return 0;
+    }
+
+    console.log(`[instagram] ${staleIds.length}/${posts.length} posts hors-sujet → suppression`);
+
+    // DELETE par batch de 50 (éviter URL trop longue)
+    let deleted = 0;
+    const BATCH = 50;
+    for (let i = 0; i < staleIds.length; i += BATCH) {
+      const ids = staleIds.slice(i, i + BATCH).map(id => `"${id}"`).join(',');
+      const del = await fetch(
+        `${SUPABASE_URL}/rest/v1/buzz_social?platform=eq.instagram&post_id=in.(${ids})`,
+        { method: 'DELETE', headers: { ...SB_HEADERS, Prefer: 'return=minimal' } }
+      );
+      if (del.ok) deleted += staleIds.slice(i, i + BATCH).length;
+      else console.warn(`[instagram] delete batch KO (${del.status}): ${(await del.text()).slice(0, 200)}`);
+    }
+    console.log(`[instagram] ✓ ${deleted} posts stale supprimés`);
+    return deleted;
+  } catch (e) {
+    console.warn('[instagram] purge erreur (non bloquante):', e.message);
+    return 0;
+  }
 }
 
 function toRow({ shortcode, caption, owner, ts, likes, comments, thumb }) {
   if (!shortcode) return null;
-  const likesNum    = Number.isFinite(likes)    ? likes    : 0;
-  const commentsNum = Number.isFinite(comments) ? comments : 0;
   return {
     platform: 'instagram',
     post_id: shortcode,
@@ -105,7 +161,7 @@ function toRow({ shortcode, caption, owner, ts, likes, comments, thumb }) {
     url: `https://www.instagram.com/p/${shortcode}/`,
     author_name: owner || null,
     published_at: ts ? new Date(ts).toISOString() : null,
-    engagement_score: likesNum + commentsNum,
+    engagement_score: (Number.isFinite(likes) ? likes : 0) + (Number.isFinite(comments) ? comments : 0),
     thumbnail_url: thumb || null,
   };
 }
@@ -118,10 +174,7 @@ async function runApifyActor(actorId, input) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Apify ${actorId} ${res.status}: ${txt.slice(0, 200)}`);
-  }
+  if (!res.ok) throw new Error(`Apify ${actorId} ${res.status}: ${(await res.text()).slice(0, 200)}`);
   return res.json();
 }
 
@@ -129,54 +182,34 @@ async function scrapeViaApify() {
   console.log('[instagram] → Apify');
   const rows = [];
 
-  // Hashtag scraper
   try {
     const items = await runApifyActor('apify~instagram-hashtag-scraper', {
-      hashtags: HASHTAGS,
-      resultsLimit: RESULTS_PER_TAG,
+      hashtags: HASHTAGS, resultsLimit: RESULTS_PER_TAG,
     });
     console.log(`[instagram]   hashtags bruts → ${items.length} posts`);
     for (const it of items) {
-      const row = toRow({
-        shortcode: it.shortCode || it.shortcode,
-        caption:   it.caption,
-        owner:     it.ownerUsername || it.ownerFullName,
-        ts:        it.timestamp,
-        likes:     it.likesCount,
-        comments:  it.commentsCount,
-        thumb:     it.displayUrl,
-      });
+      const row = toRow({ shortcode: it.shortCode || it.shortcode, caption: it.caption,
+        owner: it.ownerUsername || it.ownerFullName, ts: it.timestamp,
+        likes: it.likesCount, comments: it.commentsCount, thumb: it.displayUrl });
       if (row) rows.push(row);
     }
-  } catch (e) {
-    console.warn('[instagram]   hashtags KO:', e.message);
-  }
+  } catch (e) { console.warn('[instagram]   hashtags KO:', e.message); }
 
-  // Profile scraper (comptes clés seulement)
   try {
     const items = await runApifyActor('apify~instagram-profile-scraper', {
-      usernames: USERS,
-      resultsLimit: RESULTS_PER_USER,
+      usernames: USERS, resultsLimit: RESULTS_PER_USER,
     });
     console.log(`[instagram]   profils bruts → ${items.length} posts`);
     for (const it of items) {
       const posts = Array.isArray(it.latestPosts) ? it.latestPosts : [it];
       for (const p of posts) {
-        const row = toRow({
-          shortcode: p.shortCode || p.shortcode,
-          caption:   p.caption,
-          owner:     p.ownerUsername || it.username,
-          ts:        p.timestamp,
-          likes:     p.likesCount,
-          comments:  p.commentsCount,
-          thumb:     p.displayUrl,
-        });
+        const row = toRow({ shortcode: p.shortCode || p.shortcode, caption: p.caption,
+          owner: p.ownerUsername || it.username, ts: p.timestamp,
+          likes: p.likesCount, comments: p.commentsCount, thumb: p.displayUrl });
         if (row) rows.push(row);
       }
     }
-  } catch (e) {
-    console.warn('[instagram]   profils KO:', e.message);
-  }
+  } catch (e) { console.warn('[instagram]   profils KO:', e.message); }
 
   return filterAndDedupe(rows);
 }
@@ -200,11 +233,9 @@ async function scrapeViaRsshub() {
           const m = (it.link || '').match(/\/p\/([A-Za-z0-9_-]+)/);
           if (!m) continue;
           const row = toRow({
-            shortcode: m[1],
-            caption:   it.contentSnippet || it.title,
-            owner:     (feed.title || '').replace(/^Instagram - /, ''),
-            ts:        it.isoDate || it.pubDate,
-            likes: 0, comments: 0,
+            shortcode: m[1], caption: it.contentSnippet || it.title,
+            owner: (feed.title || '').replace(/^Instagram - /, ''),
+            ts: it.isoDate || it.pubDate, likes: 0, comments: 0,
             thumb: (it.enclosure && it.enclosure.url) || null,
           });
           if (row) rows.push(row);
@@ -222,9 +253,7 @@ async function scrapeViaRsshub() {
 function filterAndDedupe(rows) {
   const before = rows.length;
   const filtered = rows.filter(r => {
-    // 1. Pertinence sémantique stricte
     if (!isRelevantBandi(r.content || '', r.author_name || '')) return false;
-    // 2. Engagement minimum (sauf si vient d'un compte whitelisté)
     const isWhitelisted = ['yoottle', 'netflixfr'].includes((r.author_name || '').toLowerCase());
     if (!isWhitelisted && r.engagement_score < MIN_ENGAGEMENT) return false;
     return true;
@@ -238,6 +267,9 @@ function filterAndDedupe(rows) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 (async () => {
   try {
+    // Purge d'abord les posts stale en DB
+    await cleanupStaleInstagram();
+
     let rows = [];
     if (APIFY_API_TOKEN) {
       rows = await scrapeViaApify();

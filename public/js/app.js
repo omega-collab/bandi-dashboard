@@ -437,7 +437,7 @@ async function loadLiveData() {
     BANDI.current.date = today;
 
     // Badge sources croisées
-    await renderSourcesBadge(cfg, headers);
+    renderSourcesBadge();
 
     console.log('✅ Données live chargées depuis Supabase');
     console.log(`   Date: ${today} | Score: ${current.score_monde} | Rang TV Shows: #${BANDI.current.rang} | rang_monde brut (all-content): #${current.rang_monde}`);
@@ -450,36 +450,23 @@ async function loadLiveData() {
   }
 }
 
-async function renderSourcesBadge(cfg, headers) {
+function renderSourcesBadge() {
   try {
-    // Uniquement FlixPatrol (snapshots) — Tudum manque encore de données live
-    const fpRes = await fetch(`${cfg.url}/rest/v1/bandi_snapshots?order=date.desc&limit=2`, { headers, cache: 'no-store' });
-    const fp = await fpRes.json();
-
     const badge = document.getElementById('sourcesBadge');
-    if (!badge || !fp?.length) return;
-
-    const fpRang = fp[0]?.rang_monde;
-    const fpPrev = fp[1]?.rang_monde;
-    const fpScore = fp[0]?.score_monde;
-
-    if (!fpRang) return;
-
-    const fpInTop10 = fpRang <= 10;
-    const fpTrend   = fpPrev ? Math.sign(fpPrev - fpRang) : 0;
-    const trendArrow = fpTrend > 0 ? ' ↑' : fpTrend < 0 ? ' ↓' : '';
-
-    const status = fpInTop10 ? 'coherent' : 'warning';
-    const label  = fpInTop10 ? `✓ #${fpRang}${trendArrow}` : `⚠ #${fpRang}`;
-    const tooltip = `FlixPatrol · Rang #${fpRang} · Score ${fpScore} pts · Mis à jour ${fp[0]?.date || '—'}`;
-
-    badge.textContent = label;
-    badge.className = `sources-badge ${status}`;
-    badge.title = tooltip;
+    if (!badge) return;
+    const rang  = BANDI.current?.rang;
+    const prev  = BANDI.previous?.rang;
+    const score = BANDI.current?.score;
+    const date  = BANDI.current?.date || '—';
+    if (!rang) return;
+    const inTop10 = rang <= 10;
+    const trend   = prev ? Math.sign(prev - rang) : 0;
+    const arrow   = trend > 0 ? ' ↑' : trend < 0 ? ' ↓' : '';
+    badge.textContent  = inTop10 ? `✓ #${rang}${arrow}` : `⚠ #${rang}`;
+    badge.className    = `sources-badge ${inTop10 ? 'coherent' : 'warning'}`;
+    badge.title        = `FlixPatrol TV Shows · #${rang} · ${score || '—'} pts · ${date}`;
     badge.style.display = '';
-  } catch (e) {
-    // badge silencieux si erreur
-  }
+  } catch (_) {}
 }
 
 // ============ GRAPHIQUE RANG MARTINIQUE ============
@@ -1528,11 +1515,33 @@ function fmtEngagement(n, platform) {
   return String(n);
 }
 
-const BUZZ_ICONS = { press: '📰', reddit: '💬', youtube: '🎥', bluesky: '🦋' };
-const BUZZ_LABELS = { press: 'Presse', reddit: 'Reddit', youtube: 'YouTube', bluesky: 'Bluesky' };
+const BUZZ_ICONS = { press: '📰', reddit: '💬', youtube: '🎥', bluesky: '🦋', instagram: '📸' };
+const BUZZ_LABELS = { press: 'Presse', reddit: 'Reddit', youtube: 'YouTube', bluesky: 'Bluesky', instagram: 'Instagram' };
 const SOURCE_COLORS = { local: '#CE1126', national: '#009739', international: '#D4A017' };
 const SOURCE_LABELS = { local: 'Local', national: 'National', international: 'International' };
-const ENGAGE_ICONS = { reddit: '↑', youtube: '▶', bluesky: '♥', press: '' };
+const ENGAGE_ICONS = { reddit: '↑', youtube: '▶', bluesky: '♥', instagram: '♥', press: '' };
+
+// Filtre pertinence Instagram côté client (filet de sécurité vs posts stale en DB)
+function igIsRelevant(content = '', author = '') {
+  const t = (content + ' ' + author).toLowerCase();
+  const NEG = [
+    'decreto fiscale', 'decreto legge', 'gazzetta ufficiale',
+    'bandi dedicati', 'bandi di gara', 'bandi europei', 'bandi regionali',
+    'bandi comunali', 'comuni piemontesi', 'bando pubblico',
+    'intervento sr', 'smart village', 'darul uloom', 'nooria',
+    'dinajpur', 'dastaar', 'aslam warsi', 'euroservis',
+  ];
+  if (NEG.some(s => t.includes(s))) return false;
+  const STRONG = [
+    'bandinetflix', 'bandi netflix', 'bandiserie', 'seriebandi',
+    'bandimartinique', 'bandinetflixserie', 'netflix martinique',
+    'serie martinique', 'série martinique', 'première série martiniquaise',
+    'maui entertainment',
+  ];
+  if (STRONG.some(s => t.includes(s))) return true;
+  if (!/\bbandi\b/.test(t)) return false;
+  return ['netflix', 'série', 'serie', 'martinique', 'streaming', 'episode', 'saison'].some(k => t.includes(k));
+}
 
 async function loadBuzzData(cfg, headers) {
   const [artRes, socRes, trendsRes] = await Promise.all([
@@ -1553,14 +1562,17 @@ async function loadBuzzData(cfg, headers) {
     thumbnail: a.image_url || null, engagement: null,
   }));
 
-  const soc = (Array.isArray(social) ? social : []).map(s => ({
-    id: 's' + s.id, itemType: 'social', platform: s.platform,
-    sourceType: null,
-    url: s.url, title: s.content || '(sans contenu)',
-    excerpt: null, source: s.author_name || '',
-    publishedAt: s.published_at ? new Date(s.published_at) : null,
-    thumbnail: s.thumbnail_url || null, engagement: s.engagement_score,
-  }));
+  const soc = (Array.isArray(social) ? social : [])
+    // Filtre client-side : rejette les posts Instagram hors-sujet encore en DB
+    .filter(s => s.platform !== 'instagram' || igIsRelevant(s.content || '', s.author_name || ''))
+    .map(s => ({
+      id: 's' + s.id, itemType: 'social', platform: s.platform,
+      sourceType: null,
+      url: s.url, title: s.content || '(sans contenu)',
+      excerpt: null, source: s.author_name || '',
+      publishedAt: s.published_at ? new Date(s.published_at) : null,
+      thumbnail: s.thumbnail_url || null, engagement: s.engagement_score,
+    }));
 
   buzzAllItems = [...press, ...soc]
     .filter(i => i.publishedAt && !isNaN(i.publishedAt.getTime()))
@@ -2901,6 +2913,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       await loadLiveData();
       try { renderOverview(); }        catch (e) { console.error('[BANDI] refresh renderOverview:', e); }
+      try { renderSourcesBadge(); }    catch (e) { console.error('[BANDI] refresh renderSourcesBadge:', e); }
       try { renderRivals(); }          catch (e) { console.error('[BANDI] refresh renderRivals:', e); }
       try { renderBreakthroughUSA(); } catch (e) { console.error('[BANDI] refresh renderBreakthroughUSA:', e); }
       try { renderZonesDomination(); } catch (e) { console.error('[BANDI] refresh renderZonesDomination:', e); }
