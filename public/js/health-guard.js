@@ -285,7 +285,7 @@
     el.id = 'hg-css';
     el.textContent = `
 #hg-indicator {
-  position: fixed; top: 12px; right: 12px;
+  position: fixed; bottom: 16px; right: 16px;
   z-index: 9999;
   display: flex; align-items: center; gap: 6px;
   padding: 6px 10px;
@@ -315,7 +315,7 @@
 #hg-indicator .hg-count { color: #ccc; font-family: inherit; }
 
 #hg-panel {
-  position: fixed; top: 50px; right: 12px;
+  position: fixed; bottom: 56px; right: 16px;
   z-index: 9998;
   width: 340px; max-width: calc(100vw - 24px);
   max-height: 70vh; overflow-y: auto;
@@ -503,12 +503,14 @@
     get healed() { return state.healed.slice(); }
   };
 
-  // Auto-démarrage : premier scan 1s après DOMContentLoaded (laisse loadLiveData finir),
-  // puis scan toutes les 30s.
+  // Auto-démarrage : premier scan 5s après DOMContentLoaded pour laisser loadLiveData()
+  // (async, multiples fetch Supabase) se terminer avant que le scan évalue l'état.
+  // Un scan trop précoce déclencherait BANDI_EMPTY ou FALLBACK_ACTIVE à tort.
+  const FIRST_SCAN_DELAY_MS = 5000;
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(() => start(), 1000));
+    document.addEventListener('DOMContentLoaded', () => setTimeout(() => start(), FIRST_SCAN_DELAY_MS));
   } else {
-    setTimeout(() => start(), 1000);
+    setTimeout(() => start(), FIRST_SCAN_DELAY_MS);
   }
 
 })();

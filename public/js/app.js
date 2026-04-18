@@ -2993,6 +2993,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   try { renderForecastS2(); }      catch (e) { console.error('[BANDI] renderForecastS2:', e); }
   try { renderMethodologySources(); } catch (e) { console.error('[BANDI] renderMethodologySources:', e); }
 
+  // Déclencher le scan health-guard dès que tout le rendu initial est terminé
+  // (évite les faux positifs BANDI_EMPTY qui survenaient si le scan précédait loadLiveData)
+  try {
+    if (typeof window.BANDI_HEALTH?.scan === 'function') window.BANDI_HEALTH.scan();
+  } catch (_) {}
+
   // ── Auto-refresh hero (live FlixPatrol) ──────────────────────────────
   // Le scraper FlixPatrol tourne toutes les 2h côté GitHub Actions. On
   // resynchronise le dashboard toutes les 5 min pour que le hero et les

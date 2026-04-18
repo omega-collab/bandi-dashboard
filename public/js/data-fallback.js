@@ -190,3 +190,8 @@ const REGION_COLORS = {
   "Océanie":            "#7209B7",
   "Afrique":            "#F77F00"
 };
+
+// Exposition sur window — nécessaire car `const` ne s'attache pas à globalThis.
+// monitoring.js et health-guard.js y accèdent via window.BANDI / window.REGION_COLORS.
+window.BANDI         = BANDI;
+window.REGION_COLORS = REGION_COLORS;
