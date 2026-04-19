@@ -99,12 +99,14 @@
   function checkDataFreshness() {
     const cur = window.BANDI?.current;
     if (!cur?.date) return null;
-    const age = ageMs(cur.date);
+    // Préférer createdAt (timestamp précis) si dispo, sinon date (DATE).
+    const stamp = cur.createdAt || cur.date;
+    const age = ageMs(stamp);
     if (age > MAX_SNAPSHOT_AGE_MS) {
       const hours = Math.floor(age / 3600000);
       return issue(hours > 12 ? 'critical' : 'important', 'STALE_SNAPSHOT',
-        `Snapshot ${hours}h old — scraper en retard`,
-        `Dernière date en DB : ${cur.date}`);
+        `Dernière collecte il y a ${hours}h — scraper en retard`,
+        `Dernière date en DB : ${cur.date}${cur.createdAt ? ` · ${new Date(cur.createdAt).toLocaleString('fr-FR')}` : ''}`);
     }
     return null;
   }
