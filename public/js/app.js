@@ -1542,11 +1542,11 @@ function fmtEngagement(n) {
   return String(n);
 }
 
-const BUZZ_ICONS  = { press: '📰', reddit: '💬', youtube: '🎥', bluesky: '🦋' };
-const BUZZ_LABELS = { press: 'Presse', reddit: 'Reddit', youtube: 'YouTube', bluesky: 'Bluesky' };
+const BUZZ_ICONS  = { press: '📰', reddit: '💬', youtube: '🎥', bluesky: '🦋', instagram: '📸' };
+const BUZZ_LABELS = { press: 'Presse', reddit: 'Reddit', youtube: 'YouTube', bluesky: 'Bluesky', instagram: 'Instagram' };
 const SOURCE_COLORS = { local: '#CE1126', national: '#009739', international: '#D4A017' };
 const SOURCE_LABELS = { local: 'Local', national: 'National', international: 'International' };
-const ENGAGE_ICONS = { reddit: '↑', youtube: '▶', bluesky: '♥', press: '' };
+const ENGAGE_ICONS = { reddit: '↑', youtube: '▶', bluesky: '♥', instagram: '♥', press: '' };
 
 // Classifie un post social (Reddit/YouTube/Bluesky/Instagram) en local/national/international
 // par heuristique sur author_name + content. Utilisé par loadBuzzData() pour
@@ -1614,9 +1614,8 @@ async function loadBuzzData(cfg, headers) {
     };
   });
 
-  // Rejette les posts Instagram (plus de filtre UI pour les afficher)
   const soc = (Array.isArray(social) ? social : [])
-    .filter(s => s.platform && s.platform !== 'instagram')
+    .filter(s => s.platform)
     .map(s => ({
       id: 's' + s.id, itemType: 'social', platform: s.platform,
       sourceType: classifySocialSource(s),
@@ -1739,10 +1738,11 @@ function computeBuzzFilterCounts() {
       international: base.filter(i => i.sourceType === 'international').length,
     },
     platform: {
-      all:     base.filter(i => i.itemType === 'social').length,
-      reddit:  base.filter(i => i.platform === 'reddit').length,
-      youtube: base.filter(i => i.platform === 'youtube').length,
-      bluesky: base.filter(i => i.platform === 'bluesky').length,
+      all:       base.filter(i => i.itemType === 'social').length,
+      reddit:    base.filter(i => i.platform === 'reddit').length,
+      youtube:   base.filter(i => i.platform === 'youtube').length,
+      bluesky:   base.filter(i => i.platform === 'bluesky').length,
+      instagram: base.filter(i => i.platform === 'instagram').length,
     },
     period: {
       '1':   buzzAllItems.filter(i => (now - i.publishedAt.getTime()) <=  1 * 86400000).length,
