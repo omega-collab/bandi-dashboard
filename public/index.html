@@ -28,7 +28,7 @@
 <!-- Leaflet.js pour la carte choroplèthe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<link rel="stylesheet" href="css/styles.css?v=20260418b" />
+<link rel="stylesheet" href="css/styles.css?v=20260419a" />
 
 <!-- Splash screen (inline pour afficher immédiatement, avant tout chargement) -->
 <style>
@@ -522,62 +522,64 @@
   </section>
 
   <!-- ============ TAB: BUZZ ============ -->
-  <section class="tab-panel" id="panel-buzz">
+  <section class="tab-panel" id="panel-buzz" aria-label="Buzz & Veille Bandi">
 
     <!-- Header résumé -->
     <div class="panel">
       <div class="panel-head">
         <div>
-          <h2>Buzz & Veille</h2>
+          <h2>Buzz &amp; Veille</h2>
           <p class="panel-sub">Presse mondiale + réseaux sociaux · Tout ce qui parle de Bandi</p>
         </div>
         <div class="buzz-stats" id="buzzStats">
-          <span>— articles</span>
-          <span style="opacity:0.4">·</span>
-          <span>— posts</span>
-          <span style="opacity:0.4">·</span>
-          <span id="buzzResultCount" style="color:var(--gold);font-weight:600">— résultats</span>
+          <span><strong id="buzzStatPress">—</strong> articles</span>
+          <span class="buzz-stat-sep">·</span>
+          <span><strong id="buzzStatSocial">—</strong> posts</span>
+          <span class="buzz-stat-sep">·</span>
+          <span id="buzzResultCount" class="buzz-stat-result">— résultats</span>
         </div>
       </div>
     </div>
 
     <!-- Filtres -->
-    <div class="panel buzz-filters-panel">
+    <div class="panel buzz-filters-panel" role="group" aria-label="Filtres Buzz">
       <div class="buzz-filter-row">
         <span class="buzz-filter-label">Type</span>
-        <div class="buzz-filter-group">
-          <button class="buzz-btn active" data-filter="type" data-val="all">Tout</button>
-          <button class="buzz-btn" data-filter="type" data-val="press">📰 Presse</button>
-          <button class="buzz-btn" data-filter="type" data-val="social">💬 Social</button>
+        <div class="buzz-filter-group" role="tablist" aria-label="Type">
+          <button class="buzz-btn active" data-filter="type" data-val="all" aria-pressed="true">Tout</button>
+          <button class="buzz-btn" data-filter="type" data-val="press" aria-pressed="false">📰 Presse</button>
+          <button class="buzz-btn" data-filter="type" data-val="social" aria-pressed="false">💬 Social</button>
         </div>
       </div>
       <div class="buzz-filter-row" id="buzzSourceRow">
         <span class="buzz-filter-label">Source</span>
-        <div class="buzz-filter-group">
-          <button class="buzz-btn active" data-filter="source" data-val="all">Tout</button>
-          <button class="buzz-btn" data-filter="source" data-val="local">🇲🇶 Local</button>
-          <button class="buzz-btn" data-filter="source" data-val="national">🇫🇷 National</button>
-          <button class="buzz-btn" data-filter="source" data-val="international">🌍 International</button>
+        <div class="buzz-filter-group" role="tablist" aria-label="Source presse">
+          <button class="buzz-btn active" data-filter="source" data-val="all" aria-pressed="true">Tout</button>
+          <button class="buzz-btn" data-filter="source" data-val="local" aria-pressed="false">🇲🇶 Local</button>
+          <button class="buzz-btn" data-filter="source" data-val="national" aria-pressed="false">🇫🇷 National</button>
+          <button class="buzz-btn" data-filter="source" data-val="international" aria-pressed="false">🌍 International</button>
         </div>
       </div>
       <div class="buzz-filter-row" id="buzzPlatformRow">
         <span class="buzz-filter-label">Plateforme</span>
-        <div class="buzz-filter-group">
-          <button class="buzz-btn active" data-filter="platform" data-val="all">Tout</button>
-          <button class="buzz-btn" data-filter="platform" data-val="reddit">💬 Reddit</button>
-          <button class="buzz-btn" data-filter="platform" data-val="youtube">🎥 YouTube</button>
-          <button class="buzz-btn" data-filter="platform" data-val="bluesky">🦋 Bluesky</button>
-          <button class="buzz-btn" data-filter="platform" data-val="instagram">📸 Instagram</button>
+        <div class="buzz-filter-group" role="tablist" aria-label="Plateforme sociale">
+          <button class="buzz-btn active" data-filter="platform" data-val="all" aria-pressed="true">Tout</button>
+          <button class="buzz-btn" data-filter="platform" data-val="reddit" aria-pressed="false">💬 Reddit</button>
+          <button class="buzz-btn" data-filter="platform" data-val="youtube" aria-pressed="false">🎥 YouTube</button>
+          <button class="buzz-btn" data-filter="platform" data-val="bluesky" aria-pressed="false">🦋 Bluesky</button>
         </div>
       </div>
       <div class="buzz-filter-row">
         <span class="buzz-filter-label">Période</span>
-        <div class="buzz-filter-group">
-          <button class="buzz-btn" data-filter="period" data-val="1">Aujourd'hui</button>
-          <button class="buzz-btn" data-filter="period" data-val="7">7 jours</button>
-          <button class="buzz-btn" data-filter="period" data-val="30">30 jours</button>
-          <button class="buzz-btn active" data-filter="period" data-val="all">Tout</button>
+        <div class="buzz-filter-group" role="tablist" aria-label="Période">
+          <button class="buzz-btn" data-filter="period" data-val="1" aria-pressed="false">Aujourd'hui</button>
+          <button class="buzz-btn" data-filter="period" data-val="7" aria-pressed="false">7 jours</button>
+          <button class="buzz-btn" data-filter="period" data-val="30" aria-pressed="false">30 jours</button>
+          <button class="buzz-btn active" data-filter="period" data-val="all" aria-pressed="true">Tout</button>
         </div>
+      </div>
+      <div class="buzz-filter-row buzz-filter-actions">
+        <button type="button" id="buzzResetBtn" class="buzz-reset-btn">Réinitialiser</button>
       </div>
     </div>
 
@@ -594,27 +596,46 @@
       </div>
     </div>
 
-    <!-- Loading -->
-    <div class="buzz-loading" id="buzzLoading">
-      <span class="pulse-dot" style="width:8px;height:8px;margin:0;"></span>
-      <span>Chargement de la veille…</span>
+    <!-- Loading : skeleton cards -->
+    <div class="buzz-loading" id="buzzLoading" aria-live="polite" aria-busy="true">
+      <div class="buzz-skeleton-card" aria-hidden="true"><div class="skel-thumb"></div><div class="skel-body"><div class="skel-line skel-line--sm"></div><div class="skel-line"></div><div class="skel-line skel-line--xs"></div></div></div>
+      <div class="buzz-skeleton-card" aria-hidden="true"><div class="skel-thumb"></div><div class="skel-body"><div class="skel-line skel-line--sm"></div><div class="skel-line"></div><div class="skel-line skel-line--xs"></div></div></div>
+      <div class="buzz-skeleton-card" aria-hidden="true"><div class="skel-thumb"></div><div class="skel-body"><div class="skel-line skel-line--sm"></div><div class="skel-line"></div><div class="skel-line skel-line--xs"></div></div></div>
+      <div class="buzz-skeleton-card" aria-hidden="true"><div class="skel-thumb"></div><div class="skel-body"><div class="skel-line skel-line--sm"></div><div class="skel-line"></div><div class="skel-line skel-line--xs"></div></div></div>
+      <div class="buzz-skeleton-card" aria-hidden="true"><div class="skel-thumb"></div><div class="skel-body"><div class="skel-line skel-line--sm"></div><div class="skel-line"></div><div class="skel-line skel-line--xs"></div></div></div>
     </div>
 
     <!-- Timeline -->
-    <div id="buzzTimeline"></div>
+    <div id="buzzTimeline" role="region" aria-label="Timeline des articles et posts Bandi"></div>
 
     <!-- Pagination -->
-    <div class="buzz-pagination" id="buzzPagination" style="display:none">
-      <button class="buzz-page-btn" id="buzzPrev">← Précédent</button>
+    <div class="buzz-pagination" id="buzzPagination" style="display:none" role="navigation" aria-label="Pagination Buzz">
+      <button class="buzz-page-btn" id="buzzPrev" type="button">← Précédent</button>
       <span class="buzz-page-info" id="buzzPageInfo">Page 1</span>
-      <button class="buzz-page-btn" id="buzzNext">Suivant →</button>
+      <button class="buzz-page-btn" id="buzzNext" type="button">Suivant →</button>
     </div>
 
-    <!-- Empty state -->
-    <div class="buzz-empty" id="buzzEmpty" style="display:none">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3;"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-      <p>Veille en cours de constitution.</p>
-      <p style="font-size:13px;opacity:0.5;">Reviens dans quelques jours — les scrapers tournent toutes les 3h.</p>
+    <!-- État : aucun résultat avec filtres -->
+    <div class="buzz-empty" id="buzzEmptyFiltered" style="display:none" role="status">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <p><strong>Aucun résultat</strong> avec ces filtres.</p>
+      <p class="buzz-empty-sub">Essaie de combiner différemment ou réinitialise.</p>
+      <button type="button" class="buzz-retry-btn" id="buzzEmptyReset">Réinitialiser les filtres</button>
+    </div>
+
+    <!-- État : DB vide (veille en cours) -->
+    <div class="buzz-empty" id="buzzEmptyDB" style="display:none" role="status">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      <p><strong>Veille en cours de constitution.</strong></p>
+      <p class="buzz-empty-sub">Les scrapers tournent toutes les 30 minutes — reviens dans quelques instants.</p>
+    </div>
+
+    <!-- État : erreur de chargement -->
+    <div class="buzz-empty buzz-empty--error" id="buzzError" style="display:none" role="alert">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <p><strong>Chargement impossible.</strong></p>
+      <p class="buzz-empty-sub" id="buzzErrorMsg">Vérifie ta connexion et réessaie.</p>
+      <button type="button" class="buzz-retry-btn" id="buzzRetryBtn">Réessayer</button>
     </div>
 
   </section>
@@ -1002,12 +1023,12 @@
 </nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/auth.js?v=20260418b"></script>
-<script src="js/data-fallback.js?v=20260418b"></script>
-<script src="js/config.js?v=20260418b"></script>
-<script src="js/monitoring.js?v=20260418b"></script>
-<script src="js/app.js?v=20260418b"></script>
-<script src="js/health-guard.js?v=20260418b"></script>
+<script src="js/auth.js?v=20260419a"></script>
+<script src="js/data-fallback.js?v=20260419a"></script>
+<script src="js/config.js?v=20260419a"></script>
+<script src="js/monitoring.js?v=20260419a"></script>
+<script src="js/app.js?v=20260419a"></script>
+<script src="js/health-guard.js?v=20260419a"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {

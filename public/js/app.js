@@ -1521,6 +1521,7 @@ const BUZZ_PAGE = 50;
 const buzzFilters = { type: 'all', source: 'all', platform: 'all', period: 'all' };
 let buzzAllItems = [];
 let buzzTrendsChartInstance = null;
+let buzzLastFetchedAt = null;
 
 function timeAgo(date) {
   if (!date) return '—';
@@ -1534,40 +1535,18 @@ function timeAgo(date) {
   return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
 }
 
-function fmtEngagement(n, platform) {
+function fmtEngagement(n) {
   if (n === null || n === undefined || n === 0) return '';
   if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
   if (n >= 1000) return `${(n / 1e3).toFixed(1)}K`;
   return String(n);
 }
 
-const BUZZ_ICONS = { press: '📰', reddit: '💬', youtube: '🎥', bluesky: '🦋', instagram: '📸' };
-const BUZZ_LABELS = { press: 'Presse', reddit: 'Reddit', youtube: 'YouTube', bluesky: 'Bluesky', instagram: 'Instagram' };
+const BUZZ_ICONS  = { press: '📰', reddit: '💬', youtube: '🎥', bluesky: '🦋' };
+const BUZZ_LABELS = { press: 'Presse', reddit: 'Reddit', youtube: 'YouTube', bluesky: 'Bluesky' };
 const SOURCE_COLORS = { local: '#CE1126', national: '#009739', international: '#D4A017' };
 const SOURCE_LABELS = { local: 'Local', national: 'National', international: 'International' };
-const ENGAGE_ICONS = { reddit: '↑', youtube: '▶', bluesky: '♥', instagram: '♥', press: '' };
-
-// Filtre pertinence Instagram côté client (filet de sécurité vs posts stale en DB)
-function igIsRelevant(content = '', author = '') {
-  const t = (content + ' ' + author).toLowerCase();
-  const NEG = [
-    'decreto fiscale', 'decreto legge', 'gazzetta ufficiale',
-    'bandi dedicati', 'bandi di gara', 'bandi europei', 'bandi regionali',
-    'bandi comunali', 'comuni piemontesi', 'bando pubblico',
-    'intervento sr', 'smart village', 'darul uloom', 'nooria',
-    'dinajpur', 'dastaar', 'aslam warsi', 'euroservis',
-  ];
-  if (NEG.some(s => t.includes(s))) return false;
-  const STRONG = [
-    'bandinetflix', 'bandi netflix', 'bandiserie', 'seriebandi',
-    'bandimartinique', 'bandinetflixserie', 'netflix martinique',
-    'serie martinique', 'série martinique', 'première série martiniquaise',
-    'maui entertainment',
-  ];
-  if (STRONG.some(s => t.includes(s))) return true;
-  if (!/\bbandi\b/.test(t)) return false;
-  return ['netflix', 'série', 'serie', 'martinique', 'streaming', 'episode', 'saison'].some(k => t.includes(k));
-}
+const ENGAGE_ICONS = { reddit: '↑', youtube: '▶', bluesky: '♥', press: '' };
 
 // Classifie un post social (Reddit/YouTube/Bluesky/Instagram) en local/national/international
 // par heuristique sur author_name + content. Utilisé par loadBuzzData() pour
@@ -1615,14 +1594,14 @@ async function loadBuzzData(cfg, headers) {
     fetch(`${cfg.url}/rest/v1/buzz_social?order=published_at.desc&limit=500`, { headers, cache: 'no-store' }),
     fetch(`${cfg.url}/rest/v1/buzz_trends?order=date.asc&limit=31`, { headers, cache: 'no-store' }),
   ]);
+  if (!artRes.ok || !socRes.ok) {
+    throw new Error(`Supabase error: articles=${artRes.status} social=${socRes.status}`);
+  }
   const articles = await artRes.json();
   const social   = await socRes.json();
-  const trends   = await trendsRes.json();
+  const trends   = trendsRes.ok ? await trendsRes.json() : [];
 
   const press = (Array.isArray(articles) ? articles : []).map(a => {
-    // Priorité au nom de source (règle tout le legacy "via Google News" mal
-    // classé en international avant le fix des scrapers). Fallback DB si
-    // nom inconnu.
     const byName = classifyPressByName(a.source_name);
     return {
       id: 'p' + a.id, itemType: 'press', platform: 'press',
@@ -1631,12 +1610,13 @@ async function loadBuzzData(cfg, headers) {
       excerpt: a.description, source: a.source_name || '',
       publishedAt: a.published_at ? new Date(a.published_at) : null,
       thumbnail: a.image_url || null, engagement: null,
+      fetchedAt: a.fetched_at ? new Date(a.fetched_at) : null,
     };
   });
 
+  // Rejette les posts Instagram (plus de filtre UI pour les afficher)
   const soc = (Array.isArray(social) ? social : [])
-    // Filtre client-side : rejette les posts Instagram hors-sujet encore en DB
-    .filter(s => s.platform !== 'instagram' || igIsRelevant(s.content || '', s.author_name || ''))
+    .filter(s => s.platform && s.platform !== 'instagram')
     .map(s => ({
       id: 's' + s.id, itemType: 'social', platform: s.platform,
       sourceType: classifySocialSource(s),
@@ -1644,15 +1624,25 @@ async function loadBuzzData(cfg, headers) {
       excerpt: null, source: s.author_name || '',
       publishedAt: s.published_at ? new Date(s.published_at) : null,
       thumbnail: s.thumbnail_url || null, engagement: s.engagement_score,
+      fetchedAt: s.fetched_at ? new Date(s.fetched_at) : null,
     }));
 
   buzzAllItems = [...press, ...soc]
     .filter(i => i.publishedAt && !isNaN(i.publishedAt.getTime()))
     .sort((a, b) => b.publishedAt - a.publishedAt);
 
-  // Render trends chart if data
+  // Date du dernier fetch = max des fetched_at
+  const fetchedAts = buzzAllItems.map(i => i.fetchedAt).filter(d => d && !isNaN(d));
+  buzzLastFetchedAt = fetchedAts.length ? new Date(Math.max(...fetchedAts.map(d => d.getTime()))) : null;
+
+  // Trends : render si data, sinon cache le panel
   const trendsData = Array.isArray(trends) ? trends : [];
-  if (trendsData.length > 0) renderBuzzTrendsChart(trendsData);
+  if (trendsData.length > 0) {
+    renderBuzzTrendsChart(trendsData);
+  } else {
+    const tp = $('buzzTrendsPanel'); if (tp) tp.style.display = 'none';
+    if (buzzTrendsChartInstance) { try { buzzTrendsChartInstance.destroy(); } catch(_){} buzzTrendsChartInstance = null; }
+  }
 
   return { pressCount: press.length, socialCount: soc.length };
 }
@@ -1673,60 +1663,70 @@ function buzzFiltered() {
   });
 }
 
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function renderBuzzCard(item) {
   const icon  = BUZZ_ICONS[item.platform]  || '📄';
   const label = BUZZ_LABELS[item.platform] || item.platform;
   const time  = timeAgo(item.publishedAt);
-  const eng   = fmtEngagement(item.engagement, item.platform);
+  const eng   = fmtEngagement(item.engagement);
   const engIcon = ENGAGE_ICONS[item.platform] || '';
 
   const srcBadge = item.sourceType && SOURCE_COLORS[item.sourceType]
     ? `<span class="buzz-source-badge" style="color:${SOURCE_COLORS[item.sourceType]};background:${SOURCE_COLORS[item.sourceType]}18;border-color:${SOURCE_COLORS[item.sourceType]}35">${SOURCE_LABELS[item.sourceType]}</span>`
     : '';
 
+  // <img loading="lazy"> au lieu de background-image : supporte onerror et lazy load natif
   const thumb = item.thumbnail
-    ? `<div class="buzz-card-thumb" style="background-image:url('${item.thumbnail}')"></div>`
+    ? `<img class="buzz-card-thumb" src="${escapeHtml(item.thumbnail)}" alt="" loading="lazy" decoding="async" onerror="this.remove();this.parentElement&&this.parentElement.classList.remove('has-thumb')">`
     : '';
 
-  const title   = (item.title   || '').slice(0, 160) + ((item.title || '').length > 160 ? '…' : '');
-  const excerpt = item.excerpt ? (item.excerpt.slice(0, 120) + (item.excerpt.length > 120 ? '…' : '')) : '';
+  const rawTitle = item.title || '';
+  const title   = escapeHtml(rawTitle.slice(0, 160)) + (rawTitle.length > 160 ? '…' : '');
+  const rawExcerpt = item.excerpt || '';
+  const excerpt = rawExcerpt ? escapeHtml(rawExcerpt.slice(0, 140)) + (rawExcerpt.length > 140 ? '…' : '') : '';
 
   const engHtml = eng
-    ? `<span class="buzz-engagement">${engIcon} ${eng}</span>`
+    ? `<span class="buzz-engagement" aria-label="Engagement">${engIcon} ${eng}</span>`
     : '';
 
-  return `<a class="buzz-card${item.thumbnail ? ' has-thumb' : ''}" href="${item.url}" target="_blank" rel="noopener noreferrer">
-    ${thumb}
-    <div class="buzz-card-body">
-      <div class="buzz-card-badges">
-        <span class="buzz-type-badge">${icon} ${label}</span>
-        ${srcBadge}
+  const href = escapeHtml(item.url || '#');
+  const src  = escapeHtml(item.source || '');
+
+  return `<article class="buzz-card${item.thumbnail ? ' has-thumb' : ''}" data-platform="${item.platform}" data-source-type="${item.sourceType || ''}">
+    <a class="buzz-card-link" href="${href}" target="_blank" rel="noopener noreferrer">
+      ${thumb}
+      <div class="buzz-card-body">
+        <div class="buzz-card-badges">
+          <span class="buzz-type-badge">${icon} ${label}</span>
+          ${srcBadge}
+        </div>
+        <div class="buzz-card-title">${title}</div>
+        ${excerpt ? `<div class="buzz-card-excerpt">${excerpt}</div>` : ''}
+        <div class="buzz-card-meta">
+          <span class="buzz-meta-source">${src}</span>
+          <span class="buzz-sep">·</span>
+          <span class="buzz-meta-time">${time}</span>
+          ${engHtml}
+        </div>
       </div>
-      <div class="buzz-card-title">${title}</div>
-      ${excerpt ? `<div class="buzz-card-excerpt">${excerpt}</div>` : ''}
-      <div class="buzz-card-meta">
-        <span>${item.source}</span>
-        <span class="buzz-sep">·</span>
-        <span>${time}</span>
-        ${engHtml}
-      </div>
-    </div>
-  </a>`;
+    </a>
+  </article>`;
 }
 
-// Calcule les quantités par filtre — pour afficher "(N)" sur chaque bouton.
-// Les compteurs respectent la période sélectionnée (utile : on veut voir
-// "Local (3)" sur 7j, pas "Local (250)" total) mais ignorent la dimension
-// en cours de comptage pour indiquer l'impact potentiel d'un clic.
+// Calcule les quantités par filtre — les compteurs respectent la période
+// sélectionnée, et pour chaque dimension on ignore la valeur active de cette
+// même dimension pour indiquer l'impact potentiel d'un clic.
 function computeBuzzFilterCounts() {
   const now = Date.now();
   const days = buzzFilters.period === 'all' ? null : parseInt(buzzFilters.period);
   const inPeriod = i => !days || (now - i.publishedAt.getTime()) <= days * 86400000;
   const base = buzzAllItems.filter(inPeriod);
 
-  // Pour chaque bouton, on compte les items correspondant si on cliquait dessus
-  // (en ignorant les dimensions hors-type). La période est toujours appliquée.
-  const counts = {
+  return {
     type: {
       all:    base.length,
       press:  base.filter(i => i.itemType === 'press').length,
@@ -1739,11 +1739,10 @@ function computeBuzzFilterCounts() {
       international: base.filter(i => i.sourceType === 'international').length,
     },
     platform: {
-      all:       base.filter(i => i.itemType === 'social').length,
-      reddit:    base.filter(i => i.platform === 'reddit').length,
-      youtube:   base.filter(i => i.platform === 'youtube').length,
-      bluesky:   base.filter(i => i.platform === 'bluesky').length,
-      instagram: base.filter(i => i.platform === 'instagram').length,
+      all:     base.filter(i => i.itemType === 'social').length,
+      reddit:  base.filter(i => i.platform === 'reddit').length,
+      youtube: base.filter(i => i.platform === 'youtube').length,
+      bluesky: base.filter(i => i.platform === 'bluesky').length,
     },
     period: {
       '1':   buzzAllItems.filter(i => (now - i.publishedAt.getTime()) <=  1 * 86400000).length,
@@ -1752,10 +1751,11 @@ function computeBuzzFilterCounts() {
       'all': buzzAllItems.length,
     }
   };
-  return counts;
 }
 
 // Met à jour les badges "(N)" sur chaque bouton de filtre Buzz.
+// Optim : patch en-place (textContent) plutôt que remove+appendChild —
+// supprime le flicker sur longues listes.
 function renderBuzzFilterCounts() {
   const counts = computeBuzzFilterCounts();
   document.querySelectorAll('.buzz-btn[data-filter]').forEach(btn => {
@@ -1763,54 +1763,79 @@ function renderBuzzFilterCounts() {
     const v = btn.dataset.val;
     const n = counts[f]?.[v];
     if (n === undefined) return;
-    // On retire l'ancien badge avant d'ajouter le nouveau
-    btn.querySelectorAll('.buzz-btn-count').forEach(e => e.remove());
-    const badge = document.createElement('span');
-    badge.className = 'buzz-btn-count';
-    badge.textContent = n > 999 ? `${Math.round(n/100)/10}k` : n;
-    if (n === 0) btn.classList.add('buzz-btn-empty');
-    else btn.classList.remove('buzz-btn-empty');
-    btn.appendChild(badge);
+    const label = n > 999 ? `${Math.round(n/100)/10}k` : String(n);
+    let badge = btn.querySelector('.buzz-btn-count');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'buzz-btn-count';
+      btn.appendChild(badge);
+    }
+    if (badge.textContent !== label) badge.textContent = label;
+    btn.classList.toggle('buzz-btn-empty', n === 0 && v !== 'all');
+    btn.setAttribute('aria-disabled', n === 0 && v !== 'all' ? 'true' : 'false');
   });
 }
 
+// Gestion centralisée des états visuels de l'onglet Buzz.
+// 'loading'         → skeleton visible, timeline vide
+// 'ok'              → timeline + pagination
+// 'filtered-empty'  → empty state "Aucun résultat avec ces filtres"
+// 'db-empty'        → empty state "Veille en cours de constitution"
+// 'error'           → empty state erreur + bouton Réessayer
+function setBuzzState(state, errMsg) {
+  const loading = $('buzzLoading');
+  const tl      = $('buzzTimeline');
+  const pg      = $('buzzPagination');
+  const emFilt  = $('buzzEmptyFiltered');
+  const emDB    = $('buzzEmptyDB');
+  const emErr   = $('buzzError');
+  const errMsgEl = $('buzzErrorMsg');
+
+  if (loading) loading.style.display = state === 'loading' ? '' : 'none';
+  if (tl)      tl.style.display      = state === 'ok' ? '' : 'none';
+  if (pg && state !== 'ok') pg.style.display = 'none';
+  if (emFilt)  emFilt.style.display  = state === 'filtered-empty' ? '' : 'none';
+  if (emDB)    emDB.style.display    = state === 'db-empty' ? '' : 'none';
+  if (emErr)   emErr.style.display   = state === 'error' ? '' : 'none';
+  if (errMsgEl && errMsg) errMsgEl.textContent = errMsg;
+}
+
 function renderBuzzTimeline() {
+  // Source pour état DB-empty : aucune data du tout
+  if (buzzAllItems.length === 0) {
+    try { renderBuzzFilterCounts(); } catch (_) {}
+    const ct = $('buzzResultCount');
+    if (ct) ct.textContent = '0 résultat';
+    setBuzzState('db-empty');
+    return;
+  }
+
   const filtered = buzzFiltered();
+  const total    = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / BUZZ_PAGE));
+  // Clamp : si un changement de filtre réduit le total sous la page courante
+  if (buzzPage >= totalPages) buzzPage = totalPages - 1;
+  if (buzzPage < 0) buzzPage = 0;
   const start = buzzPage * BUZZ_PAGE;
   const page  = filtered.slice(start, start + BUZZ_PAGE);
-  const total = filtered.length;
 
-  const tl   = $('buzzTimeline');
-  const em   = $('buzzEmpty');
-  const pg   = $('buzzPagination');
+  const tl = $('buzzTimeline');
+  const pg = $('buzzPagination');
 
-  // Compteur résultats — toujours visible (même 0) pour transparence
   const ct = $('buzzResultCount');
   if (ct) ct.textContent = `${total} résultat${total > 1 ? 's' : ''}`;
 
-  // Compteurs par filtre (Local (12) / National (45) / …)
   try { renderBuzzFilterCounts(); } catch (_) {}
 
-  // Aucun résultat — message explicite (audit : seuil arbitraire <5 supprimé)
   if (total === 0) {
     if (tl) tl.innerHTML = '';
-    if (em) {
-      em.style.display = '';
-      em.innerHTML = `
-        <p>Aucun résultat avec ces filtres.</p>
-        <p style="font-size:11px;opacity:.6;margin-top:6px;">
-          Essaie de combiner différemment ou utilise <button type="button" id="buzzReset" class="buzz-btn" style="display:inline-block;margin-left:4px;">Réinitialiser</button>
-        </p>`;
-      const rb = document.getElementById('buzzReset');
-      if (rb) rb.addEventListener('click', resetBuzzFilters);
-    }
-    if (pg) pg.style.display = 'none';
+    setBuzzState('filtered-empty');
     return;
   }
-  if (em) em.style.display = 'none';
+
+  setBuzzState('ok');
   if (tl) tl.innerHTML = page.map(renderBuzzCard).join('');
 
-  const totalPages = Math.ceil(total / BUZZ_PAGE);
   if (pg) pg.style.display = totalPages > 1 ? '' : 'none';
   const pi = $('buzzPageInfo');
   if (pi) pi.textContent = `Page ${buzzPage + 1} / ${totalPages} · ${total} résultats`;
@@ -1828,7 +1853,9 @@ function resetBuzzFilters() {
   buzzFilters.period = 'all';
   buzzPage = 0;
   document.querySelectorAll('.buzz-btn[data-filter]').forEach(b => {
-    b.classList.toggle('active', b.dataset.val === 'all');
+    const isAll = b.dataset.val === 'all';
+    b.classList.toggle('active', isAll);
+    b.setAttribute('aria-pressed', isAll ? 'true' : 'false');
     b.disabled = false;
     b.classList.remove('disabled');
   });
@@ -1884,82 +1911,117 @@ function renderBuzzTrendsChart(trendsData) {
   });
 }
 
+// Met à jour le bloc stats du header (articles / posts / dernier fetch).
+function renderBuzzStats(pressCount, socialCount) {
+  const p = $('buzzStatPress');  if (p) p.textContent = pressCount;
+  const s = $('buzzStatSocial'); if (s) s.textContent = socialCount;
+  const stats = $('buzzStats');
+  if (stats && buzzLastFetchedAt) {
+    // Ajoute / remplace le segment "Mis à jour il y a Xmin"
+    let lu = stats.querySelector('.buzz-stat-updated');
+    if (!lu) {
+      const sep = document.createElement('span');
+      sep.className = 'buzz-stat-sep';
+      sep.textContent = '·';
+      lu = document.createElement('span');
+      lu.className = 'buzz-stat-updated';
+      stats.appendChild(sep);
+      stats.appendChild(lu);
+    }
+    lu.textContent = `Mis à jour ${timeAgo(buzzLastFetchedAt)}`;
+  }
+}
+
+// Gère le scroll au changement de page : remonte vers le haut de la timeline
+// seulement si l'utilisateur a déjà scrollé au-delà.
+function buzzScrollToTop() {
+  const tl = $('buzzTimeline');
+  if (!tl) return;
+  const rect = tl.getBoundingClientRect();
+  if (rect.top < -120) {
+    tl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+async function runBuzzLoad(cfg, headers) {
+  setBuzzState('loading');
+  const { pressCount, socialCount } = await loadBuzzData(cfg, headers);
+  renderBuzzStats(pressCount, socialCount);
+  renderBuzzTimeline();
+  return { pressCount, socialCount };
+}
+
 async function initBuzzTab() {
   if (buzzLoaded) { renderBuzzTimeline(); return; }
-  buzzLoaded = true;
 
-  const loading = $('buzzLoading');
-  if (loading) loading.style.display = '';
+  setBuzzState('loading');
 
   const cfg = window.SUPABASE_CONFIG;
-  if (!cfg || cfg.url.includes('PLACEHOLDER')) {
-    if (loading) loading.style.display = 'none';
-    const em = $('buzzEmpty'); if (em) em.style.display = '';
+  if (!cfg || !cfg.url || cfg.url.includes('PLACEHOLDER')) {
+    setBuzzState('error', 'Configuration Supabase absente.');
     return;
   }
 
   const headers = { 'apikey': cfg.anonKey, 'Authorization': `Bearer ${cfg.anonKey}` };
 
   try {
-    const { pressCount, socialCount } = await loadBuzzData(cfg, headers);
-
-    // Stats header
-    const stats = $('buzzStats');
-    if (stats) stats.innerHTML = `<span><strong>${pressCount}</strong> articles</span><span style="opacity:0.4">·</span><span><strong>${socialCount}</strong> posts</span>`;
-
-    if (loading) loading.style.display = 'none';
-    renderBuzzTimeline();
-
-    // Filtres avec auto-exclusivité (Source ⇒ Presse, Plateforme ⇒ Social)
-    document.querySelectorAll('.buzz-btn[data-filter]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const f = btn.dataset.filter, v = btn.dataset.val;
-        buzzFilters[f] = v;
-        buzzPage = 0;
-
-        // Auto-promotion du type selon la dimension cliquée
-        // - Cliquer une Source spécifique impose type=press (sinon le filtre serait ignoré)
-        // - Cliquer une Plateforme spécifique impose type=social
-        // - Inverse : si on revient à "all" sur source/plateforme, on ne touche pas au type
-        if (f === 'source' && v !== 'all' && buzzFilters.type !== 'press') {
-          buzzFilters.type = 'press';
-          buzzFilters.platform = 'all';
-        }
-        if (f === 'platform' && v !== 'all' && buzzFilters.type !== 'social') {
-          buzzFilters.type = 'social';
-          buzzFilters.source = 'all';
-        }
-
-        // Sync visuel des boutons actifs (toutes dimensions, car on a pu modifier type)
-        document.querySelectorAll('.buzz-btn[data-filter]').forEach(b => {
-          b.classList.toggle('active', buzzFilters[b.dataset.filter] === b.dataset.val);
-        });
-
-        // Masquer/désactiver les lignes de filtres incompatibles avec le type
-        const sr = $('buzzSourceRow'), pr = $('buzzPlatformRow');
-        const t = buzzFilters.type;
-        if (sr) {
-          sr.style.opacity = t === 'social' ? '0.35' : '';
-          sr.style.pointerEvents = t === 'social' ? 'none' : '';
-        }
-        if (pr) {
-          pr.style.opacity = t === 'press' ? '0.35' : '';
-          pr.style.pointerEvents = t === 'press' ? 'none' : '';
-        }
-
-        renderBuzzTimeline();
-      });
-    });
-
-    // Pagination
-    $('buzzPrev')?.addEventListener('click', () => { buzzPage--; renderBuzzTimeline(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-    $('buzzNext')?.addEventListener('click', () => { buzzPage++; renderBuzzTimeline(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-
+    await runBuzzLoad(cfg, headers);
+    buzzLoaded = true;
   } catch (err) {
-    console.error('Buzz load error:', err);
-    if (loading) loading.style.display = 'none';
-    const em = $('buzzEmpty'); if (em) em.style.display = '';
+    console.error('[Buzz] load error:', err);
+    setBuzzState('error', 'Impossible de charger la veille. Vérifie ta connexion.');
   }
+
+  // Filtres avec auto-exclusivité (Source ⇒ Presse, Plateforme ⇒ Social)
+  document.querySelectorAll('.buzz-btn[data-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.getAttribute('aria-disabled') === 'true') return;
+      const f = btn.dataset.filter, v = btn.dataset.val;
+      buzzFilters[f] = v;
+      buzzPage = 0;
+
+      // Auto-promotion du type
+      if (f === 'source' && v !== 'all' && buzzFilters.type !== 'press') {
+        buzzFilters.type = 'press';
+        buzzFilters.platform = 'all';
+      }
+      if (f === 'platform' && v !== 'all' && buzzFilters.type !== 'social') {
+        buzzFilters.type = 'social';
+        buzzFilters.source = 'all';
+      }
+
+      document.querySelectorAll('.buzz-btn[data-filter]').forEach(b => {
+        const active = buzzFilters[b.dataset.filter] === b.dataset.val;
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+
+      const sr = $('buzzSourceRow'), pr = $('buzzPlatformRow');
+      const t = buzzFilters.type;
+      if (sr) {
+        sr.style.opacity = t === 'social' ? '0.35' : '';
+        sr.style.pointerEvents = t === 'social' ? 'none' : '';
+      }
+      if (pr) {
+        pr.style.opacity = t === 'press' ? '0.35' : '';
+        pr.style.pointerEvents = t === 'press' ? 'none' : '';
+      }
+
+      renderBuzzTimeline();
+    });
+  });
+
+  // Pagination
+  $('buzzPrev')?.addEventListener('click', () => { buzzPage--; renderBuzzTimeline(); buzzScrollToTop(); });
+  $('buzzNext')?.addEventListener('click', () => { buzzPage++; renderBuzzTimeline(); buzzScrollToTop(); });
+
+  // Reset + retry
+  $('buzzResetBtn')?.addEventListener('click', resetBuzzFilters);
+  $('buzzEmptyReset')?.addEventListener('click', resetBuzzFilters);
+  $('buzzRetryBtn')?.addEventListener('click', async () => {
+    try { await runBuzzLoad(cfg, headers); buzzLoaded = true; }
+    catch (err) { console.error('[Buzz] retry error:', err); setBuzzState('error', 'Toujours impossible de charger.'); }
+  });
 }
 
 // ============ MODULES B2B ============
