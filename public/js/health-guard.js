@@ -24,6 +24,17 @@
   const SEVERITY = { critical: 3, important: 2, minor: 1, ok: 0 };
   const DEFAULT_INTERVAL_MS = 30 * 1000;
 
+  // Mode interne : l'indicateur + le panneau ne s'affichent que pour les admins
+  // (via `?debug=1` dans l'URL ou `localStorage.BANDI_DEBUG = '1'`).
+  // Le scan et l'auto-heal tournent toujours en arrière-plan.
+  const DEBUG_UI = (() => {
+    try {
+      if (/[?&]debug=1\b/.test(location.search)) return true;
+      if (localStorage.getItem('BANDI_DEBUG') === '1') return true;
+    } catch (_) {}
+    return false;
+  })();
+
   // Âge maximum toléré sur le snapshot (cron scraper = 2h, on accepte 4h de marge)
   const MAX_SNAPSHOT_AGE_MS = 4 * 60 * 60 * 1000;
 
@@ -486,6 +497,22 @@
   }
 
   function render() {
+    // Bannière "data stale" (visible publiquement) toujours mise à jour
+    const banner = document.getElementById('hgStaleBanner');
+    if (banner) {
+      const stale = state.issues.find(r => r.code === 'FALLBACK_ACTIVE' || r.code === 'STALE_SNAPSHOT' || r.code === 'SUPABASE_CFG');
+      if (stale) {
+        banner.hidden = false;
+        const detail = document.getElementById('hgStaleDetail');
+        if (detail) detail.textContent = stale.detail || stale.message;
+      } else {
+        banner.hidden = true;
+      }
+    }
+
+    // Indicateur + panneau : réservés au mode debug interne
+    if (!DEBUG_UI) return;
+
     const { ind, panel } = ensureDOM();
     const sev = severityTop();
     ind.dataset.sev = sev;
@@ -527,21 +554,6 @@
       </div>`;
     const btn = panel.querySelector('#hg-rescan');
     if (btn) btn.addEventListener('click', () => scan());
-
-    // Bannière "data stale" dans le hero (si elle existe dans le DOM)
-    const banner = document.getElementById('hgStaleBanner');
-    if (banner) {
-      const stale = state.issues.find(r => r.code === 'FALLBACK_ACTIVE' || r.code === 'STALE_SNAPSHOT' || r.code === 'SUPABASE_CFG');
-      if (stale) {
-        banner.hidden = false;
-        const detail = document.getElementById('hgStaleDetail');
-        if (detail) {
-          detail.textContent = stale.detail || stale.message;
-        }
-      } else {
-        banner.hidden = true;
-      }
-    }
   }
 
   function toggle() {

@@ -3009,16 +3009,16 @@ async function loadMonFreshness() {
     const h = { 'apikey': cfg.anonKey, 'Authorization': `Bearer ${cfg.anonKey}` };
     const hc = { ...h, 'Prefer': 'count=exact', 'Range': '0-0' };
     const [artR, socR, wkR, artC, socC] = await Promise.allSettled([
-      fetch(`${cfg.url}/rest/v1/buzz_articles?order=date_pub.desc&limit=1&select=date_pub`, { headers: h }),
-      fetch(`${cfg.url}/rest/v1/buzz_social?order=date_pub.desc&limit=1&select=date_pub`,   { headers: h }),
+      fetch(`${cfg.url}/rest/v1/buzz_articles?order=published_at.desc&limit=1&select=published_at`, { headers: h }),
+      fetch(`${cfg.url}/rest/v1/buzz_social?order=published_at.desc&limit=1&select=published_at`,   { headers: h }),
       fetch(`${cfg.url}/rest/v1/wikipedia_pageviews?order=date.desc&limit=1&select=date`,   { headers: h }),
       fetch(`${cfg.url}/rest/v1/buzz_articles?select=id`, { headers: hc }),
       fetch(`${cfg.url}/rest/v1/buzz_social?select=id`,   { headers: hc }),
     ]);
     const pj = async r => (r.status === 'fulfilled' && r.value.ok) ? r.value.json() : null;
     const [artD, socD, wkD] = await Promise.all([pj(artR), pj(socR), pj(wkR)]);
-    buzzArtDate  = artD?.[0]?.date_pub;
-    buzzSocDate  = socD?.[0]?.date_pub;
+    buzzArtDate  = artD?.[0]?.published_at;
+    buzzSocDate  = socD?.[0]?.published_at;
     wikiDate     = wkD?.[0]?.date;
     if (artC.status === 'fulfilled') buzzArtCount = parseInt(artC.value.headers.get('content-range')?.split('/')[1]) || '—';
     if (socC.status === 'fulfilled') buzzSocCount = parseInt(socC.value.headers.get('content-range')?.split('/')[1]) || '—';
