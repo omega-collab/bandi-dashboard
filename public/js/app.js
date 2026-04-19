@@ -4,6 +4,17 @@
    Fallback sur data-fallback.js si échec
    ======================================== */
 
+// Exposition défensive de BANDI sur window : indispensable pour monitoring.js
+// et health-guard.js. `const BANDI` dans data-fallback.js ne s'attache pas à
+// globalThis automatiquement ; un cache navigateur sur l'ancien data-fallback.js
+// rendrait window.BANDI undefined et casserait toutes les jauges.
+try {
+  if (typeof BANDI !== 'undefined' && typeof window !== 'undefined') {
+    window.BANDI = BANDI;
+    if (typeof REGION_COLORS !== 'undefined') window.REGION_COLORS = REGION_COLORS;
+  }
+} catch (_) { /* data-fallback.js absent → impossible */ }
+
 // ============ UTILS ============
 function $(id) { return document.getElementById(id); }
 
@@ -227,6 +238,19 @@ async function loadLiveData() {
       if (!joursEnTop10 && Array.isArray(paysHist)) joursEnTop10 = paysHist.length;
     } catch (_) { joursEnTop10 = Array.isArray(paysHist) ? paysHist.length : 0; }
 
+    // ── C3 (audit) : resync USA rang depuis données live ────────────────
+    // bandi_country_rankings = source de vérité, BANDI.strategique.usaRang
+    // n'est plus qu'un fallback offline
+    try {
+      const usaLive = (paysData || []).find(p =>
+        p.code_pays === 'US' || p.pays === 'États-Unis' || p.pays === 'United States'
+      );
+      if (usaLive?.rang && BANDI.strategique) {
+        BANDI.strategique.usaRang = usaLive.rang;
+        BANDI.strategique.usaDate = today.slice(8,10) + '/' + today.slice(5,7) + '/' + today.slice(0,4);
+      }
+    } catch (_) {}
+
     // 11. Heures de visionnage cumulées Tudum pour Bandi (somme de toutes les semaines)
     let heuresVuesCumul = null;
     try {
@@ -327,6 +351,8 @@ async function loadLiveData() {
     // Override BANDI (Object.assign pour muter la const déclarée dans data-fallback.js)
     // ?? préserve les valeurs data-fallback.js si la DB retourne null
     const _prevCur = BANDI.current || {};
+    // M1 (audit) : on marque explicitement que les données ne sont plus du fallback
+    BANDI._fallback = false;
     Object.assign(BANDI, {
       current: {
         score:     current.score_monde     ?? _prevCur.score     ?? 0,
@@ -1495,6 +1521,7 @@ const BUZZ_PAGE = 50;
 const buzzFilters = { type: 'all', source: 'all', platform: 'all', period: 'all' };
 let buzzAllItems = [];
 let buzzTrendsChartInstance = null;
+let buzzLastFetchedAt = null;
 
 function timeAgo(date) {
   if (!date) return '—';
@@ -1508,39 +1535,57 @@ function timeAgo(date) {
   return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
 }
 
-function fmtEngagement(n, platform) {
+function fmtEngagement(n) {
   if (n === null || n === undefined || n === 0) return '';
   if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
   if (n >= 1000) return `${(n / 1e3).toFixed(1)}K`;
   return String(n);
 }
 
-const BUZZ_ICONS = { press: '📰', reddit: '💬', youtube: '🎥', bluesky: '🦋', instagram: '📸' };
-const BUZZ_LABELS = { press: 'Presse', reddit: 'Reddit', youtube: 'YouTube', bluesky: 'Bluesky', instagram: 'Instagram' };
+const BUZZ_ICONS  = { press: '📰', reddit: '💬', youtube: '🎥', bluesky: '🦋' };
+const BUZZ_LABELS = { press: 'Presse', reddit: 'Reddit', youtube: 'YouTube', bluesky: 'Bluesky' };
 const SOURCE_COLORS = { local: '#CE1126', national: '#009739', international: '#D4A017' };
 const SOURCE_LABELS = { local: 'Local', national: 'National', international: 'International' };
-const ENGAGE_ICONS = { reddit: '↑', youtube: '▶', bluesky: '♥', instagram: '♥', press: '' };
+const ENGAGE_ICONS = { reddit: '↑', youtube: '▶', bluesky: '♥', press: '' };
 
-// Filtre pertinence Instagram côté client (filet de sécurité vs posts stale en DB)
-function igIsRelevant(content = '', author = '') {
-  const t = (content + ' ' + author).toLowerCase();
-  const NEG = [
-    'decreto fiscale', 'decreto legge', 'gazzetta ufficiale',
-    'bandi dedicati', 'bandi di gara', 'bandi europei', 'bandi regionali',
-    'bandi comunali', 'comuni piemontesi', 'bando pubblico',
-    'intervento sr', 'smart village', 'darul uloom', 'nooria',
-    'dinajpur', 'dastaar', 'aslam warsi', 'euroservis',
-  ];
-  if (NEG.some(s => t.includes(s))) return false;
-  const STRONG = [
-    'bandinetflix', 'bandi netflix', 'bandiserie', 'seriebandi',
-    'bandimartinique', 'bandinetflixserie', 'netflix martinique',
-    'serie martinique', 'série martinique', 'première série martiniquaise',
-    'maui entertainment',
-  ];
-  if (STRONG.some(s => t.includes(s))) return true;
-  if (!/\bbandi\b/.test(t)) return false;
-  return ['netflix', 'série', 'serie', 'martinique', 'streaming', 'episode', 'saison'].some(k => t.includes(k));
+// Classifie un post social (Reddit/YouTube/Bluesky/Instagram) en local/national/international
+// par heuristique sur author_name + content. Utilisé par loadBuzzData() pour
+// uniformiser le filtre Source entre presse et réseaux.
+const SOCIAL_LOCAL_RE = /(martiniqu|guadeloup|guyan|antill|caraib|\bmq\b|\bgp\b|\bgf\b|kreyol|créole|creole|madinina|gwada|\bkarib)/i;
+const SOCIAL_NATIONAL_RE = /(\bfrance\b|\bfr\b|paris|konbini|brut|allocin|premier|journaldugeek|numerama|ecranlarge|\bfrench\b|francais|français)/i;
+function classifySocialSource(s) {
+  const blob = `${s.author_name || ''} ${s.content || ''}`;
+  if (SOCIAL_LOCAL_RE.test(blob))    return 'local';
+  if (SOCIAL_NATIONAL_RE.test(blob)) return 'national';
+  return 'international';
+}
+
+// Reclassification de la presse côté frontend depuis source_name.
+// Indispensable : les articles stockés en DB avant la refonte ont presque
+// tous source_type='international' (classification par host Google News).
+// On override source_type dynamiquement à chaque fetch pour que le filtre
+// Local/National affiche du contenu sans attendre la réexécution des scrapers.
+const PRESS_LOCAL_KEYWORDS = [
+  'france-antilles', 'antilles', 'martinique', 'guadeloupe', 'guyane',
+  'zayactu', 'bondamanjak', 'rci martinique', 'rci guadeloupe', 'rci ',
+  'karib', 'coconews', 'madinin', 'antilla', 'blada', 'la 1ère', 'la1ere',
+  'linfo.re', 'réunion', 'reunion',
+];
+const PRESS_NATIONAL_KEYWORDS = [
+  'le monde', 'le figaro', 'liberation', 'libération', 'télérama', 'telerama',
+  'allocine', 'allociné', 'première', 'premiere', 'le parisien', 'les inrocks',
+  'numerama', 'journal du geek', 'journaldugeek', 'écran large', 'ecran large',
+  'programme-tv', '20 minutes', 'bfm', 'tf1', 'france tv', 'france info',
+  'francetv', 'franceinfo', 'rfi', 'rtl', 'europe 1', 'europe1', 'cnews',
+  'huffington', 'variety france', 'puremedias', 'lepoint', 'le point',
+  'lexpress', "l'express", 'radiofrance',
+];
+function classifyPressByName(name) {
+  if (!name) return null;
+  const n = name.toLowerCase();
+  if (PRESS_LOCAL_KEYWORDS.some(k => n.includes(k)))    return 'local';
+  if (PRESS_NATIONAL_KEYWORDS.some(k => n.includes(k))) return 'national';
+  return null;
 }
 
 async function loadBuzzData(cfg, headers) {
@@ -1549,38 +1594,55 @@ async function loadBuzzData(cfg, headers) {
     fetch(`${cfg.url}/rest/v1/buzz_social?order=published_at.desc&limit=500`, { headers, cache: 'no-store' }),
     fetch(`${cfg.url}/rest/v1/buzz_trends?order=date.asc&limit=31`, { headers, cache: 'no-store' }),
   ]);
+  if (!artRes.ok || !socRes.ok) {
+    throw new Error(`Supabase error: articles=${artRes.status} social=${socRes.status}`);
+  }
   const articles = await artRes.json();
   const social   = await socRes.json();
-  const trends   = await trendsRes.json();
+  const trends   = trendsRes.ok ? await trendsRes.json() : [];
 
-  const press = (Array.isArray(articles) ? articles : []).map(a => ({
-    id: 'p' + a.id, itemType: 'press', platform: 'press',
-    sourceType: a.source_type || 'international',
-    url: a.url, title: a.title || '(sans titre)',
-    excerpt: a.description, source: a.source_name || '',
-    publishedAt: a.published_at ? new Date(a.published_at) : null,
-    thumbnail: a.image_url || null, engagement: null,
-  }));
+  const press = (Array.isArray(articles) ? articles : []).map(a => {
+    const byName = classifyPressByName(a.source_name);
+    return {
+      id: 'p' + a.id, itemType: 'press', platform: 'press',
+      sourceType: byName || a.source_type || 'international',
+      url: a.url, title: a.title || '(sans titre)',
+      excerpt: a.description, source: a.source_name || '',
+      publishedAt: a.published_at ? new Date(a.published_at) : null,
+      thumbnail: a.image_url || null, engagement: null,
+      fetchedAt: a.fetched_at ? new Date(a.fetched_at) : null,
+    };
+  });
 
+  // Rejette les posts Instagram (plus de filtre UI pour les afficher)
   const soc = (Array.isArray(social) ? social : [])
-    // Filtre client-side : rejette les posts Instagram hors-sujet encore en DB
-    .filter(s => s.platform !== 'instagram' || igIsRelevant(s.content || '', s.author_name || ''))
+    .filter(s => s.platform && s.platform !== 'instagram')
     .map(s => ({
       id: 's' + s.id, itemType: 'social', platform: s.platform,
-      sourceType: null,
+      sourceType: classifySocialSource(s),
       url: s.url, title: s.content || '(sans contenu)',
       excerpt: null, source: s.author_name || '',
       publishedAt: s.published_at ? new Date(s.published_at) : null,
       thumbnail: s.thumbnail_url || null, engagement: s.engagement_score,
+      fetchedAt: s.fetched_at ? new Date(s.fetched_at) : null,
     }));
 
   buzzAllItems = [...press, ...soc]
     .filter(i => i.publishedAt && !isNaN(i.publishedAt.getTime()))
     .sort((a, b) => b.publishedAt - a.publishedAt);
 
-  // Render trends chart if data
+  // Date du dernier fetch = max des fetched_at
+  const fetchedAts = buzzAllItems.map(i => i.fetchedAt).filter(d => d && !isNaN(d));
+  buzzLastFetchedAt = fetchedAts.length ? new Date(Math.max(...fetchedAts.map(d => d.getTime()))) : null;
+
+  // Trends : render si data, sinon cache le panel
   const trendsData = Array.isArray(trends) ? trends : [];
-  if (trendsData.length > 0) renderBuzzTrendsChart(trendsData);
+  if (trendsData.length > 0) {
+    renderBuzzTrendsChart(trendsData);
+  } else {
+    const tp = $('buzzTrendsPanel'); if (tp) tp.style.display = 'none';
+    if (buzzTrendsChartInstance) { try { buzzTrendsChartInstance.destroy(); } catch(_){} buzzTrendsChartInstance = null; }
+  }
 
   return { pressCount: press.length, socialCount: soc.length };
 }
@@ -1590,7 +1652,8 @@ function buzzFiltered() {
   return buzzAllItems.filter(i => {
     if (buzzFilters.type === 'press'  && i.itemType !== 'press')  return false;
     if (buzzFilters.type === 'social' && i.itemType !== 'social') return false;
-    if (buzzFilters.source   !== 'all' && i.itemType === 'press' && i.sourceType !== buzzFilters.source) return false;
+    // Source (local/national/international) : s'applique maintenant à presse ET social
+    if (buzzFilters.source !== 'all' && i.sourceType !== buzzFilters.source) return false;
     if (buzzFilters.platform !== 'all' && i.itemType === 'social' && i.platform !== buzzFilters.platform) return false;
     if (buzzFilters.period   !== 'all') {
       const days = parseInt(buzzFilters.period);
@@ -1600,67 +1663,179 @@ function buzzFiltered() {
   });
 }
 
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function renderBuzzCard(item) {
   const icon  = BUZZ_ICONS[item.platform]  || '📄';
   const label = BUZZ_LABELS[item.platform] || item.platform;
   const time  = timeAgo(item.publishedAt);
-  const eng   = fmtEngagement(item.engagement, item.platform);
+  const eng   = fmtEngagement(item.engagement);
   const engIcon = ENGAGE_ICONS[item.platform] || '';
 
   const srcBadge = item.sourceType && SOURCE_COLORS[item.sourceType]
     ? `<span class="buzz-source-badge" style="color:${SOURCE_COLORS[item.sourceType]};background:${SOURCE_COLORS[item.sourceType]}18;border-color:${SOURCE_COLORS[item.sourceType]}35">${SOURCE_LABELS[item.sourceType]}</span>`
     : '';
 
+  // <img loading="lazy"> au lieu de background-image : supporte onerror et lazy load natif
   const thumb = item.thumbnail
-    ? `<div class="buzz-card-thumb" style="background-image:url('${item.thumbnail}')"></div>`
+    ? `<img class="buzz-card-thumb" src="${escapeHtml(item.thumbnail)}" alt="" loading="lazy" decoding="async" onerror="this.remove();this.parentElement&&this.parentElement.classList.remove('has-thumb')">`
     : '';
 
-  const title   = (item.title   || '').slice(0, 160) + ((item.title || '').length > 160 ? '…' : '');
-  const excerpt = item.excerpt ? (item.excerpt.slice(0, 120) + (item.excerpt.length > 120 ? '…' : '')) : '';
+  const rawTitle = item.title || '';
+  const title   = escapeHtml(rawTitle.slice(0, 160)) + (rawTitle.length > 160 ? '…' : '');
+  const rawExcerpt = item.excerpt || '';
+  const excerpt = rawExcerpt ? escapeHtml(rawExcerpt.slice(0, 140)) + (rawExcerpt.length > 140 ? '…' : '') : '';
 
   const engHtml = eng
-    ? `<span class="buzz-engagement">${engIcon} ${eng}</span>`
+    ? `<span class="buzz-engagement" aria-label="Engagement">${engIcon} ${eng}</span>`
     : '';
 
-  return `<a class="buzz-card${item.thumbnail ? ' has-thumb' : ''}" href="${item.url}" target="_blank" rel="noopener noreferrer">
-    ${thumb}
-    <div class="buzz-card-body">
-      <div class="buzz-card-badges">
-        <span class="buzz-type-badge">${icon} ${label}</span>
-        ${srcBadge}
+  const href = escapeHtml(item.url || '#');
+  const src  = escapeHtml(item.source || '');
+
+  return `<article class="buzz-card${item.thumbnail ? ' has-thumb' : ''}" data-platform="${item.platform}" data-source-type="${item.sourceType || ''}">
+    <a class="buzz-card-link" href="${href}" target="_blank" rel="noopener noreferrer">
+      ${thumb}
+      <div class="buzz-card-body">
+        <div class="buzz-card-badges">
+          <span class="buzz-type-badge">${icon} ${label}</span>
+          ${srcBadge}
+        </div>
+        <div class="buzz-card-title">${title}</div>
+        ${excerpt ? `<div class="buzz-card-excerpt">${excerpt}</div>` : ''}
+        <div class="buzz-card-meta">
+          <span class="buzz-meta-source">${src}</span>
+          <span class="buzz-sep">·</span>
+          <span class="buzz-meta-time">${time}</span>
+          ${engHtml}
+        </div>
       </div>
-      <div class="buzz-card-title">${title}</div>
-      ${excerpt ? `<div class="buzz-card-excerpt">${excerpt}</div>` : ''}
-      <div class="buzz-card-meta">
-        <span>${item.source}</span>
-        <span class="buzz-sep">·</span>
-        <span>${time}</span>
-        ${engHtml}
-      </div>
-    </div>
-  </a>`;
+    </a>
+  </article>`;
+}
+
+// Calcule les quantités par filtre — les compteurs respectent la période
+// sélectionnée, et pour chaque dimension on ignore la valeur active de cette
+// même dimension pour indiquer l'impact potentiel d'un clic.
+function computeBuzzFilterCounts() {
+  const now = Date.now();
+  const days = buzzFilters.period === 'all' ? null : parseInt(buzzFilters.period);
+  const inPeriod = i => !days || (now - i.publishedAt.getTime()) <= days * 86400000;
+  const base = buzzAllItems.filter(inPeriod);
+
+  return {
+    type: {
+      all:    base.length,
+      press:  base.filter(i => i.itemType === 'press').length,
+      social: base.filter(i => i.itemType === 'social').length,
+    },
+    source: {
+      all:           base.length,
+      local:         base.filter(i => i.sourceType === 'local').length,
+      national:      base.filter(i => i.sourceType === 'national').length,
+      international: base.filter(i => i.sourceType === 'international').length,
+    },
+    platform: {
+      all:     base.filter(i => i.itemType === 'social').length,
+      reddit:  base.filter(i => i.platform === 'reddit').length,
+      youtube: base.filter(i => i.platform === 'youtube').length,
+      bluesky: base.filter(i => i.platform === 'bluesky').length,
+    },
+    period: {
+      '1':   buzzAllItems.filter(i => (now - i.publishedAt.getTime()) <=  1 * 86400000).length,
+      '7':   buzzAllItems.filter(i => (now - i.publishedAt.getTime()) <=  7 * 86400000).length,
+      '30':  buzzAllItems.filter(i => (now - i.publishedAt.getTime()) <= 30 * 86400000).length,
+      'all': buzzAllItems.length,
+    }
+  };
+}
+
+// Met à jour les badges "(N)" sur chaque bouton de filtre Buzz.
+// Optim : patch en-place (textContent) plutôt que remove+appendChild —
+// supprime le flicker sur longues listes.
+function renderBuzzFilterCounts() {
+  const counts = computeBuzzFilterCounts();
+  document.querySelectorAll('.buzz-btn[data-filter]').forEach(btn => {
+    const f = btn.dataset.filter;
+    const v = btn.dataset.val;
+    const n = counts[f]?.[v];
+    if (n === undefined) return;
+    const label = n > 999 ? `${Math.round(n/100)/10}k` : String(n);
+    let badge = btn.querySelector('.buzz-btn-count');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'buzz-btn-count';
+      btn.appendChild(badge);
+    }
+    if (badge.textContent !== label) badge.textContent = label;
+    btn.classList.toggle('buzz-btn-empty', n === 0 && v !== 'all');
+    btn.setAttribute('aria-disabled', n === 0 && v !== 'all' ? 'true' : 'false');
+  });
+}
+
+// Gestion centralisée des états visuels de l'onglet Buzz.
+// 'loading'         → skeleton visible, timeline vide
+// 'ok'              → timeline + pagination
+// 'filtered-empty'  → empty state "Aucun résultat avec ces filtres"
+// 'db-empty'        → empty state "Veille en cours de constitution"
+// 'error'           → empty state erreur + bouton Réessayer
+function setBuzzState(state, errMsg) {
+  const loading = $('buzzLoading');
+  const tl      = $('buzzTimeline');
+  const pg      = $('buzzPagination');
+  const emFilt  = $('buzzEmptyFiltered');
+  const emDB    = $('buzzEmptyDB');
+  const emErr   = $('buzzError');
+  const errMsgEl = $('buzzErrorMsg');
+
+  if (loading) loading.style.display = state === 'loading' ? '' : 'none';
+  if (tl)      tl.style.display      = state === 'ok' ? '' : 'none';
+  if (pg && state !== 'ok') pg.style.display = 'none';
+  if (emFilt)  emFilt.style.display  = state === 'filtered-empty' ? '' : 'none';
+  if (emDB)    emDB.style.display    = state === 'db-empty' ? '' : 'none';
+  if (emErr)   emErr.style.display   = state === 'error' ? '' : 'none';
+  if (errMsgEl && errMsg) errMsgEl.textContent = errMsg;
 }
 
 function renderBuzzTimeline() {
-  const filtered = buzzFiltered();
-  const start = buzzPage * BUZZ_PAGE;
-  const page  = filtered.slice(start, start + BUZZ_PAGE);
-  const total = filtered.length;
-
-  const tl   = $('buzzTimeline');
-  const em   = $('buzzEmpty');
-  const pg   = $('buzzPagination');
-
-  if (total < 5) {
-    if (tl) tl.innerHTML = '';
-    if (em) em.style.display = '';
-    if (pg) pg.style.display = 'none';
+  // Source pour état DB-empty : aucune data du tout
+  if (buzzAllItems.length === 0) {
+    try { renderBuzzFilterCounts(); } catch (_) {}
+    const ct = $('buzzResultCount');
+    if (ct) ct.textContent = '0 résultat';
+    setBuzzState('db-empty');
     return;
   }
-  if (em) em.style.display = 'none';
+
+  const filtered = buzzFiltered();
+  const total    = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / BUZZ_PAGE));
+  // Clamp : si un changement de filtre réduit le total sous la page courante
+  if (buzzPage >= totalPages) buzzPage = totalPages - 1;
+  if (buzzPage < 0) buzzPage = 0;
+  const start = buzzPage * BUZZ_PAGE;
+  const page  = filtered.slice(start, start + BUZZ_PAGE);
+
+  const tl = $('buzzTimeline');
+  const pg = $('buzzPagination');
+
+  const ct = $('buzzResultCount');
+  if (ct) ct.textContent = `${total} résultat${total > 1 ? 's' : ''}`;
+
+  try { renderBuzzFilterCounts(); } catch (_) {}
+
+  if (total === 0) {
+    if (tl) tl.innerHTML = '';
+    setBuzzState('filtered-empty');
+    return;
+  }
+
+  setBuzzState('ok');
   if (tl) tl.innerHTML = page.map(renderBuzzCard).join('');
 
-  const totalPages = Math.ceil(total / BUZZ_PAGE);
   if (pg) pg.style.display = totalPages > 1 ? '' : 'none';
   const pi = $('buzzPageInfo');
   if (pi) pi.textContent = `Page ${buzzPage + 1} / ${totalPages} · ${total} résultats`;
@@ -1668,6 +1843,26 @@ function renderBuzzTimeline() {
   const nextBtn = $('buzzNext');
   if (prevBtn) prevBtn.disabled = buzzPage === 0;
   if (nextBtn) nextBtn.disabled = buzzPage >= totalPages - 1;
+}
+
+// Reset complet des filtres Buzz (utilisé par le bouton vide + bouton dédié)
+function resetBuzzFilters() {
+  buzzFilters.type = 'all';
+  buzzFilters.source = 'all';
+  buzzFilters.platform = 'all';
+  buzzFilters.period = 'all';
+  buzzPage = 0;
+  document.querySelectorAll('.buzz-btn[data-filter]').forEach(b => {
+    const isAll = b.dataset.val === 'all';
+    b.classList.toggle('active', isAll);
+    b.setAttribute('aria-pressed', isAll ? 'true' : 'false');
+    b.disabled = false;
+    b.classList.remove('disabled');
+  });
+  const sr = $('buzzSourceRow'), pr = $('buzzPlatformRow');
+  if (sr) { sr.style.display = ''; sr.style.opacity = ''; sr.style.pointerEvents = ''; }
+  if (pr) { pr.style.display = ''; pr.style.opacity = ''; pr.style.pointerEvents = ''; }
+  renderBuzzTimeline();
 }
 
 function renderBuzzTrendsChart(trendsData) {
@@ -1716,58 +1911,117 @@ function renderBuzzTrendsChart(trendsData) {
   });
 }
 
+// Met à jour le bloc stats du header (articles / posts / dernier fetch).
+function renderBuzzStats(pressCount, socialCount) {
+  const p = $('buzzStatPress');  if (p) p.textContent = pressCount;
+  const s = $('buzzStatSocial'); if (s) s.textContent = socialCount;
+  const stats = $('buzzStats');
+  if (stats && buzzLastFetchedAt) {
+    // Ajoute / remplace le segment "Mis à jour il y a Xmin"
+    let lu = stats.querySelector('.buzz-stat-updated');
+    if (!lu) {
+      const sep = document.createElement('span');
+      sep.className = 'buzz-stat-sep';
+      sep.textContent = '·';
+      lu = document.createElement('span');
+      lu.className = 'buzz-stat-updated';
+      stats.appendChild(sep);
+      stats.appendChild(lu);
+    }
+    lu.textContent = `Mis à jour ${timeAgo(buzzLastFetchedAt)}`;
+  }
+}
+
+// Gère le scroll au changement de page : remonte vers le haut de la timeline
+// seulement si l'utilisateur a déjà scrollé au-delà.
+function buzzScrollToTop() {
+  const tl = $('buzzTimeline');
+  if (!tl) return;
+  const rect = tl.getBoundingClientRect();
+  if (rect.top < -120) {
+    tl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+async function runBuzzLoad(cfg, headers) {
+  setBuzzState('loading');
+  const { pressCount, socialCount } = await loadBuzzData(cfg, headers);
+  renderBuzzStats(pressCount, socialCount);
+  renderBuzzTimeline();
+  return { pressCount, socialCount };
+}
+
 async function initBuzzTab() {
   if (buzzLoaded) { renderBuzzTimeline(); return; }
-  buzzLoaded = true;
 
-  const loading = $('buzzLoading');
-  if (loading) loading.style.display = '';
+  setBuzzState('loading');
 
   const cfg = window.SUPABASE_CONFIG;
-  if (!cfg || cfg.url.includes('PLACEHOLDER')) {
-    if (loading) loading.style.display = 'none';
-    const em = $('buzzEmpty'); if (em) em.style.display = '';
+  if (!cfg || !cfg.url || cfg.url.includes('PLACEHOLDER')) {
+    setBuzzState('error', 'Configuration Supabase absente.');
     return;
   }
 
   const headers = { 'apikey': cfg.anonKey, 'Authorization': `Bearer ${cfg.anonKey}` };
 
   try {
-    const { pressCount, socialCount } = await loadBuzzData(cfg, headers);
-
-    // Stats header
-    const stats = $('buzzStats');
-    if (stats) stats.innerHTML = `<span><strong>${pressCount}</strong> articles</span><span style="opacity:0.4">·</span><span><strong>${socialCount}</strong> posts</span>`;
-
-    if (loading) loading.style.display = 'none';
-    renderBuzzTimeline();
-
-    // Filtres
-    document.querySelectorAll('.buzz-btn[data-filter]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const f = btn.dataset.filter, v = btn.dataset.val;
-        buzzFilters[f] = v;
-        buzzPage = 0;
-        document.querySelectorAll(`.buzz-btn[data-filter="${f}"]`).forEach(b => b.classList.toggle('active', b.dataset.val === v));
-        // Masquer filtres source/plateforme selon le type
-        const sr = $('buzzSourceRow'), pr = $('buzzPlatformRow');
-        if (f === 'type') {
-          if (sr) sr.style.display = v === 'social' ? 'none' : '';
-          if (pr) pr.style.display = v === 'press'  ? 'none' : '';
-        }
-        renderBuzzTimeline();
-      });
-    });
-
-    // Pagination
-    $('buzzPrev')?.addEventListener('click', () => { buzzPage--; renderBuzzTimeline(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-    $('buzzNext')?.addEventListener('click', () => { buzzPage++; renderBuzzTimeline(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-
+    await runBuzzLoad(cfg, headers);
+    buzzLoaded = true;
   } catch (err) {
-    console.error('Buzz load error:', err);
-    if (loading) loading.style.display = 'none';
-    const em = $('buzzEmpty'); if (em) em.style.display = '';
+    console.error('[Buzz] load error:', err);
+    setBuzzState('error', 'Impossible de charger la veille. Vérifie ta connexion.');
   }
+
+  // Filtres avec auto-exclusivité (Source ⇒ Presse, Plateforme ⇒ Social)
+  document.querySelectorAll('.buzz-btn[data-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.getAttribute('aria-disabled') === 'true') return;
+      const f = btn.dataset.filter, v = btn.dataset.val;
+      buzzFilters[f] = v;
+      buzzPage = 0;
+
+      // Auto-promotion du type
+      if (f === 'source' && v !== 'all' && buzzFilters.type !== 'press') {
+        buzzFilters.type = 'press';
+        buzzFilters.platform = 'all';
+      }
+      if (f === 'platform' && v !== 'all' && buzzFilters.type !== 'social') {
+        buzzFilters.type = 'social';
+        buzzFilters.source = 'all';
+      }
+
+      document.querySelectorAll('.buzz-btn[data-filter]').forEach(b => {
+        const active = buzzFilters[b.dataset.filter] === b.dataset.val;
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+
+      const sr = $('buzzSourceRow'), pr = $('buzzPlatformRow');
+      const t = buzzFilters.type;
+      if (sr) {
+        sr.style.opacity = t === 'social' ? '0.35' : '';
+        sr.style.pointerEvents = t === 'social' ? 'none' : '';
+      }
+      if (pr) {
+        pr.style.opacity = t === 'press' ? '0.35' : '';
+        pr.style.pointerEvents = t === 'press' ? 'none' : '';
+      }
+
+      renderBuzzTimeline();
+    });
+  });
+
+  // Pagination
+  $('buzzPrev')?.addEventListener('click', () => { buzzPage--; renderBuzzTimeline(); buzzScrollToTop(); });
+  $('buzzNext')?.addEventListener('click', () => { buzzPage++; renderBuzzTimeline(); buzzScrollToTop(); });
+
+  // Reset + retry
+  $('buzzResetBtn')?.addEventListener('click', resetBuzzFilters);
+  $('buzzEmptyReset')?.addEventListener('click', resetBuzzFilters);
+  $('buzzRetryBtn')?.addEventListener('click', async () => {
+    try { await runBuzzLoad(cfg, headers); buzzLoaded = true; }
+    catch (err) { console.error('[Buzz] retry error:', err); setBuzzState('error', 'Toujours impossible de charger.'); }
+  });
 }
 
 // ============ MODULES B2B ============
@@ -1824,7 +2078,11 @@ function renderAuthenticiteMini() {
   }
 
   const pctEl = document.getElementById('authPctMini');
-  if (pctEl) pctEl.textContent = `${auth.pctCasting}%`;
+  if (pctEl) {
+    // C2 (audit) : flag visuel "non vérifié" tant que _verified !== true
+    const tag = auth._verified ? '' : ' <sup class="auth-unverified" title="Estimation interne — à confirmer par la production">●</sup>';
+    pctEl.innerHTML = `${auth.pctCasting}%${tag}`;
+  }
 }
 
 // ── Authenticité complète (panel-series) ──────────────────────
@@ -2321,9 +2579,12 @@ function renderForecastS2() {
     }).join('');
   }
 
-  // Disclaimer
+  // Disclaimer — préfixe "heuristique non validée" tant que _validated !== true (I7 audit)
   const disclaimerEl = document.getElementById('forecastDisclaimer');
-  if (disclaimerEl && fc.disclaimer) disclaimerEl.textContent = fc.disclaimer;
+  if (disclaimerEl && fc.disclaimer) {
+    const prefix = fc._validated ? '' : '⚠ Modèle heuristique non calibré · ';
+    disclaimerEl.textContent = `${prefix}${fc.disclaimer}`;
+  }
 
   // Panneau pédagogique « Méthode & sources »
   try { renderCompletionBreakdown(); } catch (e) { console.error('[BANDI] renderCompletionBreakdown:', e); }
@@ -2579,35 +2840,39 @@ function renderMethodologySources() {
 // ============================================================
 // MONITORING TAB
 // Fraîcheur des données · Notes externes · Scrapers GitHub Actions
+// Rerender autorisé à chaque clic sur l'onglet (pas de cache interne) —
+// sinon un clic précoce avant la fin de loadLiveData() fige des jauges vides
 // ============================================================
 let monitoringLoaded = false;
 
 function initMonitoringTab() {
-  if (monitoringLoaded) return;
+  // Flag utile uniquement pour debug / BANDI_HEALTH_RERENDER qui vérifie si
+  // l'onglet a déjà été ouvert au moins une fois. PAS de garde early-return.
   monitoringLoaded = true;
 
   // ── Adaptateur données pour BANDI_MONITORING ──────────────
   // Le module monitoring.js lit des champs spécifiques sur BANDI
-  // On les crée ici à partir des données live déjà chargées
+  // On les DÉRIVE à partir des données live — jamais de fallback hardcodé
+  // (les valeurs demo sont dans data-fallback.js et visibles via BANDI._fallback)
   try {
-    // Fallback ultime : si le DB a retourné null pour les KPIs principaux,
-    // on s'assure que BANDI.current a au moins les valeurs data-fallback.js
     if (BANDI.current) {
-      if (BANDI.current.score == null || BANDI.current.score === 0) {
-        BANDI.current.score = BANDI.current.score_monde ?? 348;
+      // Alias score_monde ↔ score pour monitoring.js
+      if (BANDI.current.score_monde == null && BANDI.current.score != null) {
+        BANDI.current.score_monde = BANDI.current.score;
       }
-      if (BANDI.current.rang == null || BANDI.current.rang === 0) {
-        BANDI.current.rang = 6;
+      if (BANDI.current.score == null && BANDI.current.score_monde != null) {
+        BANDI.current.score = BANDI.current.score_monde;
       }
-      if (BANDI.current.paysN1 == null)    BANDI.current.paysN1    = 13;
-      if (BANDI.current.paysTop10 == null) BANDI.current.paysTop10 = 37;
+      // Dérive paysN1 / paysTop10 depuis bandi_country_rankings live si manquant
+      const pays = Array.isArray(BANDI.pays) ? BANDI.pays : [];
+      if (BANDI.current.paysN1 == null && pays.length) {
+        BANDI.current.paysN1 = pays.filter(p => p.rang === 1).length;
+      }
+      if (BANDI.current.paysTop10 == null && pays.length) {
+        BANDI.current.paysTop10 = pays.length;
+      }
     }
-
-    // score_monde : alias pour monitoring.js
-    if (BANDI.current && BANDI.current.score_monde == null) {
-      BANDI.current.score_monde = BANDI.current.score ?? 0;
-    }
-    // history : tableau de snapshots pour la timeline 14j
+    // history : timeline pour les deltas J / J-1
     if (!BANDI.history || BANDI.history.length === 0) {
       BANDI.history = (BANDI.historique || []).map(h => ({
         date: h.jour,
@@ -2640,6 +2905,16 @@ function initMonitoringTab() {
         BANDI.completionScore = (cs && cs.score != null) ? cs.score : null;
       } catch (_) { BANDI.completionScore = null; }
     }
+    // semaines_top10 dérivé du nombre réel de semaines où Bandi est listé
+    if (BANDI.semTop10 == null) {
+      const wks = new Set();
+      (BANDI.tudumWeekly || []).forEach(r => {
+        if (r?.titre && r.titre.toLowerCase().includes('bandi') && r.week_start) {
+          wks.add(r.week_start);
+        }
+      });
+      BANDI.semTop10 = wks.size || null;
+    }
   } catch (e) {
     console.warn('[monitoring] adaptateur données:', e);
   }
@@ -2667,7 +2942,22 @@ function initMonitoringTab() {
 
   // ── Sections opérationnelles ──────────────────────────────
   const btn = document.getElementById('monRefreshBtn');
-  if (btn) btn.addEventListener('click', () => { monitoringLoaded = false; initMonitoringTab(); });
+  if (btn && !btn.dataset.bound) {
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', async () => {
+      btn.classList.add('mon-spin');
+      try {
+        await loadLiveData();
+        monitoringLoaded = false;
+        initMonitoringTab();
+        if (typeof window.BANDI_HEALTH?.scan === 'function') window.BANDI_HEALTH.scan();
+      } catch (e) {
+        console.warn('[monitoring] refresh KO:', e);
+      } finally {
+        setTimeout(() => btn.classList.remove('mon-spin'), 600);
+      }
+    });
+  }
   renderMonScrapers();
   renderMonRatings();
   loadMonFreshness();
@@ -2733,6 +3023,19 @@ async function loadMonFreshness() {
     if (artC.status === 'fulfilled') buzzArtCount = parseInt(artC.value.headers.get('content-range')?.split('/')[1]) || '—';
     if (socC.status === 'fulfilled') buzzSocCount = parseInt(socC.value.headers.get('content-range')?.split('/')[1]) || '—';
   }
+
+  // Partage des dates avec renderMonScrapers (calcul statuts en temps réel)
+  BANDI._freshness = {
+    snap: BANDI.snapshots30?.[0]?.date,
+    tudum: BANDI.tudumWeekly?.[0]?.week_start,
+    ratings: Object.values(BANDI.externalRatings ?? {}).find(r => r?.date)?.date,
+    buzzArt: buzzArtDate,
+    buzzSoc: buzzSocDate,
+    wiki: wikiDate
+  };
+  // Re-render scrapers avec les dates désormais disponibles (loadMonFreshness
+  // étant async, renderMonScrapers a déjà tourné une première fois sans ces dates)
+  try { renderMonScrapers(); } catch (_) {}
 
   const CARDS = [
     {
@@ -2847,16 +3150,34 @@ function renderMonRatings() {
 }
 
 // ── Scrapers GitHub Actions ────────────────────────────────
+// Les statuts "Actif / Retard / Hors-ligne" sont calculés depuis la fraîcheur
+// réelle des données écrites en DB (pas un status UI statique).
 function renderMonScrapers() {
   const root = document.getElementById('monScrapers');
   if (!root) return;
 
+  // Dates les plus récentes disponibles côté frontend
+  const snapDate    = BANDI.snapshots30?.[0]?.date;
+  const tudumDate   = BANDI.tudumWeekly?.[0]?.week_start;
+  const ratingsDate = Object.values(BANDI.externalRatings ?? {}).find(r => r?.date)?.date;
+  const buzzArtDate = BANDI._freshness?.buzzArt ?? null;
+  const buzzSocDate = BANDI._freshness?.buzzSoc ?? null;
+
+  // Statut calculé : âge data → {cls, badge}
+  const status = (date, weekly = false) => {
+    if (!date) return { cls: 'mon-stale', badge: 'Hors-ligne' };
+    const { hours } = monTimeAgo(date);
+    const cls = monFreshCls(hours, weekly);
+    const badge = cls === 'mon-ok' ? 'Actif' : cls === 'mon-warn' ? 'Retard' : 'Hors-ligne';
+    return { cls, badge };
+  };
+
   const WF = [
-    { name: 'scrape.yml',             label: 'Classements FlixPatrol',      freq: 'Toutes les 6h',  icon: '📊', cls: 'mon-ok',   badge: 'Actif',  url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/scrape.yml' },
-    { name: 'tudum-scrape.yml',       label: 'Netflix Tudum officiel',      freq: 'Mardi 15h UTC',  icon: '✅', cls: 'mon-warn', badge: 'Hebdo',  url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/tudum-scrape.yml' },
-    { name: 'buzz-scrape.yml',        label: 'Presse + GDELT (23 flux)',    freq: 'Toutes les 6h',  icon: '📰', cls: 'mon-ok',   badge: 'Actif',  url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/buzz-scrape.yml' },
-    { name: 'buzz-social-scrape.yml', label: 'Reddit · YouTube · Bluesky', freq: 'Toutes les 6h',  icon: '💬', cls: 'mon-ok',   badge: 'Actif',  url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/buzz-social-scrape.yml' },
-    { name: 'ratings-scrape.yml',     label: '8 sources notes + Wikipedia', freq: 'Toutes les 6h', icon: '⭐', cls: 'mon-ok',   badge: 'Actif',  url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/ratings-scrape.yml' },
+    { name: 'scrape.yml',             label: 'Classements FlixPatrol',      freq: 'Toutes les 6h',  icon: '📊', st: status(snapDate),          url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/scrape.yml' },
+    { name: 'tudum-scrape.yml',       label: 'Netflix Tudum officiel',      freq: 'Mardi 15h UTC',  icon: '✅', st: status(tudumDate, true),   url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/tudum-scrape.yml' },
+    { name: 'buzz-scrape.yml',        label: 'Presse + GDELT (23 flux)',    freq: 'Toutes les 6h',  icon: '📰', st: status(buzzArtDate),       url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/buzz-scrape.yml' },
+    { name: 'buzz-social-scrape.yml', label: 'Reddit · YouTube · Bluesky', freq: 'Toutes les 6h',  icon: '💬', st: status(buzzSocDate),       url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/buzz-social-scrape.yml' },
+    { name: 'ratings-scrape.yml',     label: '8 sources notes + Wikipedia', freq: 'Toutes les 6h', icon: '⭐', st: status(ratingsDate),       url: 'https://github.com/omega-collab/bandi-dashboard/actions/workflows/ratings-scrape.yml' },
   ];
 
   root.innerHTML = WF.map(w => `
@@ -2867,8 +3188,8 @@ function renderMonScrapers() {
         <span class="mon-scraper-label">${w.label}</span>
       </div>
       <span class="mon-scraper-freq">↻ ${w.freq}</span>
-      <div class="mon-scraper-status ${w.cls}">
-        <div class="mon-card-dot ${w.cls}"></div>${w.badge}
+      <div class="mon-scraper-status ${w.st.cls}">
+        <div class="mon-card-dot ${w.st.cls}"></div>${w.st.badge}
       </div>
     </a>`).join('');
 }
@@ -2878,6 +3199,44 @@ window.addEventListener('scroll', () => {
   const header = document.querySelector('.header');
   if (header) header.classList.toggle('scrolled', window.scrollY > 20);
 }, { passive: true });
+
+// ============ HEALTH GUARD — hooks globaux ============
+// Expose les fonctions de calcul pour que health-guard.js puisse les scanner.
+window.computeCompletionScore = computeCompletionScore;
+window.computeForecastS2      = computeForecastS2;
+// Hook déclenché par health-guard après auto-heal (paysN1/paysTop10/USA rang
+// + agrégats monitoring). Re-render uniquement les modules visibles pour éviter
+// les crashs côté panels lazy (Buzz, Map, Historique).
+window.BANDI_HEALTH_RERENDER = function () {
+  try { renderOverview(); }        catch (_) {}
+  try { renderSourcesBadge(); }    catch (_) {}
+  try { renderBreakthroughUSA(); } catch (_) {}
+  try { renderForecastS2(); }      catch (_) {}
+  try { renderZonesDomination(); } catch (_) {}
+  // Monitoring : rerender uniquement si l'onglet est déjà initialisé et visible.
+  try {
+    const panel = document.getElementById('panel-monitoring');
+    if (monitoringLoaded && panel && panel.classList.contains('active')) {
+      if (window.BANDI_MONITORING) BANDI_MONITORING.renderMonitoringTab();
+      renderMonScrapers();
+      renderMonRatings();
+    }
+  } catch (_) {}
+};
+
+// ============ SPLASH SCREEN ============
+// Masque l'écran de chargement avec un fondu. Idempotent : on peut appeler
+// plusieurs fois sans dommage. Un hard timeout de sécurité garantit que le
+// splash ne reste jamais collé si un render échoue.
+function hideBandiSplash() {
+  const splash = document.getElementById('bandiSplash');
+  if (!splash || splash.classList.contains('is-hidden')) return;
+  splash.classList.add('is-hidden');
+  // Retire l'élément du DOM après le fondu pour libérer les ressources
+  setTimeout(() => { try { splash.remove(); } catch (_) {} }, 500);
+}
+// Filet : au pire 6s d'affichage même si tout crash côté render
+setTimeout(hideBandiSplash, 6000);
 
 // ============ INIT ============
 document.addEventListener("DOMContentLoaded", async () => {
@@ -2902,6 +3261,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   try { renderForecastS2(); }      catch (e) { console.error('[BANDI] renderForecastS2:', e); }
   try { renderMethodologySources(); } catch (e) { console.error('[BANDI] renderMethodologySources:', e); }
 
+  // Retrait du splash dès que l'overview est rendu (on attend un RAF pour que
+  // le premier paint soit effectif avant le fondu, évite un "flash of unstyled")
+  requestAnimationFrame(() => requestAnimationFrame(hideBandiSplash));
+
+  // Déclencher le scan health-guard dès que tout le rendu initial est terminé
+  // (évite les faux positifs BANDI_EMPTY qui survenaient si le scan précédait loadLiveData)
+  try {
+    if (typeof window.BANDI_HEALTH?.scan === 'function') window.BANDI_HEALTH.scan();
+  } catch (_) {}
+
   // ── Auto-refresh hero (live FlixPatrol) ──────────────────────────────
   // Le scraper FlixPatrol tourne toutes les 2h côté GitHub Actions. On
   // resynchronise le dashboard toutes les 5 min pour que le hero et les
@@ -2919,6 +3288,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       try { renderZonesDomination(); } catch (e) { console.error('[BANDI] refresh renderZonesDomination:', e); }
       try { renderForecastS2(); }      catch (e) { console.error('[BANDI] refresh renderForecastS2:', e); }
       try { renderAuthenticiteMini(); }catch (e) { console.error('[BANDI] refresh renderAuthenticiteMini:', e); }
+      // Monitoring : rerender si l'onglet est actif pour voir live les deltas
+      try {
+        const panel = document.getElementById('panel-monitoring');
+        if (monitoringLoaded && panel && panel.classList.contains('active')) {
+          if (window.BANDI_MONITORING) BANDI_MONITORING.renderMonitoringTab();
+          loadMonFreshness();
+        }
+      } catch (_) {}
       console.log('[BANDI] 🔄 hero resynchronisé');
     } catch (e) {
       console.warn('[BANDI] refresh KO (non bloquant):', e.message);

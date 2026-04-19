@@ -69,11 +69,22 @@ const REGIONS = {
   'Israel': 'Moyen-Orient', 'Turkey': 'Moyen-Orient'
 };
 
-async function fetchHtml(url) {
-  console.log(`📡 GET ${url}`);
-  const res = await fetch(url, { headers: HEADERS });
-  if (!res.ok) throw new Error(`HTTP ${res.status} pour ${url}`);
-  return await res.text();
+// Retry wrapper avec backoff exponentiel (I1 audit)
+// 3 tentatives max, attend 2s, 4s entre chaque
+async function fetchHtml(url, attempts = 3) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      console.log(`📡 GET ${url}${i ? ` (tentative ${i + 1}/${attempts})` : ''}`);
+      const res = await fetch(url, { headers: HEADERS });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.text();
+    } catch (err) {
+      if (i === attempts - 1) throw new Error(`${url} → ${err.message} (${attempts} tentatives)`);
+      const wait = 2000 * Math.pow(2, i);
+      console.warn(`⚠️ ${err.message} — retry dans ${wait}ms`);
+      await new Promise(r => setTimeout(r, wait));
+    }
+  }
 }
 
 /**
@@ -240,6 +251,13 @@ async function main() {
   try {
     const { scoreMonde, rangMonde, countries, joursTop10Cumul, rangPeak } = await scrapeBandiPage();
     const top10 = await scrapeWorldTop10();
+
+    // C4 (audit) : fail-fast si le scrape revient vide — FlixPatrol a probablement
+    // changé de structure. Mieux vaut exit 1 (workflow rouge, notif GitHub) que
+    // d'upserter un snapshot null qui ferait tomber le dashboard en fallback statique.
+    if (scoreMonde == null && rangMonde == null && countries.length === 0) {
+      throw new Error('Scrape FlixPatrol vide — score/rang/pays tous absents. Vérifier la structure HTML.');
+    }
 
     const today = new Date().toISOString().slice(0, 10);
     const paysN1 = countries.filter(c => c.rang === 1).length;

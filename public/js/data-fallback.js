@@ -4,7 +4,12 @@
    Dernière MAJ : 16 avril 2026
    ======================================== */
 
+// M1 (audit) : marqueur explicite du fallback statique. Il est remis à false
+// par loadLiveData() dès qu'on reçoit un snapshot live depuis Supabase. Le
+// health-guard s'appuie sur ce flag (plutôt que sur une date figée) pour
+// détecter un fallback silencieux.
 const BANDI = {
+  _fallback: true,
   titre: "Bandi",
   sortie: "2026-04-09",
   episodes: 8,
@@ -138,10 +143,14 @@ const BANDI = {
 
     // 91% du casting est martiniquais · Source : Maui Entertainment / casting interne
     // À VALIDER par la production avant toute présentation officielle
+    // _verified: passer à `true` une fois confirmé par la production — health-guard
+    // affichera un flag "non vérifié" tant que ce flag n'est pas à true.
     authenticite: {
       pctCasting: 91,
       acteursLocaux: 75,
       totalRoles: 82,
+      _verified: false,
+      _source: 'Estimation interne Maui Entertainment — à confirmer',
       comparaisons: [
         { titre: 'Top Boy (UK)', pct: 50 },
         { titre: 'Narcos (CO)',  pct: 40 }
@@ -149,8 +158,12 @@ const BANDI = {
     },
 
     // Forecast Saison 2 · modèle probabiliste interne · NON OFFICIEL
+    // _validated: passer à true une fois la formule calibrée sur un historique réel.
+    // Tant que false, le health-guard affiche un badge "heuristique non validée".
     forecastS2: {
       probabilite: 85,
+      _validated: false,
+      _model: 'Heuristique additive (base 30 + bonus empiriques)',
       indicateurs: [
         // Taux de complétion estimé — remplacé dynamiquement par computeCompletionScore() au rendu
         // Le fallback ci-dessous ne s'affiche que si tout le calcul échoue
@@ -177,3 +190,8 @@ const REGION_COLORS = {
   "Océanie":            "#7209B7",
   "Afrique":            "#F77F00"
 };
+
+// Exposition sur window — nécessaire car `const` ne s'attache pas à globalThis.
+// monitoring.js et health-guard.js y accèdent via window.BANDI / window.REGION_COLORS.
+window.BANDI         = BANDI;
+window.REGION_COLORS = REGION_COLORS;

@@ -29,7 +29,35 @@ const BANDI_RE = /\bbandi\b/i;
 const BANDI_NETFLIX_RE = /(\bbandi\b.*netflix|netflix.*\bbandi\b)/i;
 
 // ─── Classif source type ──────────────────────────────────────────────────────
-function classifyUrl(url) {
+// Les URLs Google News sont opaques (news.google.com/...) donc on ne peut pas
+// classifier depuis l'URL seule. On accepte aussi le nom de source (ex.
+// "France-Antilles Martinique") que Google News fournit dans item.source.
+const LOCAL_NAME_KEYWORDS = [
+  'france-antilles', 'martinique', 'guadeloupe', 'guyane', 'antilles',
+  'zayactu', 'bondamanjak', 'rci martinique', 'rci guadeloupe',
+  'karib', 'coconews', 'madinin', 'antilla', 'blada', 'la 1ère',
+];
+const NATIONAL_NAME_KEYWORDS = [
+  'le monde', 'le figaro', 'liberation', 'libération', 'télérama', 'telerama',
+  'allocine', 'allociné', 'première', 'premiere', 'le parisien', 'les inrocks',
+  'numerama', 'journal du geek', 'écran large', 'ecran large', 'programme-tv',
+  '20 minutes', 'bfm', 'tf1', 'france tv', 'france info', 'rfi', 'rtl',
+  'europe 1', 'cnews', 'huffington', 'variety france', 'puremedias',
+];
+
+function classifyByName(name) {
+  if (!name) return null;
+  const n = name.toLowerCase();
+  if (LOCAL_NAME_KEYWORDS.some(k => n.includes(k)))    return 'local';
+  if (NATIONAL_NAME_KEYWORDS.some(k => n.includes(k))) return 'national';
+  return null;
+}
+
+function classifyUrl(url, sourceName) {
+  // 1. Priorité au nom de la source (robust vs redirects Google News)
+  const byName = classifyByName(sourceName);
+  if (byName) return byName;
+  // 2. Fallback sur le hostname de l'URL
   try {
     const host = new URL(url).hostname.replace(/^www\./, '');
     if (sourcesMap.local.some(d => host.includes(d)))    return 'local';
@@ -77,12 +105,13 @@ async function fetchGoogleNews() {
       for (const item of result.items) {
         const url = item.link || item.guid || '';
         if (!url) continue;
+        const sourceName = item.source?.name || result.title || 'Google News';
         articles.push({
           url,
           title: item.title || '',
           description: truncate(item.contentSnippet || item.content || ''),
-          source_name: item.source?.name || result.title || 'Google News',
-          source_type: classifyUrl(url),
+          source_name: sourceName,
+          source_type: classifyUrl(url, sourceName),
           language: feed.lang,
           country_code: null,
           published_at: parseDate(item.pubDate || item.isoDate),
@@ -96,9 +125,8 @@ async function fetchGoogleNews() {
   return articles;
 }
 
-// ─── 2. Presse locale Antilles ────────────────────────────────────────────────
+// ─── 2. Presse locale Antilles-Guyane ────────────────────────────────────────
 const LOCAL_FEEDS = [
-  // ── Martinique ──
   // ── Martinique ──
   { url: 'https://www.martinique.franceantilles.fr/actualite/faitsdivers/rss.xml', name: 'France-Antilles Martinique', lang: 'fr', country_code: 'MQ' },
   { url: 'https://www.martinique.franceantilles.fr/actualite/rss.xml',             name: 'France-Antilles Martinique', lang: 'fr', country_code: 'MQ' },
@@ -108,9 +136,17 @@ const LOCAL_FEEDS = [
   { url: 'https://antilla-martinique.com/feed/',                                    name: 'Antilla Martinique',         lang: 'fr', country_code: 'MQ' },
   { url: 'https://martinique.coconews.com/flux-actualite.rss',                      name: 'Coconews Martinique',        lang: 'fr', country_code: 'MQ' },
   { url: 'https://la1ere.franceinfo.fr/martinique/actu/rss',                        name: 'Martinique La 1ère',         lang: 'fr', country_code: 'MQ' },
+  { url: 'https://www.madinin-art.net/feed/',                                       name: 'Madinin\'Art',               lang: 'fr', country_code: 'MQ' },
+  { url: 'https://rci.fm/martinique/fb/videos_rss_mq',                              name: 'RCI Martinique Vidéos',      lang: 'fr', country_code: 'MQ' },
   // ── Guadeloupe ──
   { url: 'https://la1ere.franceinfo.fr/guadeloupe/actu/rss',                        name: 'Guadeloupe La 1ère',         lang: 'fr', country_code: 'GP' },
   { url: 'https://www.guadeloupe.franceantilles.fr/actualite/rss.xml',              name: 'France-Antilles Guadeloupe', lang: 'fr', country_code: 'GP' },
+  { url: 'https://rci.fm/guadeloupe/fb/articles_rss_gp',                            name: 'RCI Guadeloupe',             lang: 'fr', country_code: 'GP' },
+  { url: 'https://karibinfo.com/feed/',                                             name: 'Karib\'Info',                lang: 'fr', country_code: 'GP' },
+  // ── Guyane ──
+  { url: 'https://la1ere.franceinfo.fr/guyane/actu/rss',                            name: 'Guyane La 1ère',             lang: 'fr', country_code: 'GF' },
+  { url: 'https://www.franceguyane.fr/rss.xml',                                     name: 'France-Guyane',              lang: 'fr', country_code: 'GF' },
+  { url: 'https://www.blada.com/index.rss',                                         name: 'Blada.com',                  lang: 'fr', country_code: 'GF' },
 ];
 
 async function fetchLocalPress() {
@@ -184,7 +220,7 @@ async function fetchSpecializedFeeds() {
           title: item.title || '',
           description: truncate(item.contentSnippet || item.content || ''),
           source_name: feed.name,
-          source_type: classifyUrl(url),
+          source_type: classifyUrl(url, feed.name),
           language: feed.lang,
           country_code: feed.country_code || null,
           published_at: parseDate(item.pubDate || item.isoDate),
@@ -213,12 +249,13 @@ async function fetchGdelt() {
     console.log(`  GDELT: ${items.length} articles`);
     for (const item of items) {
       if (!item.url) continue;
+      const sourceName = item.domain || new URL(item.url).hostname;
       articles.push({
         url: item.url,
         title: item.title || '',
         description: null,
-        source_name: item.domain || new URL(item.url).hostname,
-        source_type: classifyUrl(item.url),
+        source_name: sourceName,
+        source_type: classifyUrl(item.url, sourceName),
         language: item.language?.toLowerCase() || null,
         country_code: item.sourcecountry || null,
         published_at: item.seendate

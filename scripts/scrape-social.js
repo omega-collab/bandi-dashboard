@@ -67,16 +67,45 @@ async function fetchReddit() {
 }
 
 // ─── 2. YouTube ───────────────────────────────────────────────────────────────
-// Stratégie : API officielle si YOUTUBE_API_KEY présent, sinon fallback Invidious
-// (API publique open-source — aucune clé nécessaire).
+// Cascade : API officielle (si YOUTUBE_API_KEY) → Invidious → Piped → RSS chaînes
+// L'objectif est de toujours remonter au moins quelques vidéos même quand
+// les instances communautaires (Invidious/Piped) tombent — ça arrive souvent.
 
+const YT_QUERIES = ['Bandi Netflix', 'Bandi série Netflix', 'Bandi serie Netflix', 'Bandi Martinique'];
+
+// Instances Invidious actives (vérifiées via api.invidious.io) — élargies
 const INVIDIOUS_INSTANCES = [
-  'https://invidious.io',
-  'https://y.com.sb',
-  'https://iv.datura.network',
   'https://invidious.nerdvpn.de',
+  'https://iv.datura.network',
+  'https://invidious.privacydev.net',
+  'https://invidious.fdn.fr',
+  'https://yewtu.be',
+  'https://invidious.protokolla.fi',
+  'https://inv.nadeko.net',
 ];
-const YT_QUERIES = ['Bandi Netflix', 'Bandi série Netflix', 'Bandi serie Netflix'];
+
+// Instances Piped (alternative à Invidious, souvent plus stables)
+const PIPED_INSTANCES = [
+  'https://pipedapi.kavin.rocks',
+  'https://pipedapi.adminforge.de',
+  'https://pipedapi.smnz.de',
+  'https://pipedapi.in.projectsegfau.lt',
+  'https://pipedapi.darkness.services',
+];
+
+// Chaînes YouTube qui couvrent régulièrement les sorties Netflix FR/Caraïbes
+// → on récupère leurs derniers uploads via le flux RSS officiel YouTube
+//   (https://www.youtube.com/feeds/videos.xml?channel_id=XXX), puis on filtre
+//   par mots-clés liés à Bandi.
+const YT_CHANNELS = [
+  { id: 'UCpko_-a4wgz2u_DgDgd9fqA', name: 'Konbini' },
+  { id: 'UCmfBYOZ3E3K2qLcDeFt5XAg', name: 'Brut' },
+  { id: 'UCwo7AwBPnsJDSpV0gscjMHQ', name: 'Première' },
+  { id: 'UCS2nGbZyL_KJxPP4Lxc7v3w', name: 'AlloCiné' },
+  { id: 'UCqMAavhpwXcvONqVDF7Knhg', name: 'Netflix France' },
+  { id: 'UCWOA1ZGywLbqmigxE4Qlvuw', name: 'Netflix' },
+];
+const YT_KEYWORDS = ['bandi', 'martinique'];
 
 async function fetchYouTubeAPI(key) {
   const posts = [];
@@ -138,15 +167,108 @@ async function fetchYouTubeInvidious() {
       }));
     } catch (_) {}
   }
-  console.log('  YouTube Invidious: toutes instances KO — skip');
+  console.log('  YouTube Invidious: toutes instances KO');
   return [];
+}
+
+async function fetchYouTubePiped() {
+  for (const base of PIPED_INSTANCES) {
+    try {
+      const url = `${base}/search?q=${encodeURIComponent('Bandi Netflix')}&filter=videos`;
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const items = data?.items || [];
+      if (items.length === 0) continue;
+      console.log(`  YouTube (Piped ${base}): ${items.length} vidéos`);
+      return items.slice(0, 30).map(v => {
+        const vid = (v.url || '').split('v=')[1] || (v.url || '').split('/').pop();
+        return {
+          platform: 'youtube', post_id: vid,
+          url: `https://www.youtube.com/watch?v=${vid}`,
+          author_name: v.uploaderName || null,
+          content: truncate((v.title || '') + (v.shortDescription ? '\n' + v.shortDescription : '')),
+          engagement_score: v.views || 0,
+          published_at: parseDate(v.uploaded || null),
+          thumbnail_url: v.thumbnail || null,
+        };
+      }).filter(p => p.post_id);
+    } catch (_) {}
+  }
+  console.log('  YouTube Piped: toutes instances KO');
+  return [];
+}
+
+// Parse une feed RSS YouTube (XML) sans dépendance — regex suffisante pour
+// les balises stables <entry>/<yt:videoId>/<title>/<author><name>.
+function parseYouTubeRSS(xml, channelName) {
+  const entries = xml.split(/<entry>/).slice(1);
+  const out = [];
+  for (const e of entries) {
+    const vid = (e.match(/<yt:videoId>([^<]+)<\/yt:videoId>/) || [])[1];
+    const title = (e.match(/<title>([^<]+)<\/title>/) || [])[1] || '';
+    const published = (e.match(/<published>([^<]+)<\/published>/) || [])[1];
+    const author = (e.match(/<name>([^<]+)<\/name>/) || [])[1] || channelName;
+    const desc = (e.match(/<media:description>([\s\S]*?)<\/media:description>/) || [])[1] || '';
+    const thumb = (e.match(/<media:thumbnail[^>]*url="([^"]+)"/) || [])[1];
+    if (!vid) continue;
+    const blob = (title + ' ' + desc).toLowerCase();
+    if (!YT_KEYWORDS.some(k => blob.includes(k))) continue;
+    out.push({
+      platform: 'youtube', post_id: vid,
+      url: `https://www.youtube.com/watch?v=${vid}`,
+      author_name: author,
+      content: truncate(title + (desc ? '\n' + desc : '')),
+      engagement_score: 0, // pas de stats dans le flux RSS
+      published_at: parseDate(published),
+      thumbnail_url: thumb || null,
+    });
+  }
+  return out;
+}
+
+async function fetchYouTubeRSS() {
+  const posts = [];
+  for (const ch of YT_CHANNELS) {
+    try {
+      const url = `https://www.youtube.com/feeds/videos.xml?channel_id=${ch.id}`;
+      const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(8000) });
+      if (!res.ok) continue;
+      const xml = await res.text();
+      const found = parseYouTubeRSS(xml, ch.name);
+      if (found.length) console.log(`  YouTube RSS ${ch.name}: +${found.length} vidéo(s) Bandi`);
+      posts.push(...found);
+    } catch (err) {
+      console.warn(`  ⚠️ YouTube RSS ${ch.name}: ${err.message}`);
+    }
+  }
+  return posts;
 }
 
 async function fetchYouTube() {
   const key = process.env.YOUTUBE_API_KEY;
-  if (key) return fetchYouTubeAPI(key);
-  console.log('  YouTube : clé absente → fallback Invidious (sans clé)');
-  return fetchYouTubeInvidious();
+  const all = [];
+
+  if (key) {
+    const apiPosts = await fetchYouTubeAPI(key);
+    all.push(...apiPosts);
+    console.log(`  ↳ YouTube API : ${apiPosts.length} vidéos`);
+  } else {
+    console.log('  YouTube : clé absente → cascade Invidious / Piped / RSS');
+    const inv = await fetchYouTubeInvidious();
+    all.push(...inv);
+    if (inv.length === 0) {
+      const pip = await fetchYouTubePiped();
+      all.push(...pip);
+    }
+  }
+
+  // RSS : toujours en complément (chaînes éditoriales FR/Caraïbes)
+  const rss = await fetchYouTubeRSS();
+  all.push(...rss);
+
+  console.log(`  ↳ YouTube total : ${all.length} vidéos (avant dédup)`);
+  return all;
 }
 
 // ─── 3. Bluesky ───────────────────────────────────────────────────────────────
