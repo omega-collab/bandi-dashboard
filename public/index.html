@@ -28,7 +28,7 @@
 <!-- Leaflet.js pour la carte choroplèthe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<link rel="stylesheet" href="css/styles.css?v=20260419f" />
+<link rel="stylesheet" href="css/styles.css?v=20260419g" />
 
 <!-- Splash screen (inline pour afficher immédiatement, avant tout chargement) -->
 <style>
@@ -868,6 +868,35 @@
       </p>
     </div>
 
+    <!-- ── Lancement mondial · semaine 1 (alimenté par BANDI.launchWeek) ── -->
+    <div class="panel series-stats-panel" id="launchWeekPanel">
+      <div class="panel-head">
+        <h3 class="panel-title">Lancement mondial — semaine 1</h3>
+        <span class="panel-sub" id="launchWeekSub">09–13 avril 2026 · Netflix Global Top 10</span>
+      </div>
+      <div class="series-stats-grid">
+        <div class="stat-card">
+          <span class="stat-num" id="launchVues">2,1 M</span>
+          <span class="stat-label">vues complètes<br/><small>en 4 jours</small></span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num" id="launchHeures">16,2 M</span>
+          <span class="stat-label">heures visionnées<br/><small>semaine 1</small></span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num" id="launchPays">57</span>
+          <span class="stat-label">pays au Top 10<br/><small>présence globale</small></span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num" id="launchPeak">#2</span>
+          <span class="stat-label">Top 10 non-anglo<br/><small>entrée <span id="launchEntree">#6</span></small></span>
+        </div>
+      </div>
+      <p class="series-stats-source">
+        Source : <span id="launchSource">Gemini · Netflix Global Top 10</span> · Notes par épisode IMDb : <strong id="launchImdb">8,7 – 8,9 / 10</strong> · Hashtag viral : <strong id="launchHashtag">#BandiNetflix</strong>
+      </p>
+    </div>
+
     <!-- ── Indice d'authenticité martiniquaise ── -->
     <div class="authenticite-module panel" id="authenticiteModule">
       <div class="auth-header">
@@ -949,6 +978,10 @@
           <p class="team-names">Jimmy Laporal-Trésor · Mathilde Vallet</p>
         </div>
         <div class="team-col">
+          <span class="team-label">Scénario local</span>
+          <p class="team-names" id="scenaristesLocaux">Khris Burton</p>
+        </div>
+        <div class="team-col">
           <span class="team-label">Production</span>
           <p class="team-names">Maui Entertainment · Netflix France</p>
         </div>
@@ -1024,12 +1057,12 @@
 </nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/auth.js?v=20260419f"></script>
-<script src="js/data-fallback.js?v=20260419f"></script>
-<script src="js/config.js?v=20260419f"></script>
-<script src="js/monitoring.js?v=20260419f"></script>
-<script src="js/app.js?v=20260419f"></script>
-<script src="js/health-guard.js?v=20260419f"></script>
+<script src="js/auth.js?v=20260419g"></script>
+<script src="js/data-fallback.js?v=20260419g"></script>
+<script src="js/config.js?v=20260419g"></script>
+<script src="js/monitoring.js?v=20260419g"></script>
+<script src="js/app.js?v=20260419g"></script>
+<script src="js/health-guard.js?v=20260419g"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {

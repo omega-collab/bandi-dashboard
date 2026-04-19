@@ -1109,6 +1109,32 @@ function renderTudumMini() {
 // ============ SERIES ============
 function renderSeriesTab() {
   $("castTags").innerHTML = BANDI.casting.map(a => `<span class="cast-tag">${a}</span>`).join("");
+
+  // Scénaristes locaux (rapport Gemini 19/04/2026)
+  const sl = BANDI.scenaristesLocaux;
+  const slEl = document.getElementById('scenaristesLocaux');
+  if (slEl && Array.isArray(sl) && sl.length) slEl.textContent = sl.join(' · ');
+
+  // Lancement mondial — semaine 1 (rapport Gemini 19/04/2026)
+  const lw = BANDI.launchWeek;
+  const lwPanel = document.getElementById('launchWeekPanel');
+  if (lw && lwPanel) {
+    const setText = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.textContent = val; };
+    if (lw.vuesMillions    != null) setText('launchVues',    `${String(lw.vuesMillions).replace('.', ',')} M`);
+    if (lw.heuresMillions  != null) setText('launchHeures',  `${String(lw.heuresMillions).replace('.', ',')} M`);
+    if (lw.paysTop10       != null) setText('launchPays',    lw.paysTop10);
+    if (lw.peakNonEnglish  != null) setText('launchPeak',    `#${lw.peakNonEnglish}`);
+    if (lw.entreeNonEnglish!= null) setText('launchEntree',  `#${lw.entreeNonEnglish}`);
+    if (lw.periode)                 setText('launchWeekSub', `${lw.periode} · Netflix Global Top 10`);
+    if (lw.source)                  setText('launchSource',  lw.source);
+    const imdb = BANDI.imdbPerEpisode;
+    if (imdb && imdb.min != null && imdb.max != null) {
+      setText('launchImdb', `${String(imdb.min).replace('.', ',')} – ${String(imdb.max).replace('.', ',')} / 10`);
+    }
+    if (BANDI.viralHashtag) setText('launchHashtag', BANDI.viralHashtag);
+  } else if (lwPanel) {
+    lwPanel.style.display = 'none';
+  }
 }
 
 // ============ HISTORIQUE 30J ============

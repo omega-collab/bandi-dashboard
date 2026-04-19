@@ -19,6 +19,8 @@ const BANDI = {
 
   createurs: ["Éric Rochant", "Capucine Rochant"],
   realisateurs: ["Jimmy Laporal-Trésor", "Mathilde Vallet"],
+  // Scénaristes locaux additionnels — source : rapport Gemini 19/04/2026
+  scenaristesLocaux: ["Khris Burton"],
 
   casting: [
     "Rudgy Pajany",
@@ -33,8 +35,27 @@ const BANDI = {
     "Lucas Pernock",
     "Rodney Dijon",
     "Patrick Trieste",
-    "Cédric Camille"
+    "Cédric Camille",
+    "Evil P (Sherkhan)"
   ],
+
+  // Performance semaine de lancement — source : rapport Gemini 19/04/2026
+  // (Netflix Global Top 10 / Tudum). Chronologie : voir rapports/.
+  launchWeek: {
+    vuesMillions: 2.1,
+    heuresMillions: 16.2,
+    paysTop10: 57,
+    entreeNonEnglish: 6,   // Place d'entrée Top 10 non-anglo
+    peakNonEnglish: 2,     // Pic atteint Top 10 non-anglo
+    periode: '09–13/04/2026',
+    source: 'Gemini · Netflix Global Top 10'
+  },
+
+  // Plage de notes IMDb par épisode (S1) — rapport Gemini 19/04/2026
+  imdbPerEpisode: { min: 8.7, max: 8.9 },
+
+  // Hashtag viral identifié — TikTok / X
+  viralHashtag: '#BandiNetflix',
 
   // Score / rang actuel (16/04/2026) — source FlixPatrol
   // Note : paysN1 et paysTop10 sont recalculés à partir de la liste `pays`

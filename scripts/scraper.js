@@ -275,11 +275,25 @@ async function main() {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     // Insert snapshot (avec nouvelles colonnes jours_top10_cumul et rang_peak)
-    // IMPORTANT : created_at explicitement rafraîchi à chaque run — sinon il
-    // garde la valeur de la PREMIÈRE insertion du jour (DEFAULT NOW() ne
-    // s'applique pas au UPDATE branch du UPSERT), ce qui fait croire au
-    // dashboard que les données datent de plusieurs heures alors qu'un
-    // refresh vient d'avoir lieu.
+    // IMPORTANT : created_at ne doit refléter que les CHANGEMENTS réels des
+    // chiffres scrappés, pas chaque exécution du cron. Sinon le dashboard
+    // affiche une heure fraîche alors que les valeurs (score, rang, …) sont
+    // identiques à la précédente capture → l'utilisateur pense que la donnée
+    // vient d'être refresh, alors qu'elle est figée. On compare donc la ligne
+    // existante du jour et on ne met à jour created_at que si au moins un
+    // indicateur a changé.
+    const { data: prevSnap } = await supabase
+      .from('bandi_snapshots')
+      .select('score_monde,rang_monde,pays_n1,pays_top10,rang_moyen,created_at')
+      .eq('date', today)
+      .maybeSingle();
+    const snapshotChanged = !prevSnap
+      || prevSnap.score_monde !== scoreMonde
+      || prevSnap.rang_monde  !== rangMonde
+      || prevSnap.pays_n1     !== paysN1
+      || prevSnap.pays_top10  !== countries.length
+      || Number(prevSnap.rang_moyen) !== Number(rangMoyen);
+
     const snapshotRow = {
       date: today,
       score_monde: scoreMonde,
@@ -287,7 +301,7 @@ async function main() {
       pays_n1: paysN1,
       pays_top10: countries.length,
       rang_moyen: rangMoyen,
-      created_at: new Date().toISOString()
+      created_at: snapshotChanged ? new Date().toISOString() : (prevSnap?.created_at || new Date().toISOString())
     };
     // Ajouter les nouvelles colonnes seulement si elles existent en DB
     if (joursTop10Cumul > 0) snapshotRow.jours_top10_cumul = joursTop10Cumul;
@@ -295,40 +309,60 @@ async function main() {
 
     const { error: e1 } = await supabase.from('bandi_snapshots').upsert(snapshotRow, { onConflict: 'date' });
     if (e1) throw new Error(`Insert snapshot : ${e1.message}`);
-    console.log('✅ Snapshot inséré');
+    console.log(snapshotChanged ? '✅ Snapshot inséré (valeurs changées, created_at rafraîchi)' : 'ℹ️  Snapshot inchangé (created_at préservé)');
 
-    // Insert pays (avec code ISO depuis country-mapping.json)
-    // Même logique que le snapshot : created_at explicite sur upsert, sinon
-    // il reste figé sur la première insertion du jour.
+    // Insert pays — même logique : created_at ne rajeunit que si le rang a
+    // bougé pour ce pays sur cette date.
     if (countries.length > 0) {
+      const { data: prevCountries } = await supabase
+        .from('bandi_country_rankings')
+        .select('pays,rang,created_at')
+        .eq('date', today);
+      const prevByPays = new Map((prevCountries || []).map(r => [r.pays, r]));
       const nowIso = new Date().toISOString();
       const rows = countries.map(c => {
         const mapped = COUNTRY_MAP[c.pays];
+        const prev = prevByPays.get(c.pays);
+        const changed = !prev || prev.rang !== c.rang;
         return {
           date: today,
           pays: c.pays,
           code_pays: mapped?.code || null,
           rang: c.rang,
           region: c.region,
-          created_at: nowIso
+          created_at: changed ? nowIso : (prev?.created_at || nowIso)
         };
       });
       const { error: e2 } = await supabase.from('bandi_country_rankings').upsert(rows, { onConflict: 'date,pays' });
       if (e2) throw new Error(`Insert pays : ${e2.message}`);
       const withCode = rows.filter(r => r.code_pays).length;
-      console.log(`✅ ${rows.length} pays insérés (${withCode} avec code ISO)`);
+      const changedCount = rows.filter((r, i) => {
+        const prev = prevByPays.get(countries[i].pays);
+        return !prev || prev.rang !== countries[i].rang;
+      }).length;
+      console.log(`✅ ${rows.length} pays insérés (${withCode} avec code ISO · ${changedCount} rangs modifiés)`);
     }
 
-    // Insert top 10
+    // Insert top 10 — idem, on ne rajeunit created_at que pour les lignes dont
+    // titre ou score a changé sur ce rang.
     if (top10.length > 0) {
+      const { data: prevTop } = await supabase
+        .from('netflix_tv_top10_world')
+        .select('rang,titre,score,created_at')
+        .eq('date', today);
+      const prevByRang = new Map((prevTop || []).map(r => [r.rang, r]));
       const nowIso = new Date().toISOString();
-      const rows = top10.map(s => ({
-        date: today,
-        rang: s.rang,
-        titre: s.titre,
-        score: s.score,
-        created_at: nowIso
-      }));
+      const rows = top10.map(s => {
+        const prev = prevByRang.get(s.rang);
+        const changed = !prev || prev.titre !== s.titre || Number(prev.score) !== Number(s.score);
+        return {
+          date: today,
+          rang: s.rang,
+          titre: s.titre,
+          score: s.score,
+          created_at: changed ? nowIso : (prev?.created_at || nowIso)
+        };
+      });
       const { error: e3 } = await supabase.from('netflix_tv_top10_world').upsert(rows, { onConflict: 'date,rang' });
       if (e3) throw new Error(`Insert top10 : ${e3.message}`);
       console.log(`✅ ${rows.length} concurrents insérés`);
