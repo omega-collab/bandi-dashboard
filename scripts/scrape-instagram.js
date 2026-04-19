@@ -28,16 +28,31 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 }
 
 const HASHTAGS = [
+  // FR / Martinique
   'bandinetflix', 'bandiserie', 'seriebandi', 'bandimartinique',
   'bandinetflixserie', 'bandilaseries', 'bandilaserie',
   'bandisaison1', 'bandis1', 'bandiep1',
   'netflixmartinique', 'martiniquenetflix', 'seriemartinique',
   'mauientertainment',
+  // EN / international
+  'bandiseries', 'bandishow', 'bandireview', 'bandinetflixshow',
+  'watchbandi', 'bandisoundtrack', 'bandiopening',
+  // ES
+  'bandiserienetflix', 'bandiespanol',
+  // PT
+  'bandinetflixbr', 'bandibrasil',
+  // IT
+  'bandiserieitaliana',
 ];
 
 const USERS = [
-  'yoottle', 'netflixfr', 'netflixfrance', 'netflix',
-  'mauientertainment',
+  // FR / Martinique
+  'yoottle', 'netflixfr', 'netflixfrance', 'mauientertainment',
+  // Global Netflix
+  'netflix', 'netflixqueue', 'netflixtudum', 'netflixfilm',
+  // Régionaux Netflix
+  'netflixuk', 'netflixes', 'netflixit', 'netflixde',
+  'netflixlat', 'netflixbrasil',
 ];
 
 const RESULTS_PER_TAG  = 60;
@@ -94,13 +109,30 @@ function isRelevantBandi(caption = '', author = '') {
   // ── "bandi" + contexte série/Martinique — pertinent ──────────────────────
   if (!/\bbandi\b/.test(text)) return false;
 
+  // "bandi" + contexte sériel (toutes langues) = pertinent
   const CONTEXT_KEYWORDS = [
-    'netflix', 'série', 'serie', 'saison', 'episode', 'épisode',
+    // FR
+    'netflix', 'série', 'serie', 'saison', 'episode', 'épisode', 'épisodes',
+    'streaming', 'casting', 'tournage', 'diffusion', 'avant-première',
+    'scénariste', 'réalisateur', 'réalisatrice', 'acteur', 'actrice',
     'martinique', 'martiniquais', 'martiniquaise',
     'antilles', 'antillais', 'caribéen', 'caribbean', 'caraïbe',
-    'streaming', 'casting', 'tournage', 'diffusion', 'maui',
-    'scénariste', 'réalisateur', 'réalisatrice', 'acteur', 'actrice',
-    'créole', 'creole', 'fort-de-france', 'foyal',
+    'créole', 'creole', 'fort-de-france', 'foyal', 'maui',
+    // EN
+    'show', 'series', 'season', 'binge', 'binge-watch', 'binging',
+    'watching', 'watched', 'review', 'trailer', 'premiere', 'finale',
+    'must-watch', 'mustwatch', 'must watch', 'streaming now',
+    'caribbean drama', 'soundtrack', 'ost',
+    // ES
+    'temporada', 'capítulo', 'capitulo', 'reseña', 'resena',
+    'estreno', 'viéndola', 'viendola', 'viendo', 'avance',
+    // PT
+    'temporada', 'episódio', 'episodio', 'assistindo', 'resenha',
+    'estreia', 'trailer',
+    // IT (risque faux positifs : exigeons "netflix" ou "serie" explicite — déjà présent)
+    'stagione', 'puntata', 'recensione',
+    // DE
+    'staffel', 'folge', 'ansehen',
   ];
   return CONTEXT_KEYWORDS.some(k => text.includes(k));
 }
