@@ -27,12 +27,22 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   process.exit(0);
 }
 
-const HASHTAGS = ['bandinetflix', 'bandiserie', 'seriebandi', 'bandimartinique', 'bandinetflixserie'];
-const USERS    = ['yoottle', 'netflixfr'];
+const HASHTAGS = [
+  'bandinetflix', 'bandiserie', 'seriebandi', 'bandimartinique',
+  'bandinetflixserie', 'bandilaseries', 'bandilaserie',
+  'bandisaison1', 'bandis1', 'bandiep1',
+  'netflixmartinique', 'martiniquenetflix', 'seriemartinique',
+  'mauientertainment',
+];
 
-const RESULTS_PER_TAG  = 50;
-const RESULTS_PER_USER = 30;
-const MIN_ENGAGEMENT   = 10;
+const USERS = [
+  'yoottle', 'netflixfr', 'netflixfrance', 'netflix',
+  'mauientertainment',
+];
+
+const RESULTS_PER_TAG  = 60;
+const RESULTS_PER_USER = 40;
+const MIN_ENGAGEMENT   = 3;
 
 const RSSHUB_INSTANCES = [
   'https://rsshub.app',
@@ -63,10 +73,21 @@ function isRelevantBandi(caption = '', author = '') {
     'bandinetflix', 'bandi netflix', 'bandi serie', 'bandi série',
     '#bandiserie', 'bandiserie', '#seriebandi', 'seriebandi',
     '#bandimartinique', 'bandimartinique', '#bandinetflixserie',
+    '#bandilaserie', 'bandilaserie',
     'netflix martinique', 'serie martinique', 'série martinique',
     'martinique netflix', 'première série martiniquaise',
+    'première série martiniquaise netflix',
     'maui entertainment', 'bandi saison', 'bandi s1', 'bandi s2',
-    'bandi ep', 'episode bandi', 'regarder bandi',
+    'bandi ep', 'episode bandi', 'épisode bandi', 'regarder bandi',
+    // Équipe création / réalisation
+    'jimmy laporal-trésor', 'jimmy laporal', 'mathilde vallet',
+    'éric rochant', 'eric rochant', 'capucine rochant',
+    // Casting principal (source data-fallback.js)
+    'rudgy pajany', 'jonathan zaccaï', 'jonathan zaccai',
+    'rémy laquittant', 'remy laquittant', 'djody grimeau',
+    'william paul-joseph', 'evan lienafa', 'ambre bozza',
+    'souane rosamont', 'steeven mornet', 'lucas pernock',
+    'rodney dijon', 'patrick trieste', 'cédric camille', 'cedric camille',
   ];
   if (STRONG_SIGNALS.some(s => text.includes(s))) return true;
 
@@ -75,9 +96,11 @@ function isRelevantBandi(caption = '', author = '') {
 
   const CONTEXT_KEYWORDS = [
     'netflix', 'série', 'serie', 'saison', 'episode', 'épisode',
-    'martinique', 'martiniquais', 'antilles', 'caribéen', 'caribbean',
+    'martinique', 'martiniquais', 'martiniquaise',
+    'antilles', 'antillais', 'caribéen', 'caribbean', 'caraïbe',
     'streaming', 'casting', 'tournage', 'diffusion', 'maui',
-    'scénariste', 'réalisateur', 'acteur', 'actrice',
+    'scénariste', 'réalisateur', 'réalisatrice', 'acteur', 'actrice',
+    'créole', 'creole', 'fort-de-france', 'foyal',
   ];
   return CONTEXT_KEYWORDS.some(k => text.includes(k));
 }
@@ -252,10 +275,13 @@ async function scrapeViaRsshub() {
 // ─── Filtre + déduplication ───────────────────────────────────────────────────
 function filterAndDedupe(rows) {
   const before = rows.length;
+  const WHITELIST = new Set([
+    'yoottle', 'netflixfr', 'netflixfrance', 'netflix', 'mauientertainment',
+  ]);
   const filtered = rows.filter(r => {
     if (!isRelevantBandi(r.content || '', r.author_name || '')) return false;
-    const isWhitelisted = ['yoottle', 'netflixfr'].includes((r.author_name || '').toLowerCase());
-    if (!isWhitelisted && r.engagement_score < MIN_ENGAGEMENT) return false;
+    if (WHITELIST.has((r.author_name || '').toLowerCase())) return true;
+    if (r.engagement_score < MIN_ENGAGEMENT) return false;
     return true;
   });
   console.log(`[instagram]   filtre pertinence : ${before} → ${filtered.length} posts retenus`);
