@@ -111,19 +111,45 @@ async function upsertRt(source, data) {
 async function main() {
   console.log('🎬 Rotten Tomatoes scraper · ' + new Date().toISOString());
 
-  let html;
-  try {
-    html = await fetchHtml(RT_URL);
-  } catch (err) {
-    console.error('❌ Fetch RT KO :', err.message);
-    // Tentative Canada (certains titres non US y sont référencés)
+  // RT peut référencer la série sous plusieurs slugs — on tente dans l'ordre
+  // et on garde le premier HTML qui donne un <score-board> exploitable.
+  const CANDIDATES = [
+    `https://www.rottentomatoes.com/tv/${RT_SLUG}`,
+    `https://www.rottentomatoes.com/tv/${RT_SLUG}_2026`,
+    `https://www.rottentomatoes.com/tv/${RT_SLUG}/s01`,
+    `https://www.rottentomatoes.com/tv/${RT_SLUG}-netflix`
+  ];
+  let html = null;
+  for (const u of CANDIDATES) {
     try {
-      const altUrl = `https://www.rottentomatoes.com/tv/${RT_SLUG}/s01`;
-      console.log(`   → retry ${altUrl}`);
-      html = await fetchHtml(altUrl);
-    } catch (_) {
-      process.exit(1);
+      const page = await fetchHtml(u);
+      if (page && /score-board|tomatometerScore|audienceScore/i.test(page)) {
+        html = page;
+        console.log(`   ✓ slug retenu : ${u}`);
+        break;
+      }
+    } catch (err) {
+      console.warn(`   — ${u} → ${err.message}`);
     }
+  }
+  if (!html) {
+    console.warn('⚠️  Aucun slug RT n\'a répondu avec un score-board exploitable.');
+    const today = new Date().toISOString().slice(0, 10);
+    await supabase.from('external_ratings').upsert(
+      {
+        date: today,
+        source: 'rt_critics',
+        rating: null,
+        rating_max: 100,
+        rating_norm: null,
+        votes: null,
+        reviews_count: null,
+        url: RT_URL,
+        raw: { status: 'not_listed_yet', tried: CANDIDATES, fetched_at: new Date().toISOString() }
+      },
+      { onConflict: 'date,source' }
+    );
+    return;
   }
 
   // 1) score-board (le plus simple et stable quand dispo)
