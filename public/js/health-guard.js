@@ -499,10 +499,15 @@
   }
 
   function render() {
-    // Bannière "data stale" (visible publiquement) toujours mise à jour
+    // Bannière "données obsolètes" : visible UNIQUEMENT pour les erreurs réelles
+    // (fallback statique ou Supabase injoignable). La simple ancienneté du
+    // snapshot n'est PAS affichée — la mention "MAJ JJ/MM · HH:mm" dans le
+    // hero informe déjà l'utilisateur de la fraîcheur réelle ; déclencher
+    // "Données non live" sur un snapshot de quelques heures est redondant et
+    // fausse le message (les données sont actualisées toutes les 6h par cron).
     const banner = document.getElementById('hgStaleBanner');
     if (banner) {
-      const stale = state.issues.find(r => r.code === 'FALLBACK_ACTIVE' || r.code === 'STALE_SNAPSHOT' || r.code === 'SUPABASE_CFG');
+      const stale = state.issues.find(r => r.code === 'FALLBACK_ACTIVE' || r.code === 'SUPABASE_CFG');
       if (stale) {
         banner.hidden = false;
         const detail = document.getElementById('hgStaleDetail');

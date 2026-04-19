@@ -298,7 +298,10 @@ async function main() {
     console.log('✅ Snapshot inséré');
 
     // Insert pays (avec code ISO depuis country-mapping.json)
+    // Même logique que le snapshot : created_at explicite sur upsert, sinon
+    // il reste figé sur la première insertion du jour.
     if (countries.length > 0) {
+      const nowIso = new Date().toISOString();
       const rows = countries.map(c => {
         const mapped = COUNTRY_MAP[c.pays];
         return {
@@ -306,7 +309,8 @@ async function main() {
           pays: c.pays,
           code_pays: mapped?.code || null,
           rang: c.rang,
-          region: c.region
+          region: c.region,
+          created_at: nowIso
         };
       });
       const { error: e2 } = await supabase.from('bandi_country_rankings').upsert(rows, { onConflict: 'date,pays' });
@@ -317,11 +321,13 @@ async function main() {
 
     // Insert top 10
     if (top10.length > 0) {
+      const nowIso = new Date().toISOString();
       const rows = top10.map(s => ({
         date: today,
         rang: s.rang,
         titre: s.titre,
-        score: s.score
+        score: s.score,
+        created_at: nowIso
       }));
       const { error: e3 } = await supabase.from('netflix_tv_top10_world').upsert(rows, { onConflict: 'date,rang' });
       if (e3) throw new Error(`Insert top10 : ${e3.message}`);
