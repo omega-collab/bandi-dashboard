@@ -275,13 +275,19 @@ async function main() {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     // Insert snapshot (avec nouvelles colonnes jours_top10_cumul et rang_peak)
+    // IMPORTANT : created_at explicitement rafraîchi à chaque run — sinon il
+    // garde la valeur de la PREMIÈRE insertion du jour (DEFAULT NOW() ne
+    // s'applique pas au UPDATE branch du UPSERT), ce qui fait croire au
+    // dashboard que les données datent de plusieurs heures alors qu'un
+    // refresh vient d'avoir lieu.
     const snapshotRow = {
       date: today,
       score_monde: scoreMonde,
       rang_monde: rangMonde,
       pays_n1: paysN1,
       pays_top10: countries.length,
-      rang_moyen: rangMoyen
+      rang_moyen: rangMoyen,
+      created_at: new Date().toISOString()
     };
     // Ajouter les nouvelles colonnes seulement si elles existent en DB
     if (joursTop10Cumul > 0) snapshotRow.jours_top10_cumul = joursTop10Cumul;
