@@ -359,7 +359,9 @@ async function loadLiveData() {
         rang:      current.rang_monde      ?? _prevCur.rang      ?? 0,
         paysN1:    enrichedPaysN1          ?? _prevCur.paysN1    ?? 0,
         paysTop10: enrichedPaysTop10       ?? _prevCur.paysTop10 ?? 0,
-        rangMoyen: enrichedRangMoyen       ?? _prevCur.rangMoyen ?? null
+        rangMoyen: enrichedRangMoyen       ?? _prevCur.rangMoyen ?? null,
+        date:      current.date,
+        createdAt: current.created_at      ?? null
       },
       previous: {
         score: previous.score_monde,
@@ -694,16 +696,22 @@ function renderOverview() {
     return `${d}/${m}/${y}`;
   };
   const dateFR = fmtDate(BANDI.current?.date);
-  // Heure locale de la dernière synchro (HH:mm) — permet de voir le live pulse.
-  const now = new Date();
-  const hh = String(now.getHours()).padStart(2, '0');
-  const mm = String(now.getMinutes()).padStart(2, '0');
-  const timeFR = `${hh}:${mm}`;
+  // Heure de la DERNIÈRE capture scraper (created_at du snapshot), pas l'heure
+  // courante — les données ne sont pas live, elles sont rafraîchies toutes les 6h.
+  const createdAt = BANDI.current?.createdAt;
+  let timeFR = null;
+  if (createdAt) {
+    const d = new Date(createdAt);
+    if (!isNaN(d)) {
+      timeFR = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+  }
   if (dateFR) {
+    const stamp = timeFR ? `${dateFR} · ${timeFR}` : dateFR;
     const luEl = $("lastUpdate");
-    if (luEl) luEl.textContent = `${dateFR} · ${timeFR}`;
+    if (luEl) luEl.textContent = stamp;
     const heroU = $("heroUpdate");
-    if (heroU) heroU.textContent = `${dateFR} · ${timeFR}`;
+    if (heroU) heroU.textContent = stamp;
   }
 }
 
@@ -2994,7 +3002,15 @@ async function loadMonFreshness() {
   const time  = document.getElementById('monConnTime');
   if (dot)   { dot.className = 'mon-conn-dot ' + (live ? 'mon-ok' : 'mon-warn'); }
   if (label) label.textContent = live ? 'Supabase connecté · données live' : 'Mode fallback statique · données de démonstration';
-  if (time)  time.textContent  = `Chargé le ${new Date().toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`;
+  if (time) {
+    const createdAt = BANDI.current?.createdAt;
+    const d = createdAt ? new Date(createdAt) : null;
+    if (d && !isNaN(d)) {
+      time.textContent = `Dernière collecte le ${d.toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`;
+    } else {
+      time.textContent = '';
+    }
+  }
 
   // Dates déjà disponibles depuis loadLiveData()
   const snapDate    = BANDI.snapshots30?.[0]?.date;
