@@ -26,26 +26,67 @@ function parseDate(str) {
 }
 
 // ─── 1. Reddit ────────────────────────────────────────────────────────────────
-const REDDIT_SEARCHES = [
-  'https://www.reddit.com/search.json?q=Bandi+Netflix&sort=new&limit=100',
-  'https://www.reddit.com/r/netflix/search.json?q=Bandi&sort=new&restrict_sr=1&limit=50',
-  'https://www.reddit.com/r/television/search.json?q=Bandi+Netflix&sort=new&restrict_sr=1&limit=50',
-  'https://www.reddit.com/r/martinique/search.json?q=Bandi&sort=new&restrict_sr=1&limit=50',
-  'https://www.reddit.com/r/france/search.json?q=Bandi+Netflix&sort=new&restrict_sr=1&limit=50',
+// Reddit rate-limite fortement les clients non-OAuth sur /search.json.
+// Stratégie : tenter JSON, puis tomber en fallback RSS (`.rss`) moins bloqué.
+const REDDIT_QUERIES = [
+  { sub: null,          q: 'Bandi Netflix' },
+  { sub: 'netflix',     q: 'Bandi' },
+  { sub: 'television',  q: 'Bandi Netflix' },
+  { sub: 'martinique',  q: 'Bandi' },
+  { sub: 'france',      q: 'Bandi Netflix' },
+  { sub: 'NetflixBestOf', q: 'Bandi' },
 ];
+
+function parseRedditRSSItem(xml) {
+  const out = [];
+  const entries = xml.split(/<entry>/).slice(1);
+  for (const e of entries) {
+    const id = (e.match(/<id>([^<]+)<\/id>/) || [])[1] || '';
+    const link = (e.match(/<link[^>]*href="([^"]+)"/) || [])[1] || '';
+    const title = (e.match(/<title[^>]*>([\s\S]*?)<\/title>/) || [])[1] || '';
+    const author = (e.match(/<name>\/u\/([^<]+)<\/name>/) || [])[1] || '[deleted]';
+    const updated = (e.match(/<updated>([^<]+)<\/updated>/) || [])[1];
+    const contentMatch = e.match(/<content[^>]*>([\s\S]*?)<\/content>/);
+    const content = contentMatch ? contentMatch[1].replace(/<[^>]+>/g, ' ').slice(0, 600) : '';
+    // id format: t3_abcdef → post_id = abcdef
+    const m = id.match(/t3_([a-z0-9]+)/i);
+    if (!m) continue;
+    out.push({
+      platform: 'reddit',
+      post_id: m[1],
+      url: link,
+      author_name: author,
+      content: truncate(title + (content ? '\n' + content : '')),
+      engagement_score: 0, // pas de score dans RSS — sera refresh via JSON au prochain succès
+      published_at: parseDate(updated),
+      thumbnail_url: null,
+    });
+  }
+  return out;
+}
 
 async function fetchReddit() {
   const posts = [];
-  for (const url of REDDIT_SEARCHES) {
+  for (const { sub, q } of REDDIT_QUERIES) {
+    const qEnc = encodeURIComponent(q);
+    const jsonUrl = sub
+      ? `https://www.reddit.com/r/${sub}/search.json?q=${qEnc}&sort=new&restrict_sr=1&limit=50`
+      : `https://www.reddit.com/search.json?q=${qEnc}&sort=new&limit=100`;
+    const rssUrl  = sub
+      ? `https://www.reddit.com/r/${sub}/search.rss?q=${qEnc}&sort=new&restrict_sr=1`
+      : `https://www.reddit.com/search.rss?q=${qEnc}&sort=new`;
+
+    let gotFromJson = false;
+    // 1) JSON d'abord (fournit score, thumbnail, selftext complet)
     try {
-      const res = await fetch(url, {
-        headers: { 'User-Agent': UA },
+      const res = await fetch(jsonUrl, {
+        headers: { 'User-Agent': UA, 'Accept': 'application/json' },
         signal: AbortSignal.timeout(10000)
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const items = data?.data?.children || [];
-      console.log(`  Reddit ${new URL(url).pathname}: ${items.length} posts`);
+      console.log(`  Reddit JSON ${sub || 'all'} "${q}": ${items.length} posts`);
       for (const { data: p } of items) {
         if (!p.id) continue;
         posts.push({
@@ -59,8 +100,26 @@ async function fetchReddit() {
           thumbnail_url: p.thumbnail?.startsWith('http') ? p.thumbnail : null,
         });
       }
+      gotFromJson = true;
     } catch (err) {
-      console.warn(`  ⚠️ Reddit ${url.slice(0, 60)}... échoué : ${err.message}`);
+      console.warn(`  ⚠️ Reddit JSON ${sub || 'all'} KO (${err.message}) → RSS fallback`);
+    }
+
+    // 2) RSS en fallback (moins rate-limité)
+    if (!gotFromJson) {
+      try {
+        const res = await fetch(rssUrl, {
+          headers: { 'User-Agent': UA, 'Accept': 'application/atom+xml,application/xml' },
+          signal: AbortSignal.timeout(10000)
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const xml = await res.text();
+        const rssPosts = parseRedditRSSItem(xml);
+        console.log(`  Reddit RSS ${sub || 'all'} "${q}": ${rssPosts.length} posts`);
+        posts.push(...rssPosts);
+      } catch (err) {
+        console.warn(`  ⚠️ Reddit RSS ${sub || 'all'} KO : ${err.message}`);
+      }
     }
   }
   return posts;
@@ -329,16 +388,17 @@ async function fetchTrends() {
     const timelineData = parsed?.default?.timelineData || [];
     console.log(`  Google Trends: ${timelineData.length} points`);
 
+    // buzz_trends a UNIQUE(date) seul — pas de country_code.
     const rows = timelineData.map(pt => ({
       date: new Date(pt.time * 1000).toISOString().slice(0, 10),
-      country_code: 'WW',
       interest_score: pt.value?.[0] ?? 0,
+      fetched_at: new Date().toISOString(),
     }));
 
     if (rows.length > 0) {
       const { error } = await supabase
         .from('buzz_trends')
-        .upsert(rows, { onConflict: 'date,country_code', ignoreDuplicates: false });
+        .upsert(rows, { onConflict: 'date', ignoreDuplicates: false });
       if (error) console.warn(`  ⚠️ Trends upsert : ${error.message}`);
       else console.log(`  ✅ ${rows.length} points Trends upsertés`);
     }
@@ -378,12 +438,18 @@ async function main() {
     return;
   }
 
+  // Bump fetched_at pour que le dashboard voie que la collecte est active,
+  // et laisse merge-duplicates rafraîchir engagement_score / content sur les posts
+  // déjà connus (sinon les scores restent gelés sur la 1re valeur vue).
+  const now = new Date().toISOString();
+  for (const p of unique) p.fetched_at = now;
+
   let inserted = 0, errors = 0;
   for (let i = 0; i < unique.length; i += 50) {
     const batch = unique.slice(i, i + 50);
     const { error } = await supabase
       .from('buzz_social')
-      .upsert(batch, { onConflict: 'platform,post_id', ignoreDuplicates: true });
+      .upsert(batch, { onConflict: 'platform,post_id', ignoreDuplicates: false });
     if (error) { console.warn(`  ⚠️ Batch error : ${error.message}`); errors++; }
     else inserted += batch.length;
   }
