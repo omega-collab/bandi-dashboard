@@ -80,6 +80,59 @@ function extractFallbackFromMeta(html) {
   return null;
 }
 
+/**
+ * Fallback ultime : calcule la moyenne des notes par épisode.
+ * IMDb expose les ratings par épisode dans /episodes/ bien avant d'agréger
+ * un aggregateRating au niveau série. Scraping : on parcourt tous les blocs
+ * JSON-LD "TVEpisode" et on en extrait aggregateRating.ratingValue.
+ */
+async function extractPerEpisodeAverage(imdbId) {
+  const url = `https://www.imdb.com/title/${imdbId}/episodes/`;
+  let html;
+  try {
+    html = await fetchHtml(url);
+  } catch (err) {
+    console.warn(`   fetch /episodes/ KO : ${err.message}`);
+    return null;
+  }
+  // Pattern sur JSON-LD d'épisodes OU sur le state Next.js
+  // 1) Plusieurs JSON-LD TVEpisode
+  const ratings = [];
+  const blocks = [...html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi)];
+  for (const m of blocks) {
+    try {
+      const obj = JSON.parse(m[1]);
+      const list = Array.isArray(obj) ? obj : [obj];
+      for (const c of list) {
+        if (c?.['@type'] === 'TVEpisode' && c.aggregateRating?.ratingValue != null) {
+          const v = Number(c.aggregateRating.ratingValue);
+          if (isFinite(v) && v > 0) ratings.push(v);
+        }
+      }
+    } catch (_) {}
+  }
+  // 2) Fallback regex : "ratingValue":8.7,"ratingCount":…
+  if (ratings.length === 0) {
+    const rxAll = [...html.matchAll(/"ratingValue"\s*:\s*(\d+(?:\.\d+)?)/g)];
+    for (const rm of rxAll) {
+      const v = Number(rm[1]);
+      if (isFinite(v) && v > 0 && v <= 10) ratings.push(v);
+    }
+  }
+  if (ratings.length === 0) return null;
+  const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+  return {
+    rating: Math.round(avg * 10) / 10,
+    votes: null,
+    bestRating: 10,
+    worstRating: 1,
+    episodeCount: ratings.length,
+    episodesMin: Math.min(...ratings),
+    episodesMax: Math.max(...ratings),
+    fallback: 'per_episode_average'
+  };
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 async function main() {
   console.log('🎬 IMDb scraper · ' + new Date().toISOString());
@@ -98,6 +151,17 @@ async function main() {
     console.warn('⚠️  Pas de bloc JSON-LD aggregateRating, tentative fallback meta…');
     const fb = extractFallbackFromMeta(html);
     if (fb) agg = { rating: fb.rating, votes: fb.votes, bestRating: 10, worstRating: 1, name: null, type: null };
+  }
+
+  // Fallback : moyenne des notes par épisode (IMDb agrège souvent au niveau
+  // épisode avant d'agréger au niveau série)
+  if (!agg || !isFinite(agg.rating) || agg.rating <= 0) {
+    console.warn('⚠️  Pas d\'aggregateRating série — tentative moyenne par épisode…');
+    const perEp = await extractPerEpisodeAverage(IMDB_ID);
+    if (perEp) {
+      console.log(`   → moyenne épisodes : ${perEp.rating}/10 (${perEp.episodeCount} ép. · ${perEp.episodesMin}–${perEp.episodesMax})`);
+      agg = perEp;
+    }
   }
 
   if (!agg || !isFinite(agg.rating)) {
@@ -135,12 +199,16 @@ async function main() {
       rating_max: agg.bestRating,
       rating_norm: Math.round(ratingNorm * 100) / 100,
       votes: agg.votes,
-      reviews_count: null,
+      reviews_count: agg.episodeCount || null,
       url: IMDB_URL,
       raw: {
         name: agg.name,
         type: agg.type,
-        fetched_at: new Date().toISOString()
+        fetched_at: new Date().toISOString(),
+        fallback: agg.fallback || null,
+        episode_count: agg.episodeCount || null,
+        episodes_min: agg.episodesMin ?? null,
+        episodes_max: agg.episodesMax ?? null
       }
     },
     { onConflict: 'date,source' }

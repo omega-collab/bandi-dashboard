@@ -2544,6 +2544,18 @@ function renderForecastS2() {
       setTimeout(() => { mainBarEl.style.setProperty('--bar-width', `${prob}%`); }, 400);
     });
   }
+  // Forecast détaillé — pourcentage affiché (bug : était codé en dur à 85% dans
+  // le HTML, créant une incohérence avec le bento S2 qui utilisait la vraie
+  // valeur calculée).
+  const mainPctEl = document.getElementById('forecastMainPct');
+  if (mainPctEl) mainPctEl.textContent = `${prob}%`;
+  const mainLabelEl = document.getElementById('forecastMainLabel');
+  if (mainLabelEl) {
+    mainLabelEl.textContent = prob >= 80 ? 'Très favorable'
+                           : prob >= 65 ? 'Favorable'
+                           : prob >= 50 ? 'Incertain'
+                           : 'Peu probable';
+  }
 
   // Indicateurs — remplace le 1er indicateur (Taux de complétion) par le score calculé
   // et le 2e (Top 10 USA) par le rang live depuis bandi_country_rankings
@@ -3163,17 +3175,34 @@ function renderMonRatings() {
     { key: 'filmaffinity',    label: 'Filmaffinity',    max: 10,  unit: '/10', color: '#C0392B' },
   ];
 
+  // Fallback IMDb : si le scraper n'a pas encore trouvé d'aggregateRating
+  // (série trop récente, volumétrie insuffisante), on affiche la moyenne
+  // par épisode issue du dernier rapport externe (Gemini 19/04/2026).
+  // Dès que le scraper remplit rating > 0, ce fallback est automatiquement
+  // désactivé et la valeur live prend le dessus.
+  const imdbEpi = BANDI.imdbPerEpisode;
+  const imdbEpiAvg = (imdbEpi && imdbEpi.min != null && imdbEpi.max != null)
+    ? Math.round(((imdbEpi.min + imdbEpi.max) / 2) * 10) / 10
+    : null;
+
   const rows = SOURCES.map(src => {
     const r = R[src.key];
     // La table external_ratings utilise la colonne "rating" (pas "note")
-    const val = r?.rating ?? r?.note ?? null;
+    let val = r?.rating ?? r?.note ?? null;
+    let fallbackLabel = null;
+    if (src.key === 'imdb' && (val == null || val <= 0) && imdbEpiAvg != null) {
+      val = imdbEpiAvg;
+      fallbackLabel = `moy. ${String(imdbEpi.min).replace('.', ',')}–${String(imdbEpi.max).replace('.', ',')} par ép.`;
+    }
     const has = val != null;
     const pct = has ? Math.round((val / src.max) * 100) : 0;
     const { label: age, hours } = monTimeAgo(r?.date);
     const cls = has ? monFreshCls(hours) : 'mon-stale';
-    const votes = r?.votes          ? `${Number(r.votes).toLocaleString('fr-FR')} votes`
-                : r?.reviews_count  ? `${r.reviews_count} critiques`
-                : r?.reviews        ? `${r.reviews} critiques` : '';
+    const votes = fallbackLabel       ? fallbackLabel
+                : r?.votes            ? `${Number(r.votes).toLocaleString('fr-FR')} votes`
+                : r?.reviews_count    ? `${r.reviews_count} critiques`
+                : r?.reviews          ? `${r.reviews} critiques` : '';
+    const ageLabel = fallbackLabel ? 'Rapport 19/04' : (has ? age : 'En attente');
     return `
       <div class="mon-rating-row">
         <div class="mon-rating-dot ${cls}"></div>
@@ -3183,7 +3212,7 @@ function renderMonRatings() {
           <div class="mon-rating-bar" style="width:${pct}%;background:${src.color}33;border-right:2px solid ${src.color}99;"></div>
         </div>
         <span class="mon-rating-pct">${has ? pct + '%' : ''}</span>
-        <span class="mon-rating-age ${cls}">${has ? age : 'En attente'}</span>
+        <span class="mon-rating-age ${cls}">${ageLabel}</span>
         <span class="mon-rating-votes">${votes}</span>
       </div>`;
   }).join('');
