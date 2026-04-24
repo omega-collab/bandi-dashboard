@@ -1074,6 +1074,17 @@ body::before {
   transform: translateY(-2px);
   border-left-color: var(--gold);
 }
+.series-stats-grid .stat-card--accent {
+  background: linear-gradient(135deg, rgba(206,17,38,0.12), rgba(0,151,57,0.08));
+  border-left: 3px solid var(--gold);
+  box-shadow: 0 0 24px rgba(228,184,77,0.08);
+}
+.series-stats-grid .stat-card--accent .stat-num {
+  background: linear-gradient(90deg, var(--gold), #fff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 .series-stats-grid .stat-num {
   font-family: var(--font-display);
   font-size: 40px; font-weight: 400;

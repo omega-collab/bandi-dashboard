@@ -28,7 +28,7 @@
 <!-- Leaflet.js pour la carte choroplèthe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<link rel="stylesheet" href="css/styles.css?v=20260419h" />
+<link rel="stylesheet" href="css/styles.css?v=20260424a" />
 
 <!-- Splash screen (inline pour afficher immédiatement, avant tout chargement) -->
 <style>
@@ -872,7 +872,7 @@
     <div class="panel series-stats-panel" id="launchWeekPanel">
       <div class="panel-head">
         <h3 class="panel-title">Lancement mondial — semaine 1</h3>
-        <span class="panel-sub" id="launchWeekSub">09–13 avril 2026 · Netflix Global Top 10</span>
+        <span class="panel-sub" id="launchWeekSub">06–12 avril 2026 · Netflix Tudum</span>
       </div>
       <div class="series-stats-grid">
         <div class="stat-card">
@@ -893,7 +893,36 @@
         </div>
       </div>
       <p class="series-stats-source">
-        Source : <span id="launchSource">Gemini · Netflix Global Top 10</span> · Notes par épisode IMDb : <strong id="launchImdb">8,7 – 8,9 / 10</strong> · Hashtag viral : <strong id="launchHashtag">#BandiNetflix</strong>
+        Source : <span id="launchSource">Netflix Tudum · Top 10 officiel</span> · Notes par épisode IMDb : <strong id="launchImdb">8,7 – 8,9 / 10</strong> · Hashtag viral : <strong id="launchHashtag">#BandiNetflix</strong>
+      </p>
+    </div>
+
+    <!-- ── Lancement mondial · semaine 2 (alimenté par BANDI.launchWeek2) ── -->
+    <div class="panel series-stats-panel" id="launchWeek2Panel" style="display:none">
+      <div class="panel-head">
+        <h3 class="panel-title">Semaine 2 — confirmation mondiale</h3>
+        <span class="panel-sub" id="launchWeek2Sub">13–19 avril 2026 · Netflix Tudum</span>
+      </div>
+      <div class="series-stats-grid">
+        <div class="stat-card stat-card--accent">
+          <span class="stat-num" id="launchW2Rang">#1</span>
+          <span class="stat-label">Top 10 non-anglo<br/><small>monde entier</small></span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num" id="launchW2Vues">5,2 M</span>
+          <span class="stat-label">vues complètes<br/><small>semaine 2</small></span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num" id="launchW2Croissance">+150 %</span>
+          <span class="stat-label">heures visionnées<br/><small>vs semaine 1</small></span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num" id="launchW2PaysN1">27</span>
+          <span class="stat-label">pays #1 Netflix<br/><small>sur <span id="launchW2Pays">57</span> pays Top 10</small></span>
+        </div>
+      </div>
+      <p class="series-stats-source">
+        Source : <span id="launchW2Source">Netflix Tudum · Top 10 officiel</span> · Classement Netflix mondial (toutes catégories) : <strong id="launchW2Global">#2</strong>
       </p>
     </div>
 
@@ -1057,12 +1086,12 @@
 </nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/auth.js?v=20260419h"></script>
-<script src="js/data-fallback.js?v=20260419h"></script>
-<script src="js/config.js?v=20260419h"></script>
-<script src="js/monitoring.js?v=20260419h"></script>
-<script src="js/app.js?v=20260419h"></script>
-<script src="js/health-guard.js?v=20260419h"></script>
+<script src="js/auth.js?v=20260424a"></script>
+<script src="js/data-fallback.js?v=20260424a"></script>
+<script src="js/config.js?v=20260424a"></script>
+<script src="js/monitoring.js?v=20260424a"></script>
+<script src="js/app.js?v=20260424a"></script>
+<script src="js/health-guard.js?v=20260424a"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {

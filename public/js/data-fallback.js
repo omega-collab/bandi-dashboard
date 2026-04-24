@@ -39,16 +39,35 @@ const BANDI = {
     "Evil P (Sherkhan)"
   ],
 
-  // Performance semaine de lancement — source : rapport Gemini 19/04/2026
-  // (Netflix Global Top 10 / Tudum). Chronologie : voir rapports/.
+  // Performance semaine de lancement — sources officielles Netflix Tudum
+  // Chronologie : voir rapports/.
   launchWeek: {
+    // Semaine 1 (06–12/04/2026, partielle — Bandi sort le 09/04)
+    // Tudum officiel : #6 non-English, 2.1M vues
+    // Gemini : 16.2M heures (source secondaire, cohérent avec 2.1M vues)
     vuesMillions: 2.1,
     heuresMillions: 16.2,
     paysTop10: 57,
-    entreeNonEnglish: 6,   // Place d'entrée Top 10 non-anglo
-    peakNonEnglish: 2,     // Pic atteint Top 10 non-anglo
-    periode: '09–13/04/2026',
-    source: 'Gemini · Netflix Global Top 10'
+    entreeNonEnglish: 6,
+    peakNonEnglish: 2,
+    periode: '06–12/04/2026',
+    source: 'Netflix Tudum · Top 10 officiel'
+  },
+
+  // Semaine 2 (13–19/04/2026, première semaine complète)
+  // Source : Netflix Tudum officiel https://www.netflix.com/tudum/articles/top-10-april-13-2026
+  // Bandi #1 non-English, 5.2M vues, +150% d'heures vues vs S1 → ~40.5M heures
+  // #1 dans 27 pays · Top 10 dans 57 pays · #2 Netflix mondial tous types confondus
+  launchWeek2: {
+    rangNonEnglish: 1,
+    vuesMillions: 5.2,
+    heuresMillionsEstim: 40.5,    // +150% vs 16.2M → Netflix ne publie que les vues S2
+    croissanceHeuresPct: 150,
+    paysN1: 27,
+    paysTop10: 57,
+    rangMondeTous: 2,              // #2 tous types (TV EN + Non-EN + Films)
+    periode: '13–19/04/2026',
+    source: 'Netflix Tudum · Top 10 officiel'
   },
 
   // Plage de notes IMDb par épisode (S1) — rapport Gemini 19/04/2026
