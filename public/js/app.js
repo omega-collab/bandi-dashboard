@@ -1150,6 +1150,54 @@ function renderSeriesTab() {
     if (lw2.periode)                    setText('launchWeek2Sub',     `${lw2.periode} · Netflix Tudum`);
     if (lw2.source)                     setText('launchW2Source',     lw2.source);
   }
+
+  // Réception critique presse — agrégat maison sur 12+ sources (compense RT vide)
+  renderCriticReviews();
+}
+
+// Rendu de la liste des critiques presse + score agrégé
+function renderCriticReviews() {
+  const cr = BANDI.criticReviews;
+  const panel = document.getElementById('criticReviewsPanel');
+  if (!cr || !panel || !Array.isArray(cr.sources) || cr.sources.length === 0) {
+    if (panel) panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = '';
+
+  const setText = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.textContent = val; };
+  if (cr.scorePct != null) setText('criticScorePct', `${cr.scorePct}%`);
+  if (cr.positifs != null) setText('criticPos', cr.positifs);
+  if (cr.mitiges  != null) setText('criticMid', cr.mitiges);
+  if (cr.negatifs != null) setText('criticNeg', cr.negatifs);
+  if (cr.notePresseAlloMoy != null) {
+    setText('criticAlloNote', `${String(cr.notePresseAlloMoy).replace('.', ',')} / 5`);
+  }
+  if (cr.total != null && cr.fetchedAt) {
+    const dStr = (cr.fetchedAt || '').slice(0, 10).split('-').reverse().join('/');
+    setText('criticReviewsSub', `Agrégation maison · ${cr.total} sources documentées · MAJ ${dStr}`);
+  }
+
+  const VERDICT_BADGE = {
+    positif: { lbl: 'Favorable',   cls: 'critic-verdict--pos' },
+    mitige:  { lbl: 'Mitigé',      cls: 'critic-verdict--mid' },
+    negatif: { lbl: 'Défavorable', cls: 'critic-verdict--neg' }
+  };
+  const list = document.getElementById('criticReviewsList');
+  if (!list) return;
+  list.innerHTML = cr.sources.map(s => {
+    const v = VERDICT_BADGE[s.verdict] || VERDICT_BADGE.mitige;
+    const pays = s.pays || '';
+    const url = escapeHtml(s.url || '#');
+    const media = escapeHtml(s.media || '—');
+    const cit = escapeHtml(s.citation || '');
+    return `
+      <a class="critic-review-row" href="${url}" target="_blank" rel="noopener" role="listitem">
+        <span class="critic-review-media">${media}<span class="critic-review-pays">${pays}</span></span>
+        <span class="critic-review-cit">${cit}</span>
+        <span class="critic-verdict-badge ${v.cls}">${v.lbl}</span>
+      </a>`;
+  }).join('');
 }
 
 // ============ HISTORIQUE 30J ============
