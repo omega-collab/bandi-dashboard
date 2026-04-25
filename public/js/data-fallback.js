@@ -76,6 +76,58 @@ const BANDI = {
   // Hashtag viral identifié — TikTok / X
   viralHashtag: '#BandiNetflix',
 
+  // Réception critique presse — 12 sources documentées (24/04/2026)
+  // Compense l'absence de Tomatometer officiel chez Rotten Tomatoes
+  // (RT n'a qu'1 critique seule = pas assez pour un score consensus).
+  // Verdict : 'positif' | 'mitige' | 'negatif' — agrégation maison.
+  criticReviews: {
+    fetchedAt: '2026-04-24',
+    total: 12,
+    positifs: 9,
+    mitiges: 3,
+    negatifs: 0,
+    scorePct: 75,           // 9/12 = 75 % critiques favorables
+    notePresseAlloMoy: 3.9, // note presse Allociné (sur 5)
+    sources: [
+      { media: 'Le Parisien',           pays: 'FR', verdict: 'positif',
+        citation: '« Thriller social intense », tensions familiales et sociales brillamment captées.',
+        url: 'https://www.allocine.fr/series/ficheserie-1000000157/critiques/presse/' },
+      { media: 'Le Monde',              pays: 'FR', verdict: 'positif',
+        citation: 'Immersion dans l\'envers du décor paradisiaque · « souci d\'authenticité » réel.',
+        url: 'https://www.allocine.fr/series/ficheserie-1000000157/critiques/presse/' },
+      { media: 'Les Inrockuptibles',    pays: 'FR', verdict: 'positif',
+        citation: 'L\'art de Rochant s\'affirme avec « force et finesse » — mise en scène, complexité des personnages.',
+        url: 'https://www.allocine.fr/series/ficheserie-1000000157/critiques/presse/' },
+      { media: 'NoPopCorn',             pays: 'FR', verdict: 'positif',
+        citation: 'Rochant « réinvente le polar familial » dans une Martinique post-drame.',
+        url: 'https://www.nopopcorn.fr/series/bandi-netflix-2026-une-plongee-dans-la-martinique-post-drame-eric-rochant-reinvente-le-polar-familial/' },
+      { media: 'NRJ Antilles',          pays: 'MQ', verdict: 'positif',
+        citation: '« La série Netflix qui change la donne » pour la représentation antillaise.',
+        url: 'https://nrjantilles.com/bandi-la-serie-netflix-qui-change-la-donne/' },
+      { media: 'Decider',               pays: 'US', verdict: 'positif',
+        citation: 'Stream It · « Drame intéressant sur une famille qui essaie de rester soudée. » (Joel Keller)',
+        url: 'https://decider.com' },
+      { media: 'Screen Rant',           pays: 'US', verdict: 'positif',
+        citation: '« Gritty new 8-part crime series taking over streaming worldwide. »',
+        url: 'https://screenrant.com/netflix-bandi-streaming-success-april-2026/' },
+      { media: 'K-waves and Beyond',    pays: 'INT', verdict: 'positif',
+        citation: '« Compelling and Emotional, Even When It Feels Uneven. »',
+        url: 'https://kwavesandbeyond.com/bandi-review/' },
+      { media: 'SensCritique (presse)', pays: 'FR', verdict: 'positif',
+        citation: 'Représentation fidèle de la Martinique, profondeur des thèmes abordés.',
+        url: 'https://www.senscritique.com/serie/bandi/133850632' },
+      { media: 'What\'s on Netflix',    pays: 'INT', verdict: 'mitige',
+        citation: '« Brave and Heartfelt Project Muddled By Various Clichés. » Jeu inégal des nouveaux acteurs.',
+        url: 'https://www.whats-on-netflix.com/what-to-watch/bandi-french-crime-drama-review/' },
+      { media: 'MoviesR.net',           pays: 'INT', verdict: 'mitige',
+        citation: '« Struggles to Balance Crime and Family. » Rythme glacial reproché.',
+        url: 'https://moviesr.net/p-bandi-2026-netflix-series-review-struggles-to-balance-crime-and-family' },
+      { media: 'Fnac Leclaireur',       pays: 'FR', verdict: 'mitige',
+        citation: 'Pose la question : « Bandi est-elle surcotée ? » · synthèse des avis presse.',
+        url: 'https://leclaireur.fnac.com/article/667828-bandi-la-serie-est-elle-surcotee-ce-quen-disent-les-critiques/' }
+    ]
+  },
+
   // Score / rang actuel (16/04/2026) — source FlixPatrol
   // Note : paysN1 et paysTop10 sont recalculés à partir de la liste `pays`
   //        côté app.js (Object.assign après fetch Supabase) — les valeurs

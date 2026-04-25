@@ -28,7 +28,7 @@
 <!-- Leaflet.js pour la carte choroplèthe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<link rel="stylesheet" href="css/styles.css?v=20260424a" />
+<link rel="stylesheet" href="css/styles.css?v=20260424c" />
 
 <!-- Splash screen (inline pour afficher immédiatement, avant tout chargement) -->
 <style>
@@ -926,6 +926,32 @@
       </p>
     </div>
 
+    <!-- ── Réception critique presse (alimenté par BANDI.criticReviews) ── -->
+    <div class="panel critic-reviews-panel" id="criticReviewsPanel" style="display:none">
+      <div class="panel-head">
+        <div>
+          <h3 class="panel-title">Réception critique · presse internationale</h3>
+          <p class="panel-sub" id="criticReviewsSub">Agrégation maison · 12 sources documentées · 24/04/2026</p>
+        </div>
+        <div class="critic-score-badge">
+          <span class="critic-score-num" id="criticScorePct">75%</span>
+          <span class="critic-score-label">avis favorables</span>
+        </div>
+      </div>
+      <div class="critic-stats-row">
+        <span class="critic-stat critic-stat--pos"><strong id="criticPos">9</strong> positifs</span>
+        <span class="critic-stat critic-stat--mid"><strong id="criticMid">3</strong> mitigés</span>
+        <span class="critic-stat critic-stat--neg"><strong id="criticNeg">0</strong> négatifs</span>
+        <span class="critic-stat critic-stat--allo">Note presse Allociné · <strong id="criticAlloNote">3,9 / 5</strong></span>
+      </div>
+      <div class="critic-reviews-list" id="criticReviewsList" role="list">
+        <!-- alimenté par renderCriticReviews() -->
+      </div>
+      <p class="series-stats-source">
+        Compense l'absence de Tomatometer officiel chez Rotten Tomatoes (1 seule critique enregistrée à date — pas assez pour un consensus).
+      </p>
+    </div>
+
     <!-- ── Indice d'authenticité martiniquaise ── -->
     <div class="authenticite-module panel" id="authenticiteModule">
       <div class="auth-header">
@@ -1086,12 +1112,12 @@
 </nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/auth.js?v=20260424a"></script>
-<script src="js/data-fallback.js?v=20260424a"></script>
-<script src="js/config.js?v=20260424a"></script>
-<script src="js/monitoring.js?v=20260424a"></script>
-<script src="js/app.js?v=20260424a"></script>
-<script src="js/health-guard.js?v=20260424a"></script>
+<script src="js/auth.js?v=20260424c"></script>
+<script src="js/data-fallback.js?v=20260424c"></script>
+<script src="js/config.js?v=20260424c"></script>
+<script src="js/monitoring.js?v=20260424c"></script>
+<script src="js/app.js?v=20260424c"></script>
+<script src="js/health-guard.js?v=20260424c"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {

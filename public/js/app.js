@@ -1150,6 +1150,54 @@ function renderSeriesTab() {
     if (lw2.periode)                    setText('launchWeek2Sub',     `${lw2.periode} · Netflix Tudum`);
     if (lw2.source)                     setText('launchW2Source',     lw2.source);
   }
+
+  // Réception critique presse — agrégat maison sur 12+ sources (compense RT vide)
+  renderCriticReviews();
+}
+
+// Rendu de la liste des critiques presse + score agrégé
+function renderCriticReviews() {
+  const cr = BANDI.criticReviews;
+  const panel = document.getElementById('criticReviewsPanel');
+  if (!cr || !panel || !Array.isArray(cr.sources) || cr.sources.length === 0) {
+    if (panel) panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = '';
+
+  const setText = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.textContent = val; };
+  if (cr.scorePct != null) setText('criticScorePct', `${cr.scorePct}%`);
+  if (cr.positifs != null) setText('criticPos', cr.positifs);
+  if (cr.mitiges  != null) setText('criticMid', cr.mitiges);
+  if (cr.negatifs != null) setText('criticNeg', cr.negatifs);
+  if (cr.notePresseAlloMoy != null) {
+    setText('criticAlloNote', `${String(cr.notePresseAlloMoy).replace('.', ',')} / 5`);
+  }
+  if (cr.total != null && cr.fetchedAt) {
+    const dStr = (cr.fetchedAt || '').slice(0, 10).split('-').reverse().join('/');
+    setText('criticReviewsSub', `Agrégation maison · ${cr.total} sources documentées · MAJ ${dStr}`);
+  }
+
+  const VERDICT_BADGE = {
+    positif: { lbl: 'Favorable',   cls: 'critic-verdict--pos' },
+    mitige:  { lbl: 'Mitigé',      cls: 'critic-verdict--mid' },
+    negatif: { lbl: 'Défavorable', cls: 'critic-verdict--neg' }
+  };
+  const list = document.getElementById('criticReviewsList');
+  if (!list) return;
+  list.innerHTML = cr.sources.map(s => {
+    const v = VERDICT_BADGE[s.verdict] || VERDICT_BADGE.mitige;
+    const pays = s.pays || '';
+    const url = escapeHtml(s.url || '#');
+    const media = escapeHtml(s.media || '—');
+    const cit = escapeHtml(s.citation || '');
+    return `
+      <a class="critic-review-row" href="${url}" target="_blank" rel="noopener" role="listitem">
+        <span class="critic-review-media">${media}<span class="critic-review-pays">${pays}</span></span>
+        <span class="critic-review-cit">${cit}</span>
+        <span class="critic-verdict-badge ${v.cls}">${v.lbl}</span>
+      </a>`;
+  }).join('');
 }
 
 // ============ HISTORIQUE 30J ============
@@ -3212,17 +3260,31 @@ function renderMonRatings() {
     const has = val != null;
     const pct = has ? Math.round((val / src.max) * 100) : 0;
     const { label: age, hours } = monTimeAgo(r?.date);
-    const cls = has ? monFreshCls(hours) : 'mon-stale';
-    const votes = fallbackLabel       ? fallbackLabel
-                : r?.votes            ? `${Number(r.votes).toLocaleString('fr-FR')} votes`
-                : r?.reviews_count    ? `${r.reviews_count} critiques`
-                : r?.reviews          ? `${r.reviews} critiques` : '';
-    const ageLabel = fallbackLabel ? 'Rapport 19/04' : (has ? age : 'En attente');
+    // Si la note est absente mais le scraper a tourné (status documenté dans raw),
+    // on préfère un dot neutre + un message explicatif plutôt qu'un faux "Hors-ligne".
+    const rawStatus = r?.raw?.status || null;
+    const hasScraped = !has && (rawStatus === 'no_rating_yet' || rawStatus === 'not_listed_yet');
+    const cls = has ? monFreshCls(hours) : (hasScraped ? 'mon-warn' : 'mon-stale');
+
+    let votes;
+    if (fallbackLabel)         votes = fallbackLabel;
+    else if (rawStatus === 'not_listed_yet') votes = 'Pas encore listé sur la source';
+    else if (rawStatus === 'no_rating_yet')  votes = 'Pas encore assez de critiques';
+    else if (r?.votes)         votes = `${Number(r.votes).toLocaleString('fr-FR')} votes`;
+    else if (r?.reviews_count) votes = `${r.reviews_count} critiques`;
+    else if (r?.reviews)       votes = `${r.reviews} critiques`;
+    else                       votes = '';
+
+    const ageLabel = fallbackLabel ? 'Rapport 19/04'
+                   : has           ? age
+                   : hasScraped    ? 'Vérifié ' + age
+                                   : 'En attente';
+    const valDisplay = has ? val + src.unit : (hasScraped ? '—' : '—');
     return `
       <div class="mon-rating-row">
         <div class="mon-rating-dot ${cls}"></div>
         <span class="mon-rating-name">${src.label}</span>
-        <span class="mon-rating-val ${has ? '' : 'mon-no-data'}">${has ? val + src.unit : '—'}</span>
+        <span class="mon-rating-val ${has ? '' : 'mon-no-data'}">${valDisplay}</span>
         <div class="mon-rating-bar-wrap">
           <div class="mon-rating-bar" style="width:${pct}%;background:${src.color}33;border-right:2px solid ${src.color}99;"></div>
         </div>

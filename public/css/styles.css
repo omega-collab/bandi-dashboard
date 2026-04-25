@@ -1085,6 +1085,102 @@ body::before {
   background-clip: text;
   color: transparent;
 }
+
+/* ── Réception critique presse ───────────────────────────────────────────── */
+.critic-reviews-panel .panel-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap;
+}
+.critic-score-badge {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 12px 22px;
+  background: linear-gradient(135deg, rgba(0,151,57,0.18), rgba(228,184,77,0.10));
+  border: 1px solid rgba(0,151,57,0.35);
+  border-radius: var(--radius);
+  min-width: 130px;
+}
+.critic-score-num {
+  font-family: var(--font-display);
+  font-size: 38px; line-height: 1;
+  color: #4ade80;
+  letter-spacing: 0.02em;
+}
+.critic-score-label {
+  margin-top: 6px;
+  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-sub);
+}
+.critic-stats-row {
+  display: flex; flex-wrap: wrap; gap: 14px 22px;
+  margin: 14px 0 18px;
+  padding: 12px 16px;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  font-size: 13px;
+}
+.critic-stat strong { font-family: var(--font-mono); margin-right: 4px; }
+.critic-stat--pos strong { color: #4ade80; }
+.critic-stat--mid strong { color: #facc15; }
+.critic-stat--neg strong { color: #f87171; }
+.critic-stat--allo { margin-left: auto; color: var(--text-sub); }
+
+.critic-reviews-list {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.critic-review-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: var(--text);
+  transition: transform var(--dur-fast) var(--ease), border-left-color var(--dur-fast) var(--ease);
+}
+.critic-review-row:hover {
+  transform: translateX(2px);
+  border-left-color: var(--gold);
+}
+.critic-review-media {
+  font-weight: 600;
+  font-size: 13px;
+  display: flex; align-items: center; gap: 8px;
+}
+.critic-review-pays {
+  font-family: var(--font-mono); font-size: 10px;
+  padding: 2px 6px;
+  background: var(--surface-3);
+  border-radius: 4px;
+  color: var(--text-sub);
+  letter-spacing: 0.04em;
+}
+.critic-review-cit {
+  font-size: 13px; line-height: 1.45; color: var(--text-sub);
+}
+.critic-verdict-badge {
+  font-family: var(--font-mono); font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  white-space: nowrap;
+}
+.critic-verdict--pos { background: rgba(74,222,128,0.15); color: #4ade80; border: 1px solid rgba(74,222,128,0.35); }
+.critic-verdict--mid { background: rgba(250,204,21,0.15); color: #facc15; border: 1px solid rgba(250,204,21,0.35); }
+.critic-verdict--neg { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.35); }
+
+@media (max-width: 720px) {
+  .critic-review-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .critic-verdict-badge { justify-self: start; }
+  .critic-stat--allo { margin-left: 0; }
+}
 .series-stats-grid .stat-num {
   font-family: var(--font-display);
   font-size: 40px; font-weight: 400;
