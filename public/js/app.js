@@ -3212,17 +3212,31 @@ function renderMonRatings() {
     const has = val != null;
     const pct = has ? Math.round((val / src.max) * 100) : 0;
     const { label: age, hours } = monTimeAgo(r?.date);
-    const cls = has ? monFreshCls(hours) : 'mon-stale';
-    const votes = fallbackLabel       ? fallbackLabel
-                : r?.votes            ? `${Number(r.votes).toLocaleString('fr-FR')} votes`
-                : r?.reviews_count    ? `${r.reviews_count} critiques`
-                : r?.reviews          ? `${r.reviews} critiques` : '';
-    const ageLabel = fallbackLabel ? 'Rapport 19/04' : (has ? age : 'En attente');
+    // Si la note est absente mais le scraper a tourné (status documenté dans raw),
+    // on préfère un dot neutre + un message explicatif plutôt qu'un faux "Hors-ligne".
+    const rawStatus = r?.raw?.status || null;
+    const hasScraped = !has && (rawStatus === 'no_rating_yet' || rawStatus === 'not_listed_yet');
+    const cls = has ? monFreshCls(hours) : (hasScraped ? 'mon-warn' : 'mon-stale');
+
+    let votes;
+    if (fallbackLabel)         votes = fallbackLabel;
+    else if (rawStatus === 'not_listed_yet') votes = 'Pas encore listé sur la source';
+    else if (rawStatus === 'no_rating_yet')  votes = 'Pas encore assez de critiques';
+    else if (r?.votes)         votes = `${Number(r.votes).toLocaleString('fr-FR')} votes`;
+    else if (r?.reviews_count) votes = `${r.reviews_count} critiques`;
+    else if (r?.reviews)       votes = `${r.reviews} critiques`;
+    else                       votes = '';
+
+    const ageLabel = fallbackLabel ? 'Rapport 19/04'
+                   : has           ? age
+                   : hasScraped    ? 'Vérifié ' + age
+                                   : 'En attente';
+    const valDisplay = has ? val + src.unit : (hasScraped ? '—' : '—');
     return `
       <div class="mon-rating-row">
         <div class="mon-rating-dot ${cls}"></div>
         <span class="mon-rating-name">${src.label}</span>
-        <span class="mon-rating-val ${has ? '' : 'mon-no-data'}">${has ? val + src.unit : '—'}</span>
+        <span class="mon-rating-val ${has ? '' : 'mon-no-data'}">${valDisplay}</span>
         <div class="mon-rating-bar-wrap">
           <div class="mon-rating-bar" style="width:${pct}%;background:${src.color}33;border-right:2px solid ${src.color}99;"></div>
         </div>

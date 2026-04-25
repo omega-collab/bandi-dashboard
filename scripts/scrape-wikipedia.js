@@ -24,10 +24,14 @@ const supabase = createClient(
 );
 
 // Liste des articles à suivre (project + titre normalisé)
+// L'article FR a été créé sous "Bandi (série)" — on garde les variantes
+// historiques en fallback au cas où Wikipedia renomme la page.
 const ARTICLES = [
+  { project: 'fr.wikipedia', article: 'Bandi_(série)' },
   { project: 'fr.wikipedia', article: 'Bandi_(série_télévisée)' },
   { project: 'fr.wikipedia', article: 'Bandi_(2026)' },
-  { project: 'en.wikipedia', article: 'Bandi_(TV_series)' }
+  { project: 'en.wikipedia', article: 'Bandi_(TV_series)' },
+  { project: 'en.wikipedia', article: 'Bandi_(2026_TV_series)' }
 ];
 
 const HEADERS = {
