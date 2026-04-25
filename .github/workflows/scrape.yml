@@ -34,7 +34,8 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: node scripts/scraper-tudum.mjs
+        run: node scripts/scrape-tudum.js
+        continue-on-error: true
 
       # I2 (audit) : validation post-scrape — fail le workflow si la DB
       # ne contient PAS le snapshot du jour. Évite les workflows verts

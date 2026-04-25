@@ -299,13 +299,19 @@ async function main() {
     return;
   }
 
+  // Bump fetched_at pour tracer la fraîcheur côté monitoring dashboard,
+  // et laisse merge-duplicates rafraîchir description / image_url / tone
+  // (GDELT enrichit parfois un article déjà connu via Google News).
+  const now = new Date().toISOString();
+  for (const a of unique) a.fetched_at = now;
+
   // Upsert par batch de 50
   let inserted = 0, errors = 0;
   for (let i = 0; i < unique.length; i += 50) {
     const batch = unique.slice(i, i + 50);
     const { error } = await supabase
       .from('buzz_articles')
-      .upsert(batch, { onConflict: 'url', ignoreDuplicates: true });
+      .upsert(batch, { onConflict: 'url', ignoreDuplicates: false });
     if (error) { console.warn(`  ⚠️ Batch ${i / 50 + 1} error : ${error.message}`); errors++; }
     else inserted += batch.length;
   }

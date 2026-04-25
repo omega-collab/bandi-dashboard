@@ -1115,17 +1115,17 @@ function renderSeriesTab() {
   const slEl = document.getElementById('scenaristesLocaux');
   if (slEl && Array.isArray(sl) && sl.length) slEl.textContent = sl.join(' · ');
 
-  // Lancement mondial — semaine 1 (rapport Gemini 19/04/2026)
+  // Lancement mondial — semaine 1 (Netflix Tudum officiel, complété Gemini 19/04)
+  const setText = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.textContent = val; };
   const lw = BANDI.launchWeek;
   const lwPanel = document.getElementById('launchWeekPanel');
   if (lw && lwPanel) {
-    const setText = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.textContent = val; };
     if (lw.vuesMillions    != null) setText('launchVues',    `${String(lw.vuesMillions).replace('.', ',')} M`);
     if (lw.heuresMillions  != null) setText('launchHeures',  `${String(lw.heuresMillions).replace('.', ',')} M`);
     if (lw.paysTop10       != null) setText('launchPays',    lw.paysTop10);
     if (lw.peakNonEnglish  != null) setText('launchPeak',    `#${lw.peakNonEnglish}`);
     if (lw.entreeNonEnglish!= null) setText('launchEntree',  `#${lw.entreeNonEnglish}`);
-    if (lw.periode)                 setText('launchWeekSub', `${lw.periode} · Netflix Global Top 10`);
+    if (lw.periode)                 setText('launchWeekSub', `${lw.periode} · Netflix Tudum`);
     if (lw.source)                  setText('launchSource',  lw.source);
     const imdb = BANDI.imdbPerEpisode;
     if (imdb && imdb.min != null && imdb.max != null) {
@@ -1134,6 +1134,21 @@ function renderSeriesTab() {
     if (BANDI.viralHashtag) setText('launchHashtag', BANDI.viralHashtag);
   } else if (lwPanel) {
     lwPanel.style.display = 'none';
+  }
+
+  // Lancement mondial — semaine 2 (Tudum officiel, source : top-10-april-13-2026)
+  const lw2 = BANDI.launchWeek2;
+  const lw2Panel = document.getElementById('launchWeek2Panel');
+  if (lw2 && lw2Panel) {
+    lw2Panel.style.display = '';
+    if (lw2.rangNonEnglish     != null) setText('launchW2Rang',       `#${lw2.rangNonEnglish}`);
+    if (lw2.vuesMillions       != null) setText('launchW2Vues',       `${String(lw2.vuesMillions).replace('.', ',')} M`);
+    if (lw2.croissanceHeuresPct!= null) setText('launchW2Croissance', `+${lw2.croissanceHeuresPct} %`);
+    if (lw2.paysN1             != null) setText('launchW2PaysN1',     lw2.paysN1);
+    if (lw2.paysTop10          != null) setText('launchW2Pays',       lw2.paysTop10);
+    if (lw2.rangMondeTous      != null) setText('launchW2Global',     `#${lw2.rangMondeTous}`);
+    if (lw2.periode)                    setText('launchWeek2Sub',     `${lw2.periode} · Netflix Tudum`);
+    if (lw2.source)                     setText('launchW2Source',     lw2.source);
   }
 }
 

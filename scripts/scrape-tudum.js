@@ -119,16 +119,15 @@ async function main() {
   const weekStart = getLatestWeekStart();
   console.log(`📅 Semaine ciblée : ${weekStart} → ${weekEnd(weekStart)}`);
 
-  // Vérifie si les données de cette semaine existent déjà
+  // Check si déjà présent — sert juste à logger (on laisse l'upsert rafraîchir
+  // les chiffres car Netflix corrige parfois heures/vues post-publication).
   const { data: existing } = await supabase
     .from('tudum_global_weekly')
     .select('id')
     .eq('week_start', weekStart)
     .limit(1);
-
   if (existing && existing.length > 0) {
-    console.log('⏭️  Données déjà présentes pour cette semaine, skip.');
-    return;
+    console.log('ℹ️  Données déjà présentes pour cette semaine — refresh (Netflix corrige parfois)');
   }
 
   try {
@@ -138,7 +137,7 @@ async function main() {
 
     const { error } = await supabase
       .from('tudum_global_weekly')
-      .upsert(rows, { onConflict: 'week_start,categorie,rang' });
+      .upsert(rows, { onConflict: 'week_start,categorie,rang', ignoreDuplicates: false });
     if (error) throw error;
 
     // Résumé
