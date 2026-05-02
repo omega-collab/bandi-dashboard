@@ -3031,3 +3031,254 @@ button, .tab, .bnav-item, .region-btn, .country-row, .kpi-card, .highlight, .buz
 /* Utilitaires */
 .mon-empty         { color: var(--dim); font-size: 13px; padding: 16px 0; }
 .mon-loading-inline { color: var(--muted); font-size: 13px; padding: 12px 0; }
+
+/* ============================================================
+   CHANTIER B · Hub d'info temps réel (mockup v2 → live)
+   ============================================================ */
+
+/* ─── Strip "HUB EN DIRECT" sous le header ─── */
+.hub-strip {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0;
+  position: relative;
+  overflow: hidden;
+}
+.hub-strip::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0.45;
+}
+.hub-strip-inner {
+  max-width: 1400px; margin: 0 auto;
+  padding: 0 24px;
+  display: flex; align-items: center; gap: 24px;
+  flex-wrap: wrap;
+}
+.hub-tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 12px;
+  background: var(--rouge-soft);
+  border: 1px solid var(--rouge);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 0.18em;
+  color: var(--rouge); font-weight: 700;
+}
+.hub-tag .live-dot {
+  width: 6px; height: 6px;
+  background: var(--rouge);
+  border-radius: 50%;
+  animation: hubPulse 1.4s infinite ease-in-out;
+}
+@keyframes hubPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.7; }
+}
+.hub-kpis {
+  display: flex; gap: 28px;
+  margin-left: auto;
+}
+.hub-kpi {
+  display: flex; flex-direction: column;
+  border-left: 2px solid var(--border);
+  padding-left: 14px;
+}
+.hub-kpi strong {
+  font-family: var(--font-display);
+  font-size: 22px; line-height: 1;
+  color: var(--gold);
+  letter-spacing: 0.02em;
+}
+.hub-kpi span {
+  font-family: var(--font-mono);
+  font-size: 9px; letter-spacing: 0.12em;
+  color: var(--text-dim, #777);
+  text-transform: uppercase;
+  margin-top: 5px;
+}
+@media (max-width: 720px) {
+  .hub-kpis { display: none; }
+}
+
+/* ─── BENTO "À LA UNE" ─── */
+.bento {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 14px;
+}
+.bento-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: transform var(--dur, 200ms) var(--ease),
+              border-color var(--dur, 200ms) var(--ease),
+              box-shadow var(--dur, 200ms) var(--ease);
+  position: relative;
+  display: flex; flex-direction: column;
+}
+.bento-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--gold);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
+.bento-hero { grid-row: span 2; }
+.bento-hero-img {
+  aspect-ratio: 16/10;
+  background-size: cover; background-position: center;
+  background-color: var(--surface-2);
+  position: relative;
+}
+.bento-hero-img::before {
+  content: 'À LA UNE';
+  position: absolute; top: 14px; left: 14px;
+  padding: 5px 11px;
+  background: var(--rouge);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.18em;
+  border-radius: var(--radius-sm);
+}
+.bento-hero-body {
+  padding: 22px 24px 24px;
+  flex: 1;
+  display: flex; flex-direction: column;
+}
+.bento-source {
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 0.14em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap;
+}
+.bento-title {
+  font-family: var(--font-display);
+  font-size: 24px; line-height: 1.1;
+  margin: 0 0 12px;
+  letter-spacing: 0.01em;
+  color: var(--text);
+}
+.bento-excerpt {
+  color: var(--text-sub, #aaa);
+  font-size: 14px; line-height: 1.55;
+  margin: 0;
+}
+.bento-meta {
+  margin-top: auto;
+  padding-top: 14px;
+  display: flex; gap: 14px; flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim, #777);
+}
+.bento-side { padding: 16px; }
+.bento-side .bento-source { margin-bottom: 8px; font-size: 9px; }
+.bento-side .bento-title { font-size: 15px; line-height: 1.25; margin-bottom: 8px; }
+.bento-side .bento-meta { font-size: 10px; padding-top: 10px; }
+.bento-thumb {
+  aspect-ratio: 16/9;
+  background-size: cover; background-position: center;
+  margin: -16px -16px 12px;
+  background-color: var(--surface-2);
+}
+@media (max-width: 900px) {
+  .bento { grid-template-columns: 1fr; }
+  .bento-hero { grid-row: span 1; }
+}
+
+/* ─── Type pills (presse / social / vidéo / local) ─── */
+.type-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 9px; letter-spacing: 0.14em;
+  text-transform: uppercase; font-weight: 700;
+}
+.type-pill.press   { background: var(--gold-soft);  color: var(--gold);  border: 1px solid rgba(228,184,77,0.3); }
+.type-pill.social  { background: var(--vert-soft);  color: var(--vert);  border: 1px solid rgba(0,151,57,0.3); }
+.type-pill.video   { background: var(--rouge-soft); color: var(--rouge); border: 1px solid rgba(206,17,38,0.3); }
+.type-pill.local   { background: rgba(212,160,23,0.12); color: #D4A017; border: 1px solid rgba(212,160,23,0.3); }
+
+/* ─── Mur d'images masonry ─── */
+.wall {
+  columns: 4 280px;
+  column-gap: 12px;
+}
+.wall-item {
+  break-inside: avoid;
+  margin-bottom: 12px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: transform var(--dur, 200ms) var(--ease),
+              border-color var(--dur, 200ms) var(--ease);
+}
+.wall-item:hover {
+  transform: scale(1.02);
+  border-color: var(--gold);
+}
+.wall-item img {
+  width: 100%; display: block;
+  aspect-ratio: var(--ar, 4/3);
+  object-fit: cover;
+}
+.wall-overlay {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 14px 14px 12px;
+  background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.85) 60%, rgba(0,0,0,0.95) 100%);
+}
+.wall-overlay .wo-source {
+  font-family: var(--font-mono);
+  font-size: 9px; letter-spacing: 0.14em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.wall-overlay .wo-title {
+  font-size: 13px; line-height: 1.3;
+  color: #fff; font-weight: 600;
+}
+.wall-corner {
+  position: absolute; top: 10px; left: 10px;
+  z-index: 2;
+}
+
+/* ─── Reload bar (notif fixe bas-droite) ─── */
+.reload-bar {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  background: var(--surface-2);
+  border: 1px solid var(--vert);
+  padding: 10px 18px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--vert);
+  display: flex; align-items: center; gap: 10px;
+  z-index: 60;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: background var(--dur, 200ms) var(--ease);
+}
+.reload-bar:hover { background: var(--surface-3); }
+.reload-bar .live-dot {
+  width: 8px; height: 8px;
+  background: var(--vert);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(0,151,57,0.7);
+  animation: hubPulse 1.4s infinite;
+}

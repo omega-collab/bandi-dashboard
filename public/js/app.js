@@ -2054,6 +2054,140 @@ function renderBuzzTimeline() {
   const nextBtn = $('buzzNext');
   if (prevBtn) prevBtn.disabled = buzzPage === 0;
   if (nextBtn) nextBtn.disabled = buzzPage >= totalPages - 1;
+
+  // Chantier B : alimente "À la une" et "Le mur" depuis les vraies data Buzz
+  try { renderBuzzALaUne(); } catch (e) { console.warn('[Buzz] À la une:', e); }
+  try { renderBuzzWall();   } catch (e) { console.warn('[Buzz] Le mur:', e); }
+}
+
+// ─── Chantier B · Bento "À la une" + Le mur ────────────────────────────────
+// Sélectionne automatiquement les contenus les plus engageants des 24h
+// pour le bento "À la une", et alimente le mur d'images avec les images
+// disponibles. Sources : tableau buzzAllItems (déjà fetch + dédupé).
+function buzzPlatformPill(item) {
+  // Type-pill harmonisé avec les classes CSS du chantier B (.type-pill .press/.social/.video/.local)
+  if (item.itemType === 'social') {
+    if (item.platform === 'youtube') return { cls: 'video',  icon: '🎥', label: item.source || 'YouTube' };
+    if (item.platform === 'reddit')  return { cls: 'social', icon: '💬', label: 'Reddit' + (item.source ? ' · ' + item.source : '') };
+    if (item.platform === 'bluesky') return { cls: 'social', icon: '🦋', label: 'Bluesky' };
+    if (item.platform === 'instagram') return { cls: 'social', icon: '📸', label: 'Instagram' };
+    return { cls: 'social', icon: '💬', label: item.source || item.platform };
+  }
+  if (item.sourceType === 'local') return { cls: 'local', icon: '🇲🇶', label: item.source || 'Local' };
+  return { cls: 'press', icon: '📰', label: item.source || 'Presse' };
+}
+
+function buzzScoreEngagement(item) {
+  // Score composite simple : engagement brut + bonus fraîcheur (<24h) + bonus thumbnail
+  const ageH = (Date.now() - item.publishedAt.getTime()) / 3600000;
+  const fresh = ageH < 24 ? 200 : ageH < 72 ? 80 : 0;
+  const eng = Number(item.engagement || 0);
+  const thumb = item.thumbnail ? 50 : 0;
+  return eng + fresh + thumb;
+}
+
+function renderBuzzALaUne() {
+  const panel = document.getElementById('buzzALaUnePanel');
+  const bento = document.getElementById('buzzALaUneBento');
+  if (!panel || !bento) return;
+  if (!buzzAllItems.length) { panel.style.display = 'none'; return; }
+
+  // Top 5 par engagement composite
+  const top = [...buzzAllItems]
+    .sort((a, b) => buzzScoreEngagement(b) - buzzScoreEngagement(a))
+    .slice(0, 5);
+  if (!top.length) { panel.style.display = 'none'; return; }
+
+  const [hero, ...sides] = top;
+  const heroPill = buzzPlatformPill(hero);
+  const heroThumb = hero.thumbnail ? escapeHtml(hero.thumbnail) : '';
+  const heroAge = timeAgo(hero.publishedAt);
+  const heroExcerpt = hero.excerpt ? escapeHtml(hero.excerpt.slice(0, 180)) + (hero.excerpt.length > 180 ? '…' : '') : '';
+
+  let html = `
+    <a class="bento-card bento-hero" href="${escapeHtml(hero.url || '#')}" target="_blank" rel="noopener">
+      <div class="bento-hero-img" ${heroThumb ? `style="background-image:url('${heroThumb}');"` : ''}></div>
+      <div class="bento-hero-body">
+        <div class="bento-source">
+          <span class="type-pill ${heroPill.cls}">${heroPill.icon} ${escapeHtml(heroPill.label)}</span>
+          <span>· ${heroAge}</span>
+        </div>
+        <h3 class="bento-title">${escapeHtml((hero.title || '').slice(0, 140))}${(hero.title || '').length > 140 ? '…' : ''}</h3>
+        ${heroExcerpt ? `<p class="bento-excerpt">${heroExcerpt}</p>` : ''}
+        <div class="bento-meta">
+          ${hero.engagement ? `<span>${ENGAGE_ICONS[hero.platform] || '📈'} ${fmtEngagement(hero.engagement)}</span>` : ''}
+          <span>· ${escapeHtml(hero.source || '')}</span>
+        </div>
+      </div>
+    </a>
+  `;
+
+  for (const item of sides) {
+    const pill = buzzPlatformPill(item);
+    const thumb = item.thumbnail ? escapeHtml(item.thumbnail) : null;
+    const age = timeAgo(item.publishedAt);
+    html += `
+      <a class="bento-card bento-side" href="${escapeHtml(item.url || '#')}" target="_blank" rel="noopener">
+        ${thumb ? `<div class="bento-thumb" style="background-image:url('${thumb}');"></div>` : ''}
+        <div class="bento-source">
+          <span class="type-pill ${pill.cls}">${pill.icon} ${escapeHtml(pill.label)}</span>
+        </div>
+        <h3 class="bento-title">${escapeHtml((item.title || '').slice(0, 90))}${(item.title || '').length > 90 ? '…' : ''}</h3>
+        <div class="bento-meta">
+          <span>${age}</span>
+          ${item.engagement ? `<span>· ${fmtEngagement(item.engagement)}</span>` : ''}
+        </div>
+      </a>
+    `;
+  }
+
+  bento.innerHTML = html;
+  panel.style.display = '';
+  const maj = document.getElementById('buzzALaUneMaj');
+  if (maj) {
+    const d = new Date();
+    maj.textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+}
+
+function renderBuzzWall() {
+  const panel = document.getElementById('buzzWallPanel');
+  const list  = document.getElementById('buzzWallList');
+  const newCount = document.getElementById('buzzWallNew');
+  if (!panel || !list) return;
+
+  // Items avec thumbnails uniquement, triés par fraîcheur, top 24
+  const withThumbs = buzzAllItems
+    .filter(i => i.thumbnail)
+    .sort((a, b) => b.publishedAt - a.publishedAt)
+    .slice(0, 24);
+
+  if (!withThumbs.length) { panel.style.display = 'none'; return; }
+
+  // Aspect ratios variés pour le masonry visuel
+  const ratios = ['3/4', '1/1', '4/3', '4/5', '2/3', '3/4', '1/1', '4/3'];
+
+  list.innerHTML = withThumbs.map((item, idx) => {
+    const pill = buzzPlatformPill(item);
+    const ar = ratios[idx % ratios.length];
+    const eng = item.engagement ? `· ${fmtEngagement(item.engagement)}` : '';
+    return `
+      <a class="wall-item" style="--ar: ${ar}" href="${escapeHtml(item.url || '#')}" target="_blank" rel="noopener">
+        <div class="wall-corner"><span class="type-pill ${pill.cls}">${pill.icon} ${escapeHtml(pill.label)}</span></div>
+        <img src="${escapeHtml(item.thumbnail)}" alt="" loading="lazy" decoding="async" onerror="this.parentElement.remove()">
+        <div class="wall-overlay">
+          <div class="wo-source">${escapeHtml(item.source || '')} ${eng} · ${timeAgo(item.publishedAt)}</div>
+          <div class="wo-title">${escapeHtml((item.title || '').slice(0, 100))}${(item.title || '').length > 100 ? '…' : ''}</div>
+        </div>
+      </a>
+    `;
+  }).join('');
+
+  if (newCount) {
+    const recent = buzzAllItems.filter(i => (Date.now() - i.publishedAt.getTime()) < 24 * 3600000).length;
+    newCount.textContent = recent;
+  }
+  panel.style.display = '';
 }
 
 // Reset complet des filtres Buzz (utilisé par le bouton vide + bouton dédié)

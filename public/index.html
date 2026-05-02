@@ -28,7 +28,7 @@
 <!-- Leaflet.js pour la carte choroplèthe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<link rel="stylesheet" href="css/styles.css?v=20260502b" />
+<link rel="stylesheet" href="css/styles.css?v=20260502c" />
 
 <!-- Splash screen (inline pour afficher immédiatement, avant tout chargement) -->
 <style>
@@ -130,48 +130,71 @@
     </div>
   </div>
 
-  <!-- Onglets -->
+  <!-- Onglets — Buzz devient l'accueil par défaut (chantier B repositionnement) -->
   <nav class="tabs">
-    <button class="tab active" data-tab="overview">
+    <button class="tab active" data-tab="buzz">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Buzz
+    </button>
+    <button class="tab" data-tab="overview">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 12l4-4 4 4 5-5"/></svg>
       Vue d'ensemble
-    </button>
-    <button class="tab" data-tab="monitoring">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-      Monitoring
-    </button>
-    <button class="tab" data-tab="countries">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
-      Pays (<span id="tabCountCountries">—</span>)
     </button>
     <button class="tab" data-tab="rivals">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
       Concurrence
     </button>
-    <button class="tab" data-tab="buzz">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      Buzz
-    </button>
-    <button class="tab" data-tab="series">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
-      Fiche série
+    <button class="tab" data-tab="countries">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
+      Pays (<span id="tabCountCountries">—</span>)
     </button>
     <button class="tab" data-tab="history">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 2 5-5"/></svg>
       Historique
     </button>
+    <button class="tab" data-tab="series">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+      Fiche série
+    </button>
     <button class="tab" data-tab="map">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
       Carte
     </button>
+    <button class="tab" data-tab="monitoring">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      Monitoring
+    </button>
   </nav>
 </header>
+
+<!-- Strip "HUB EN DIRECT" — présent sur tous les onglets, repositionnement
+     de la marque vers un hub d'info temps réel (chantier B). Les KPIs sont
+     statiques pour l'instant — alimentation dynamique à venir. -->
+<div class="hub-strip">
+  <div class="hub-strip-inner">
+    <span class="hub-tag"><span class="live-dot"></span>HUB EN DIRECT · PRESSE + RÉSEAUX SOCIAUX</span>
+    <div class="hub-kpis">
+      <div class="hub-kpi">
+        <strong id="hubKpiHeures">71,4 M</strong>
+        <span>heures cumul</span>
+      </div>
+      <div class="hub-kpi">
+        <strong id="hubKpiSem">3</strong>
+        <span>sem. top 10</span>
+      </div>
+      <div class="hub-kpi">
+        <strong id="hubKpiAvis">75 %</strong>
+        <span>avis favorables</span>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ================== MAIN ================== -->
 <main class="container">
 
   <!-- ============ TAB: OVERVIEW ============ -->
-  <section class="tab-panel active" id="panel-overview">
+  <section class="tab-panel" id="panel-overview">
 
     <!-- Bannière "data stale" — affichée par health-guard.js si fallback actif -->
     <div id="hgStaleBanner" class="hg-stale-banner" hidden>
@@ -529,7 +552,7 @@
   </section>
 
   <!-- ============ TAB: BUZZ ============ -->
-  <section class="tab-panel" id="panel-buzz" aria-label="Buzz & Veille Bandi">
+  <section class="tab-panel active" id="panel-buzz" aria-label="Buzz & Veille Bandi">
 
     <!-- Header résumé -->
     <div class="panel">
@@ -545,6 +568,38 @@
           <span class="buzz-stat-sep">·</span>
           <span id="buzzResultCount" class="buzz-stat-result">— résultats</span>
         </div>
+      </div>
+    </div>
+
+    <!-- ÀLA UNE — bento "headline + cards latérales", alimenté par renderBuzzALaUne() -->
+    <div class="panel" id="buzzALaUnePanel" style="display:none">
+      <div class="panel-head">
+        <div>
+          <h2>À la une</h2>
+          <p class="panel-sub">Sélection automatique des 5 contenus les plus engageants des dernières 24 h · auto-refresh 30 s</p>
+        </div>
+        <p class="panel-sub" style="font-family: var(--font-mono); font-size: 10px;">
+          MAJ <span id="buzzALaUneMaj">—</span>
+        </p>
+      </div>
+      <div class="bento" id="buzzALaUneBento">
+        <!-- alimenté dynamiquement par renderBuzzALaUne() · 1 grosse Une + 4 cards latérales -->
+      </div>
+    </div>
+
+    <!-- LE MUR — masonry, alimenté par renderBuzzWall() -->
+    <div class="panel" id="buzzWallPanel" style="display:none">
+      <div class="panel-head">
+        <div>
+          <h2>Le mur</h2>
+          <p class="panel-sub">Tout ce qui sort sur Bandi · presse + sociaux + extraits vidéos · scroll continu</p>
+        </div>
+        <p class="panel-sub" style="font-family: var(--font-mono); font-size: 10px;">
+          <span id="buzzWallNew">—</span> items récents
+        </p>
+      </div>
+      <div class="wall" id="buzzWallList">
+        <!-- alimenté dynamiquement par renderBuzzWall() -->
       </div>
     </div>
 
@@ -1149,12 +1204,12 @@
 </nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/auth.js?v=20260502b"></script>
-<script src="js/data-fallback.js?v=20260502b"></script>
-<script src="js/config.js?v=20260502b"></script>
-<script src="js/monitoring.js?v=20260502b"></script>
-<script src="js/app.js?v=20260502b"></script>
-<script src="js/health-guard.js?v=20260502b"></script>
+<script src="js/auth.js?v=20260502c"></script>
+<script src="js/data-fallback.js?v=20260502c"></script>
+<script src="js/config.js?v=20260502c"></script>
+<script src="js/monitoring.js?v=20260502c"></script>
+<script src="js/app.js?v=20260502c"></script>
+<script src="js/health-guard.js?v=20260502c"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {
