@@ -70,7 +70,33 @@ const BANDI = {
     source: 'Netflix Tudum · Top 10 officiel'
   },
 
+  // Cumul 3 semaines au Top 10 mondial (sources whats-on-netflix.com + Tudum)
+  // Bandi détrôné par Sold Out on You (KR, 4.7M vues) en S3 (20-26/04/2026)
+  // S3 : ~1.9M vues / ~14.7M heures estimées (calcul cumul - S1 - S2)
+  cumulTudum: {
+    semainesTop10: 3,
+    heuresMillions: 71.4,
+    vuesMillions: 9.2,
+    semaine3: {
+      rangNonEnglishEstim: 5,     // estimation ; Sold Out #1, Ronaldinho #2
+      vuesMillionsEstim: 1.9,
+      heuresMillionsEstim: 14.7,
+      periode: '20–26/04/2026',
+      detroneePar: 'Sold Out on You (K-drama, 4.7M vues)'
+    },
+    source: 'Netflix Tudum + What\'s on Netflix · cumul 3 semaines',
+    fetchedAt: '2026-05-02'
+  },
+
+  // IMDb : note série consolidée (mai 2026)
+  // L'aggregateRating série est désormais publié — plus besoin du fallback per-épisode
+  // qui faisait sens à la sortie (8.7-8.9 par ép.). La note série globale est plus
+  // sévère car elle pondère les épisodes par nombre de votes (la 1re tendance, plus
+  // de votes, dominent). Voir aussi screenrant.com 6.2/10.
+  imdbCurrent: { rating: 6.2, max: 10 },
+
   // Plage de notes IMDb par épisode (S1) — rapport Gemini 19/04/2026
+  // Conservé pour le contexte historique (pic d'enthousiasme à la sortie)
   imdbPerEpisode: { min: 8.7, max: 8.9 },
 
   // Hashtag viral identifié — TikTok / X
@@ -81,13 +107,16 @@ const BANDI = {
   // (RT n'a qu'1 critique seule = pas assez pour un score consensus).
   // Verdict : 'positif' | 'mitige' | 'negatif' — agrégation maison.
   criticReviews: {
-    fetchedAt: '2026-04-24',
+    fetchedAt: '2026-05-02',
     total: 12,
     positifs: 9,
     mitiges: 3,
     negatifs: 0,
     scorePct: 75,           // 9/12 = 75 % critiques favorables
-    notePresseAlloMoy: 3.9, // note presse Allociné (sur 5)
+    notePresseAlloMoy: 3.9, // note presse Allociné (sur 5) — base 7 critiques (à jour 02/05)
+    notePresseAlloN: 7,     // nb critiques presse Allociné
+    noteSpectAlloMoy: 4.0,  // note spectateurs Allociné
+    noteSpectAlloN: 284,    // nb notes spectateurs (avec 83 critiques rédigées)
     sources: [
       { media: 'Le Parisien',           pays: 'FR', verdict: 'positif',
         citation: '« Thriller social intense », tensions familiales et sociales brillamment captées.',

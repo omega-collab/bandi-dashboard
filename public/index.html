@@ -28,7 +28,7 @@
 <!-- Leaflet.js pour la carte choroplèthe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<link rel="stylesheet" href="css/styles.css?v=20260424c" />
+<link rel="stylesheet" href="css/styles.css?v=20260502a" />
 
 <!-- Splash screen (inline pour afficher immédiatement, avant tout chargement) -->
 <style>
@@ -926,6 +926,35 @@
       </p>
     </div>
 
+    <!-- ── Cumul Top 10 mondial (alimenté par BANDI.cumulTudum) ── -->
+    <div class="panel series-stats-panel" id="cumulTudumPanel" style="display:none">
+      <div class="panel-head">
+        <h3 class="panel-title">Cumul Top 10 mondial</h3>
+        <span class="panel-sub" id="cumulTudumSub">3 semaines · Netflix Tudum + What's on Netflix</span>
+      </div>
+      <div class="series-stats-grid">
+        <div class="stat-card">
+          <span class="stat-num" id="cumulSemaines">3</span>
+          <span class="stat-label">semaines au Top 10<br/><small>monde · non-English</small></span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num" id="cumulVues">9,2 M</span>
+          <span class="stat-label">vues complètes<br/><small>cumul S1 + S2 + S3</small></span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num" id="cumulHeures">71,4 M</span>
+          <span class="stat-label">heures visionnées<br/><small>cumul 3 semaines</small></span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num" id="cumulW3Rang">≈ #5</span>
+          <span class="stat-label">rang semaine 3<br/><small id="cumulW3Detrone">détrôné par Sold Out on You</small></span>
+        </div>
+      </div>
+      <p class="series-stats-source">
+        Source : <span id="cumulTudumSource">Netflix Tudum + What's on Netflix · cumul 3 semaines</span>
+      </p>
+    </div>
+
     <!-- ── Réception critique presse (alimenté par BANDI.criticReviews) ── -->
     <div class="panel critic-reviews-panel" id="criticReviewsPanel" style="display:none">
       <div class="panel-head">
@@ -942,7 +971,8 @@
         <span class="critic-stat critic-stat--pos"><strong id="criticPos">9</strong> positifs</span>
         <span class="critic-stat critic-stat--mid"><strong id="criticMid">3</strong> mitigés</span>
         <span class="critic-stat critic-stat--neg"><strong id="criticNeg">0</strong> négatifs</span>
-        <span class="critic-stat critic-stat--allo">Note presse Allociné · <strong id="criticAlloNote">3,9 / 5</strong></span>
+        <span class="critic-stat critic-stat--allo">Allociné Presse · <strong id="criticAlloNote">3,9 / 5</strong> <small id="criticAlloN">(7 critiques)</small></span>
+        <span class="critic-stat critic-stat--allo">Allociné Public · <strong id="criticSpectNote">4,0 / 5</strong> <small id="criticSpectN">(284 votes)</small></span>
       </div>
       <div class="critic-reviews-list" id="criticReviewsList" role="list">
         <!-- alimenté par renderCriticReviews() -->
@@ -1112,12 +1142,12 @@
 </nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/auth.js?v=20260424c"></script>
-<script src="js/data-fallback.js?v=20260424c"></script>
-<script src="js/config.js?v=20260424c"></script>
-<script src="js/monitoring.js?v=20260424c"></script>
-<script src="js/app.js?v=20260424c"></script>
-<script src="js/health-guard.js?v=20260424c"></script>
+<script src="js/auth.js?v=20260502a"></script>
+<script src="js/data-fallback.js?v=20260502a"></script>
+<script src="js/config.js?v=20260502a"></script>
+<script src="js/monitoring.js?v=20260502a"></script>
+<script src="js/app.js?v=20260502a"></script>
+<script src="js/health-guard.js?v=20260502a"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {
