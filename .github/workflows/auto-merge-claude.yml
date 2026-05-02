@@ -1,0 +1,78 @@
+name: Auto-merge Claude branches to master
+
+# Déclenchement : tout push sur une branche `claude/*` ouvre (ou met à jour) une PR
+# vers master, puis la merge automatiquement en squash dès que tous les checks
+# passent (deploy previews Netlify, etc.).
+#
+# Pourquoi : le serveur MCP GitHub côté Claude Code se déconnecte sans cesse sur
+# ce repo, ce qui force Allan à merger manuellement chaque commit. Avec ce
+# workflow, le push depuis Claude est suffisant — la PR est créée + merge auto.
+#
+# Contrôle qualité conservé :
+# - Si Netlify build échoue, l'auto-merge ne déclenche pas (--auto attend les checks)
+# - Squash et non fast-forward : un commit propre par PR sur master
+# - La branche n'est PAS supprimée (nous continuerons à l'utiliser)
+#
+# Désactivation manuelle : Allan peut désactiver le workflow depuis l'onglet
+# Actions de GitHub à tout moment, ou simplement en supprimant ce fichier.
+
+on:
+  push:
+    branches:
+      - 'claude/**'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect [no-merge] flag in commit message
+        id: gate
+        run: |
+          MSG=$(git log -1 --pretty=%B)
+          if echo "$MSG" | grep -qiE '\[no-merge\]|\[skip-merge\]|\[wip\]'; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "🛑 Flag [no-merge] détecté — auto-merge skippé"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create or update PR + enable auto-merge (squash)
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          echo "Branch: $BRANCH"
+
+          # Cherche une PR ouverte de cette branche vers master
+          PR_NUMBER=$(gh pr list --head "$BRANCH" --base master --state open --json number -q '.[0].number' || true)
+
+          if [ -z "${PR_NUMBER:-}" ] || [ "${PR_NUMBER}" = "null" ]; then
+            echo "Création d'une nouvelle PR…"
+            # Récupère le dernier message de commit comme corps de PR
+            COMMIT_TITLE=$(git log -1 --pretty=%s)
+            COMMIT_BODY=$(git log -1 --pretty=%b)
+            gh pr create \
+              --base master \
+              --head "$BRANCH" \
+              --title "$COMMIT_TITLE" \
+              --body "$COMMIT_BODY"$'\n\n_PR auto-générée par .github/workflows/auto-merge-claude.yml_"
+            PR_NUMBER=$(gh pr list --head "$BRANCH" --base master --state open --json number -q '.[0].number')
+          else
+            echo "PR existante : #$PR_NUMBER"
+          fi
+
+          echo "Activation de l'auto-merge sur PR #$PR_NUMBER (squash, attend les checks)…"
+          gh pr merge "$PR_NUMBER" --squash --auto || \
+            gh pr merge "$PR_NUMBER" --squash
