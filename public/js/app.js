@@ -1151,6 +1151,24 @@ function renderSeriesTab() {
     if (lw2.source)                     setText('launchW2Source',     lw2.source);
   }
 
+  // Cumul Top 10 mondial (3 semaines · 71.4M h / 9.2M vues)
+  const cu = BANDI.cumulTudum;
+  const cuPanel = document.getElementById('cumulTudumPanel');
+  if (cu && cuPanel) {
+    cuPanel.style.display = '';
+    if (cu.semainesTop10  != null) setText('cumulSemaines', cu.semainesTop10);
+    if (cu.vuesMillions   != null) setText('cumulVues',     `${String(cu.vuesMillions).replace('.', ',')} M`);
+    if (cu.heuresMillions != null) setText('cumulHeures',   `${String(cu.heuresMillions).replace('.', ',')} M`);
+    if (cu.semaine3?.rangNonEnglishEstim != null) {
+      setText('cumulW3Rang', `≈ #${cu.semaine3.rangNonEnglishEstim}`);
+    }
+    if (cu.semaine3?.detroneePar) {
+      setText('cumulW3Detrone', `détrôné par ${cu.semaine3.detroneePar}`);
+    }
+    if (cu.source) setText('cumulTudumSource', cu.source);
+    if (cu.semainesTop10) setText('cumulTudumSub', `${cu.semainesTop10} semaines · cumul live`);
+  }
+
   // Réception critique presse — agrégat maison sur 12+ sources (compense RT vide)
   renderCriticReviews();
 }
@@ -1173,6 +1191,11 @@ function renderCriticReviews() {
   if (cr.notePresseAlloMoy != null) {
     setText('criticAlloNote', `${String(cr.notePresseAlloMoy).replace('.', ',')} / 5`);
   }
+  if (cr.notePresseAlloN  != null) setText('criticAlloN',  `(${cr.notePresseAlloN} critiques)`);
+  if (cr.noteSpectAlloMoy != null) {
+    setText('criticSpectNote', `${String(cr.noteSpectAlloMoy).replace('.', ',')} / 5`);
+  }
+  if (cr.noteSpectAlloN   != null) setText('criticSpectN',  `(${cr.noteSpectAlloN.toLocaleString('fr-FR')} votes)`);
   if (cr.total != null && cr.fetchedAt) {
     const dStr = (cr.fetchedAt || '').slice(0, 10).split('-').reverse().join('/');
     setText('criticReviewsSub', `Agrégation maison · ${cr.total} sources documentées · MAJ ${dStr}`);
@@ -3238,11 +3261,14 @@ function renderMonRatings() {
     { key: 'filmaffinity',    label: 'Filmaffinity',    max: 10,  unit: '/10', color: '#C0392B' },
   ];
 
-  // Fallback IMDb : si le scraper n'a pas encore trouvé d'aggregateRating
-  // (série trop récente, volumétrie insuffisante), on affiche la moyenne
-  // par épisode issue du dernier rapport externe (Gemini 19/04/2026).
-  // Dès que le scraper remplit rating > 0, ce fallback est automatiquement
-  // désactivé et la valeur live prend le dessus.
+  // Fallback IMDb : 2 niveaux.
+  //   1) Si la note série globale "imdbCurrent" est connue (mai 2026 = 6.2/10),
+  //      on la pousse en attendant que le scraper la remonte automatiquement.
+  //   2) Sinon, on retombe sur la moyenne par épisode du rapport Gemini 19/04
+  //      (utile uniquement avant que IMDb consolide aggregateRating série).
+  // Dès que le scraper remplit rating > 0, ces fallbacks sont automatiquement
+  // désactivés et la valeur live prend le dessus.
+  const imdbCur = BANDI.imdbCurrent;
   const imdbEpi = BANDI.imdbPerEpisode;
   const imdbEpiAvg = (imdbEpi && imdbEpi.min != null && imdbEpi.max != null)
     ? Math.round(((imdbEpi.min + imdbEpi.max) / 2) * 10) / 10
@@ -3253,9 +3279,14 @@ function renderMonRatings() {
     // La table external_ratings utilise la colonne "rating" (pas "note")
     let val = r?.rating ?? r?.note ?? null;
     let fallbackLabel = null;
-    if (src.key === 'imdb' && (val == null || val <= 0) && imdbEpiAvg != null) {
-      val = imdbEpiAvg;
-      fallbackLabel = `moy. ${String(imdbEpi.min).replace('.', ',')}–${String(imdbEpi.max).replace('.', ',')} par ép.`;
+    if (src.key === 'imdb' && (val == null || val <= 0)) {
+      if (imdbCur && imdbCur.rating > 0) {
+        val = imdbCur.rating;
+        fallbackLabel = 'note série consolidée';
+      } else if (imdbEpiAvg != null) {
+        val = imdbEpiAvg;
+        fallbackLabel = `moy. ${String(imdbEpi.min).replace('.', ',')}–${String(imdbEpi.max).replace('.', ',')} par ép.`;
+      }
     }
     const has = val != null;
     const pct = has ? Math.round((val / src.max) * 100) : 0;
@@ -3275,7 +3306,8 @@ function renderMonRatings() {
     else if (r?.reviews)       votes = `${r.reviews} critiques`;
     else                       votes = '';
 
-    const ageLabel = fallbackLabel ? 'Rapport 19/04'
+    const ageLabel = fallbackLabel === 'note série consolidée' ? 'MAJ 02/05'
+                   : fallbackLabel ? 'Rapport 19/04'
                    : has           ? age
                    : hasScraped    ? 'Vérifié ' + age
                                    : 'En attente';
