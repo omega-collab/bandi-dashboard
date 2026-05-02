@@ -2,249 +2,116 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>BANDI · Mockup v2 (Hub bento + Live Wall)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0D0D0D" />
+<title>BANDI · Mockup v2 (Hub bento + Live Wall) — fidèle au design live</title>
+
+<!-- Mêmes fonts que le site live -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --rouge: #CE1126;
-    --vert: #009739;
-    --gold: #E4B84D;
-    --bg: #0F0F0F;
-    --surface: #1a1a1a;
-    --surface-2: #232323;
-    --surface-3: #2e2e2e;
-    --text: #f5f5f5;
-    --text-sub: #aaa;
-    --text-dim: #777;
-    --border: rgba(255,255,255,0.08);
-    --font-display: 'Anton', 'Arial Narrow', sans-serif;
-    --font-body: 'Inter Tight', system-ui, sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
-    --radius: 10px;
-    --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: var(--bg); color: var(--text); font-family: var(--font-body); }
-  body { min-height: 100vh; padding-bottom: 80px; }
 
-  /* ─── Banner mockup ─── */
+<!-- ON RÉUTILISE LE STYLESHEET DU SITE LIVE -->
+<link rel="stylesheet" href="css/styles.css?v=20260502b" />
+
+<!-- Style spécifique au mockup, harmonisé avec les variables existantes -->
+<style>
+  /* Bandeau "MOCKUP" en haut (au-dessus du flag-bar) */
   .mockup-banner {
-    background: linear-gradient(90deg, rgba(228,184,77,0.18), rgba(206,17,38,0.12));
-    border-bottom: 1px solid rgba(228,184,77,0.45);
+    position: relative;
+    z-index: 100;
+    background: linear-gradient(90deg, var(--gold-soft), var(--rouge-soft));
+    border-bottom: 1px solid rgba(228, 184, 77, 0.45);
     padding: 8px 24px;
     text-align: center;
     font-family: var(--font-mono);
     font-size: 11px;
     letter-spacing: 0.18em;
     color: var(--gold);
-  }
-  .mockup-banner strong { color: #fff; }
-
-  /* ─── Header sticky ─── */
-  header {
-    position: sticky; top: 0; z-index: 50;
-    background: rgba(15,15,15,0.92);
-    backdrop-filter: blur(14px);
-    border-bottom: 1px solid var(--border);
-  }
-  .header-row {
-    max-width: 1400px; margin: 0 auto;
-    display: flex; align-items: center; gap: 24px;
-    padding: 14px 24px;
-  }
-  .brand {
-    display: flex; align-items: center; gap: 10px;
-    text-decoration: none; color: inherit;
-  }
-  .brand-logo {
-    width: 36px; height: 36px;
-    background: var(--rouge);
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-display); font-size: 22px; color: #fff;
-  }
-  .brand-text h1 {
-    font-family: var(--font-display);
-    font-size: 22px; letter-spacing: 0.18em;
-    line-height: 1;
-  }
-  .brand-text small {
-    font-family: var(--font-mono);
-    font-size: 9px; letter-spacing: 0.12em;
-    color: var(--text-dim);
     text-transform: uppercase;
   }
+  .mockup-banner strong { color: #fff; margin-right: 6px; }
+  .mockup-banner a { color: var(--gold); text-decoration: underline; }
 
-  /* KPIs sticky */
-  .kpi-strip {
-    margin-left: auto;
-    display: flex; gap: 22px;
-    align-items: center;
+  /* ─── HUB EN DIRECT — header sticky ajouté entre tabs et hero ─── */
+  .hub-strip {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 0;
+    position: relative;
+    overflow: hidden;
   }
-  .kpi-pill {
+  .hub-strip::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0.45;
+  }
+  .hub-strip-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .hub-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 5px 12px;
+    background: var(--rouge-soft);
+    border: 1px solid var(--rouge);
+    border-radius: var(--radius-pill);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--rouge);
+    font-weight: 700;
+  }
+  .hub-tag .live-dot {
+    width: 6px; height: 6px;
+    background: var(--rouge);
+    border-radius: 50%;
+    animation: hubPulse 1.4s infinite ease-in-out;
+  }
+  @keyframes hubPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.7; }
+  }
+  .hub-kpis {
+    display: flex; gap: 28px;
+    margin-left: auto;
+  }
+  .hub-kpi {
     display: flex; flex-direction: column;
-    border-left: 2px solid rgba(255,255,255,0.08);
+    border-left: 2px solid var(--border);
     padding-left: 14px;
   }
-  .kpi-pill strong {
+  .hub-kpi strong {
     font-family: var(--font-display);
     font-size: 22px;
     line-height: 1;
     color: var(--gold);
+    letter-spacing: 0.02em;
   }
-  .kpi-pill span {
+  .hub-kpi span {
     font-family: var(--font-mono);
     font-size: 9px;
     letter-spacing: 0.12em;
     color: var(--text-dim);
     text-transform: uppercase;
-    margin-top: 4px;
+    margin-top: 5px;
+  }
+  @media (max-width: 720px) {
+    .hub-kpis { display: none; }
   }
 
-  /* Nav onglets */
-  nav.tabs {
-    max-width: 1400px; margin: 0 auto;
-    padding: 0 24px;
-    display: flex; gap: 4px;
-    overflow-x: auto;
-  }
-  .tab {
-    padding: 10px 16px;
-    font-family: var(--font-body);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-sub);
-    background: none; border: none;
-    border-bottom: 2px solid transparent;
-    cursor: pointer;
-    transition: color 0.2s, border-color 0.2s;
-    white-space: nowrap;
-    position: relative;
-  }
-  .tab:hover { color: var(--text); }
-  .tab.active {
-    color: var(--text);
-    border-bottom-color: var(--rouge);
-  }
-  .tab .dot {
-    position: absolute; top: 8px; right: 6px;
-    width: 6px; height: 6px;
-    background: var(--rouge);
-    border-radius: 50%;
-    box-shadow: 0 0 10px rgba(206,17,38,0.7);
-    animation: pulse 1.6s infinite ease-in-out;
-  }
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.3); opacity: 0.7; }
-  }
-
-  /* ─── Hero ─── */
-  .hero {
-    position: relative;
-    height: 460px;
-    overflow: hidden;
-    background: #000;
-  }
-  .hero-bg {
-    position: absolute; inset: 0;
-    background-image: url('https://picsum.photos/seed/bandimartinique/1600/600');
-    background-size: cover; background-position: center;
-    filter: brightness(0.45) saturate(1.2);
-  }
-  .hero-bg::after {
-    content: '';
-    position: absolute; inset: 0;
-    background:
-      linear-gradient(180deg, rgba(15,15,15,0) 0%, rgba(15,15,15,0.85) 80%, var(--bg) 100%),
-      linear-gradient(90deg, rgba(15,15,15,0.9) 0%, rgba(15,15,15,0) 60%);
-  }
-  .hero-content {
-    position: relative;
-    max-width: 1400px;
-    margin: 0 auto;
-    height: 100%;
-    padding: 0 24px;
-    display: flex; flex-direction: column; justify-content: flex-end;
-    padding-bottom: 60px;
-  }
-  .hero-tag {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 6px 12px;
-    background: rgba(228,184,77,0.18);
-    border: 1px solid rgba(228,184,77,0.4);
-    border-radius: 999px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    color: var(--gold);
-    width: fit-content;
-    margin-bottom: 18px;
-  }
-  .hero-title {
-    font-family: var(--font-display);
-    font-size: clamp(40px, 6vw, 78px);
-    line-height: 0.95;
-    letter-spacing: 0.02em;
-    color: #fff;
-    max-width: 780px;
-  }
-  .hero-sub {
-    margin-top: 14px;
-    font-size: 17px;
-    line-height: 1.5;
-    color: var(--text-sub);
-    max-width: 580px;
-  }
-  .hero-meta {
-    margin-top: 22px;
-    display: flex; gap: 20px; flex-wrap: wrap;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--text-dim);
-  }
-  .hero-meta span strong { color: var(--gold); margin-right: 4px; }
-
-  /* ─── Page sections ─── */
-  main {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 60px 24px;
-  }
-  .section-header {
-    margin-bottom: 24px;
-    display: flex; align-items: baseline; justify-content: space-between;
-    gap: 20px;
-  }
-  .section-header h2 {
-    font-family: var(--font-display);
-    font-size: 32px;
-    letter-spacing: 0.04em;
-  }
-  .section-header p {
-    color: var(--text-sub);
-    font-size: 14px;
-  }
-  .section-header .live-dot {
-    display: inline-block;
-    width: 8px; height: 8px;
-    background: #22c55e;
-    border-radius: 50%;
-    margin-right: 6px;
-    box-shadow: 0 0 10px rgba(34,197,94,0.6);
-    animation: pulse 1.4s infinite;
-  }
-
-  /* ─── Bento ─── */
+  /* ─── BENTO "À LA UNE" ─── */
   .bento {
     display: grid;
     grid-template-columns: 2fr 1fr 1fr;
-    grid-template-rows: auto auto;
-    gap: 16px;
-    margin-bottom: 60px;
+    gap: 14px;
+    margin-bottom: 24px;
   }
   .bento-card {
     background: var(--surface);
@@ -253,39 +120,44 @@
     overflow: hidden;
     text-decoration: none;
     color: inherit;
-    transition: transform 0.25s var(--ease), border-color 0.25s var(--ease);
+    transition: transform var(--dur) var(--ease),
+                border-color var(--dur) var(--ease),
+                box-shadow var(--dur) var(--ease);
     position: relative;
+    display: flex; flex-direction: column;
   }
   .bento-card:hover {
     transform: translateY(-3px);
-    border-color: rgba(228,184,77,0.35);
+    border-color: var(--gold);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
   }
-
-  /* La grosse card "Une" */
+  /* Card "Une" en grand, span 2 lignes */
   .bento-hero {
     grid-row: span 2;
-    display: flex; flex-direction: column;
   }
   .bento-hero-img {
     aspect-ratio: 16/10;
-    background-image: url('https://picsum.photos/seed/bandiune1/900/560');
-    background-size: cover; background-position: center;
+    background-image: url('https://picsum.photos/seed/bandimartinique/900/560');
+    background-size: cover;
+    background-position: center;
     position: relative;
   }
   .bento-hero-img::before {
     content: 'À LA UNE';
-    position: absolute; top: 16px; left: 16px;
-    padding: 5px 10px;
+    position: absolute; top: 14px; left: 14px;
+    padding: 5px 11px;
     background: var(--rouge);
     color: #fff;
     font-family: var(--font-mono);
     font-size: 10px;
+    font-weight: 700;
     letter-spacing: 0.18em;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
   }
   .bento-hero-body {
-    padding: 24px;
+    padding: 22px 24px 24px;
     flex: 1;
+    display: flex; flex-direction: column;
   }
   .bento-source {
     font-family: var(--font-mono);
@@ -294,195 +166,130 @@
     color: var(--gold);
     text-transform: uppercase;
     margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+    flex-wrap: wrap;
   }
   .bento-title {
     font-family: var(--font-display);
-    font-size: 26px;
+    font-size: 24px;
     line-height: 1.1;
-    margin-bottom: 12px;
+    margin: 0 0 12px;
     letter-spacing: 0.01em;
+    color: var(--text);
   }
   .bento-excerpt {
     color: var(--text-sub);
-    font-size: 15px;
+    font-size: 14px;
     line-height: 1.55;
+    margin: 0;
   }
   .bento-meta {
-    margin-top: 16px;
-    display: flex; gap: 12px;
+    margin-top: auto;
+    padding-top: 14px;
+    display: flex; gap: 14px; flex-wrap: wrap;
     font-family: var(--font-mono);
     font-size: 11px;
     color: var(--text-dim);
   }
-
-  /* Cards latérales */
   .bento-side {
-    padding: 18px;
+    padding: 16px;
   }
   .bento-side .bento-source { margin-bottom: 8px; font-size: 9px; }
-  .bento-side .bento-title { font-size: 16px; line-height: 1.25; margin-bottom: 8px; }
-  .bento-side .bento-meta { font-size: 10px; margin-top: 12px; }
-
+  .bento-side .bento-title { font-size: 15px; line-height: 1.25; margin-bottom: 8px; }
+  .bento-side .bento-meta { font-size: 10px; padding-top: 10px; }
   .bento-thumb {
     aspect-ratio: 16/9;
     background-size: cover;
     background-position: center;
+    margin: -16px -16px 12px;
   }
 
-  /* Pill type */
+  /* Pills par type de source — couleurs cohérentes avec le design */
   .type-pill {
     display: inline-block;
     padding: 2px 8px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     font-family: var(--font-mono);
     font-size: 9px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
+    font-weight: 700;
   }
-  .type-pill.press   { background: rgba(228,184,77,0.18); color: var(--gold); }
-  .type-pill.social  { background: rgba(34,197,94,0.15);  color: #22c55e; }
-  .type-pill.video   { background: rgba(239,68,68,0.15);  color: #ef4444; }
-  .type-pill.local   { background: rgba(0,151,57,0.18);   color: var(--vert); }
+  .type-pill.press   { background: var(--gold-soft);  color: var(--gold);  border: 1px solid rgba(228,184,77,0.3); }
+  .type-pill.social  { background: var(--vert-soft);  color: var(--vert);  border: 1px solid rgba(0,151,57,0.3); }
+  .type-pill.video   { background: var(--rouge-soft); color: var(--rouge); border: 1px solid rgba(206,17,38,0.3); }
+  .type-pill.local   { background: rgba(212,160,23,0.12); color: #D4A017; border: 1px solid rgba(212,160,23,0.3); }
 
-  /* ─── Compteurs viraux ─── */
-  .stats-grid {
+  /* ─── COMPTEURS VIRAUX ─── */
+  .viral-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 60px;
+    gap: 14px;
+    margin-bottom: 24px;
   }
-  .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--rouge);
-    border-radius: var(--radius);
-    padding: 22px 18px;
-  }
-  .stat-card.gold { border-left-color: var(--gold); }
-  .stat-card.green { border-left-color: var(--vert); }
-  .stat-num {
-    font-family: var(--font-display);
-    font-size: 42px;
-    line-height: 1;
-    color: var(--text);
-    letter-spacing: 0.02em;
-  }
-  .stat-card.gold .stat-num { color: var(--gold); }
-  .stat-card.green .stat-num { color: var(--vert); }
-  .stat-label {
-    margin-top: 10px;
-    font-family: var(--font-body);
-    font-size: 12px;
-    line-height: 1.4;
-    color: var(--text-sub);
-  }
-  .stat-trend {
+  .viral-trend {
     margin-top: 8px;
     font-family: var(--font-mono);
     font-size: 11px;
-    color: #22c55e;
+    color: var(--vert);
+    letter-spacing: 0.04em;
   }
-  .stat-trend.down { color: #ef4444; }
-
-  /* ─── Mur d'images (masonry-light) ─── */
-  .wall {
-    columns: 4 280px;
-    column-gap: 14px;
-    margin-bottom: 60px;
-  }
-  .wall-item {
-    break-inside: avoid;
-    margin-bottom: 14px;
-    border-radius: var(--radius);
-    overflow: hidden;
-    position: relative;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    text-decoration: none;
-    color: inherit;
-    display: block;
-    transition: transform 0.25s var(--ease);
-  }
-  .wall-item:hover { transform: scale(1.02); }
-  .wall-item img {
-    width: 100%;
-    display: block;
-    aspect-ratio: var(--ar, 4/3);
-    object-fit: cover;
-  }
-  .wall-overlay {
-    position: absolute; left: 0; right: 0; bottom: 0;
-    padding: 14px 16px 12px;
-    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.85) 65%, rgba(0,0,0,0.95) 100%);
-  }
-  .wall-overlay .wo-source {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: 0.14em;
-    color: var(--gold);
-    text-transform: uppercase;
-    margin-bottom: 4px;
-  }
-  .wall-overlay .wo-title {
-    font-size: 14px;
-    line-height: 1.3;
-    color: #fff;
-    font-weight: 600;
-  }
-  .wall-corner-pill {
-    position: absolute; top: 10px; left: 10px;
-    z-index: 2;
+  .viral-trend.down { color: var(--rouge); }
+  @media (max-width: 720px) {
+    .viral-grid { grid-template-columns: repeat(2, 1fr); }
   }
 
-  /* ─── Concurrence (visuel boosté) ─── */
+  /* ─── CONCURRENCE BOOSTÉE ─── */
   .rivals-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 14px;
-    margin-bottom: 60px;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 12px;
   }
   .rival-card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    overflow: hidden;
+    padding: 14px 16px;
     display: flex; align-items: center; gap: 14px;
-    padding: 14px;
-    transition: transform 0.2s, border-color 0.2s;
+    transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease);
+    text-decoration: none;
+    color: inherit;
   }
   .rival-card:hover {
     transform: translateY(-2px);
-    border-color: rgba(228,184,77,0.3);
+    border-color: rgba(228,184,77,0.4);
   }
   .rival-card.is-bandi {
-    background: linear-gradient(135deg, rgba(206,17,38,0.18), rgba(0,151,57,0.10));
-    border-color: rgba(228,184,77,0.45);
+    background: linear-gradient(135deg, var(--rouge-soft), var(--vert-soft));
+    border-color: var(--gold);
+    box-shadow: 0 0 24px rgba(228,184,77,0.12);
   }
   .rival-rank {
     font-family: var(--font-display);
     font-size: 56px;
     line-height: 1;
     color: var(--text-dim);
-    flex-shrink: 0;
-    width: 56px; text-align: center;
+    width: 56px; flex-shrink: 0;
+    text-align: center;
+    letter-spacing: 0.02em;
   }
-  .rival-card.is-bandi .rival-rank { color: var(--gold); }
-  .rival-card.top1 .rival-rank, .rival-card.top2 .rival-rank, .rival-card.top3 .rival-rank {
+  .rival-card.top1 .rival-rank,
+  .rival-card.top2 .rival-rank,
+  .rival-card.top3 .rival-rank {
     color: var(--rouge);
   }
-  .rival-info {
-    flex: 1;
-    min-width: 0;
+  .rival-card.is-bandi .rival-rank {
+    color: var(--gold);
+    font-size: 32px;
   }
+  .rival-info { flex: 1; min-width: 0; }
   .rival-title {
     font-family: var(--font-body);
     font-weight: 600;
     font-size: 14px;
     color: var(--text);
     margin-bottom: 4px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .rival-meta {
     font-family: var(--font-mono);
@@ -501,383 +308,538 @@
     height: 100%;
     background: linear-gradient(90deg, var(--rouge), var(--gold));
     border-radius: 2px;
+    transition: width 0.6s var(--ease);
+  }
+  .rival-card.is-bandi .rival-bar-fill {
+    background: linear-gradient(90deg, var(--rouge), var(--gold), var(--vert));
   }
 
-  /* ─── Reload bar (notif) ─── */
+  /* ─── MUR D'IMAGES ─── */
+  .wall {
+    columns: 4 280px;
+    column-gap: 12px;
+  }
+  .wall-item {
+    break-inside: avoid;
+    margin-bottom: 12px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  }
+  .wall-item:hover {
+    transform: scale(1.02);
+    border-color: var(--gold);
+  }
+  .wall-item img {
+    width: 100%;
+    display: block;
+    aspect-ratio: var(--ar, 4/3);
+    object-fit: cover;
+  }
+  .wall-overlay {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 14px 14px 12px;
+    background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.85) 60%, rgba(0,0,0,0.95) 100%);
+  }
+  .wall-overlay .wo-source {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .wall-overlay .wo-title {
+    font-size: 13px;
+    line-height: 1.3;
+    color: #fff;
+    font-weight: 600;
+  }
+  .wall-corner {
+    position: absolute; top: 10px; left: 10px;
+    z-index: 2;
+  }
+
+  /* ─── Bouton "Charger plus" ─── */
+  .load-more-btn {
+    display: block;
+    margin: 24px auto 0;
+    padding: 12px 28px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+  }
+  .load-more-btn:hover {
+    border-color: var(--gold);
+    transform: translateY(-1px);
+  }
+
+  /* ─── Reload bar (notification flottante) ─── */
   .reload-bar {
     position: fixed;
     bottom: 24px; right: 24px;
-    background: rgba(34,197,94,0.18);
-    border: 1px solid rgba(34,197,94,0.45);
-    padding: 10px 16px;
-    border-radius: 999px;
+    background: var(--surface-2);
+    border: 1px solid var(--vert);
+    padding: 10px 18px;
+    border-radius: var(--radius-pill);
     font-family: var(--font-mono);
     font-size: 12px;
-    color: #22c55e;
-    display: flex; align-items: center; gap: 8px;
+    color: var(--vert);
+    display: flex; align-items: center; gap: 10px;
     z-index: 60;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    cursor: pointer;
+    letter-spacing: 0.04em;
   }
   .reload-bar .live-dot {
     width: 8px; height: 8px;
-    background: #22c55e;
+    background: var(--vert);
     border-radius: 50%;
-    box-shadow: 0 0 10px rgba(34,197,94,0.6);
-    animation: pulse 1.4s infinite;
+    box-shadow: 0 0 10px rgba(0,151,57,0.7);
+    animation: hubPulse 1.4s infinite;
   }
+  .reload-bar:hover { background: var(--surface-3); }
 
-  /* ─── Responsive ─── */
+  /* Mobile */
   @media (max-width: 900px) {
     .bento { grid-template-columns: 1fr; }
     .bento-hero { grid-row: span 1; }
-    .stats-grid { grid-template-columns: repeat(2, 1fr); }
-    .kpi-strip { display: none; }
-    .hero { height: 380px; }
-  }
-  @media (max-width: 540px) {
-    .stats-grid { grid-template-columns: 1fr 1fr; }
-    .stat-num { font-size: 32px; }
-    .header-row { padding: 10px 16px; gap: 12px; }
-    main { padding: 40px 16px; }
   }
 </style>
 </head>
 <body>
 
+<!-- Bandeau MOCKUP -->
 <div class="mockup-banner">
-  <strong>MOCKUP V2</strong> · proposition B+C (Hub bento + Live Wall) · ce n'est qu'un mockup statique, le site live est sur <a href="/" style="color: var(--gold)">/</a>
+  <strong>MOCKUP V2</strong> · proposition B+C — fidèle au design live · <a href="/">retour au site live</a>
 </div>
 
-<header>
-  <div class="header-row">
-    <a href="#" class="brand">
-      <span class="brand-logo">B</span>
+<!-- Drapeau Martinique -->
+<div class="flag-bar">
+  <div class="flag-rouge"></div>
+  <div class="flag-vert"></div>
+  <div class="flag-noir"></div>
+</div>
+
+<!-- HEADER strictement identique à index.html -->
+<header class="header">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 40 40" width="40" height="40">
+          <polygon points="20,3 37,20 20,37 3,20" fill="#0A0A0A" stroke="#CE1126" stroke-width="1.5"/>
+          <polygon points="20,10 30,20 20,30 10,20" fill="#009739" opacity="0.9"/>
+          <polygon points="20,14 26,20 20,26 14,20" fill="#CE1126"/>
+        </svg>
+      </div>
       <div class="brand-text">
         <h1>BANDI</h1>
-        <small>Hub d'info temps réel</small>
+        <span class="brand-sub">Hub d'info temps réel · Mockup v2</span>
       </div>
-    </a>
-    <div class="kpi-strip">
-      <div class="kpi-pill">
+    </div>
+    <div class="live-indicator">
+      <span class="pulse-dot"></span>
+      <span class="live-text">LIVE</span>
+      <span class="live-time">02 mai · 13:25</span>
+    </div>
+  </div>
+
+  <!-- Onglets — Buzz devient l'accueil par défaut, monitoring conservé -->
+  <nav class="tabs">
+    <button class="tab active" data-tab="buzz">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Buzz
+    </button>
+    <button class="tab" data-tab="overview">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 12l4-4 4 4 5-5"/></svg>
+      Vue d'ensemble
+    </button>
+    <button class="tab" data-tab="rivals">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+      Concurrence
+    </button>
+    <button class="tab" data-tab="history">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 2 5-5"/></svg>
+      Historique <span class="brand-sub" style="font-size:9px;margin-left:4px;color:var(--text-dim)">(+ Pays)</span>
+    </button>
+    <button class="tab" data-tab="series">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+      Fiche série
+    </button>
+    <button class="tab" data-tab="map">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+      Carte
+    </button>
+    <button class="tab" data-tab="monitoring">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      Monitoring
+    </button>
+  </nav>
+</header>
+
+<!-- Strip "HUB EN DIRECT" + 3 KPIs sticky-ish (sous le header) -->
+<div class="hub-strip">
+  <div class="hub-strip-inner">
+    <span class="hub-tag"><span class="live-dot"></span>HUB EN DIRECT · PRESSE + RÉSEAUX SOCIAUX</span>
+    <div class="hub-kpis">
+      <div class="hub-kpi">
         <strong>71,4 M</strong>
         <span>heures cumul</span>
       </div>
-      <div class="kpi-pill">
+      <div class="hub-kpi">
         <strong>3</strong>
         <span>sem. top 10</span>
       </div>
-      <div class="kpi-pill">
+      <div class="hub-kpi">
         <strong>75 %</strong>
         <span>avis favorables</span>
       </div>
     </div>
   </div>
-  <nav class="tabs">
-    <button class="tab active">📰 Buzz <span class="dot"></span></button>
-    <button class="tab">🏆 Concurrence</button>
-    <button class="tab">📊 Historique</button>
-    <button class="tab">🎬 Fiche série</button>
-    <button class="tab">🗺️ Carte</button>
-    <button class="tab">⚙️ Monitoring</button>
-  </nav>
-</header>
-
-<!-- ─── HERO ─── -->
-<div class="hero">
-  <div class="hero-bg"></div>
-  <div class="hero-content">
-    <span class="hero-tag">● HUB EN DIRECT · PRESSE + RÉSEAUX SOCIAUX</span>
-    <h1 class="hero-title">Bandi continue de faire parler après son passage au Top 10 mondial.</h1>
-    <p class="hero-sub">3 semaines au sommet, 71,4 millions d'heures cumulées, et la presse internationale n'a pas fini d'analyser le phénomène martiniquais. Tout suivre en temps réel.</p>
-    <div class="hero-meta">
-      <span><strong>Pic</strong> #1 non-English</span>
-      <span><strong>27</strong> pays #1 Netflix</span>
-      <span><strong>57</strong> pays Top 10</span>
-      <span><strong>9,2 M</strong> vues complètes</span>
-    </div>
-  </div>
 </div>
 
-<!-- ─── BENTO ACCUEIL ─── -->
-<main>
+<main class="container">
 
-  <div class="section-header">
-    <div>
-      <h2><span class="live-dot"></span>À la une</h2>
-      <p>Sélection éditoriale automatique · les 6 contenus les plus engageants des dernières 24h</p>
+  <!-- HERO conservé — réutilise les classes existantes -->
+  <div class="hero">
+    <div class="hero-bg" style="background-image: url('https://picsum.photos/seed/bandimartinique/1600/600');"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="hero-origin-badge">
+        <span class="nx-logo">N</span>
+        <span class="nx-original-text">NETFLIX ORIGINAL</span>
+        <span class="nx-dot">·</span>
+        <span class="nx-mq">MARTINIQUE</span>
+      </div>
+      <div class="hero-left">
+        <div class="hero-postpic-banner" style="display:inline-flex">
+          <span class="hpp-tag">BILAN</span>
+          <span class="hpp-text">Bandi est sorti du Top 10 mondial · 3 sem. au Top 10 · 71,4 M heures · pic #1 non-English</span>
+        </div>
+        <div class="hero-label">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+          <span>RANG MONDIAL · POSITION ACTUELLE</span>
+        </div>
+        <div class="hero-rank">
+          <span class="rank-number rank-orange">#15</span>
+          <div class="rank-delta" style="background: rgba(228,184,77,0.12); border-color: rgba(228,184,77,0.35); color: var(--gold);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            <span>Pic #1 non-EN · 3 sem. Top 10 · 71,4 M h cumul</span>
+          </div>
+          <span class="rank-source-pill">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            d'après flixpatrol.com
+          </span>
+        </div>
+        <p class="hero-sub">
+          <strong>247</strong> pts de popularité
+          <span class="text-vert">(-12)</span>
+          · N°1 dans <strong>4</strong> pays
+          · <strong>23</strong> top 10 nationaux
+        </p>
+        <p class="hero-source">
+          Source : <a href="https://flixpatrol.com/title/bandi/" target="_blank" rel="noopener">flixpatrol.com</a>
+          · MAJ 02/05/2026 · 13:25
+        </p>
+      </div>
     </div>
-    <p style="font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);">
-      Mis à jour il y a 2 min · auto-refresh 30 s
-    </p>
   </div>
 
-  <div class="bento">
-    <!-- Card grosse "Une" -->
-    <a href="#" class="bento-card bento-hero">
-      <div class="bento-hero-img"></div>
-      <div class="bento-hero-body">
-        <div class="bento-source">
-          <span class="type-pill press">📰 Le Monde</span>
-          · il y a 3h · 🌍 international
-        </div>
-        <h3 class="bento-title">« Bandi, immersion dans l'envers du décor paradisiaque » : le succès martiniquais analysé</h3>
-        <p class="bento-excerpt">Au-delà du carton d'audience, la série d'Éric Rochant marque un tournant pour la représentation des Antilles à l'écran. Décryptage en 5 points.</p>
-        <div class="bento-meta">
-          <span>👁️ 1,2k lectures dashboard</span>
-          <span>💬 18 commentaires</span>
-        </div>
+  <!-- ===== BENTO "À LA UNE" ===== -->
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>À la une</h2>
+        <p class="panel-sub">Sélection éditoriale automatique · 6 contenus les plus engageants des dernières 24 h · auto-refresh 30 s</p>
       </div>
-    </a>
+    </div>
 
-    <!-- Side card 1 : top post social -->
-    <a href="#" class="bento-card bento-side">
-      <div class="bento-thumb" style="background-image: url('https://picsum.photos/seed/bandisocial1/400/225');"></div>
-      <div style="padding: 14px 0 0;">
+    <div class="bento">
+      <a href="#" class="bento-card bento-hero">
+        <div class="bento-hero-img"></div>
+        <div class="bento-hero-body">
+          <div class="bento-source">
+            <span class="type-pill press">📰 Le Monde</span>
+            <span>· 🌍 international · il y a 3 h</span>
+          </div>
+          <h3 class="bento-title">« Bandi, immersion dans l'envers du décor paradisiaque » : analyse du succès martiniquais</h3>
+          <p class="bento-excerpt">Au-delà du carton d'audience, la série d'Éric Rochant marque un tournant pour la représentation des Antilles à l'écran. Décryptage en 5 points.</p>
+          <div class="bento-meta">
+            <span>👁️ 1,2k lectures dashboard</span>
+            <span>💬 18 commentaires</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="#" class="bento-card bento-side">
+        <div class="bento-thumb" style="background-image: url('https://picsum.photos/seed/bandisocial1/400/225');"></div>
         <div class="bento-source">
           <span class="type-pill social">💬 Reddit · r/netflix</span>
         </div>
         <h3 class="bento-title">"Just finished Bandi — Martinique on Netflix is a game changer"</h3>
         <div class="bento-meta">
           <span>⬆️ 4,3k upvotes</span>
-          <span>· il y a 5h</span>
+          <span>· il y a 5 h</span>
         </div>
-      </div>
-    </a>
+      </a>
 
-    <!-- Side card 2 : critique -->
-    <a href="#" class="bento-card bento-side">
-      <div class="bento-source">
-        <span class="type-pill press">📰 Les Inrockuptibles</span>
-        · 🇫🇷 national
-      </div>
-      <h3 class="bento-title">L'art de Rochant s'affirme avec « force et finesse »</h3>
-      <p class="bento-excerpt" style="font-size: 13px;">La série explore la complexité familiale avec une mise en scène patiente.</p>
-      <div class="bento-meta">
-        <span>il y a 8h</span>
-      </div>
-    </a>
+      <a href="#" class="bento-card bento-side">
+        <div class="bento-source">
+          <span class="type-pill press">📰 Les Inrockuptibles</span>
+          <span>· 🇫🇷 national</span>
+        </div>
+        <h3 class="bento-title">L'art de Rochant s'affirme avec « force et finesse »</h3>
+        <p class="bento-excerpt" style="font-size: 12px; line-height: 1.45;">La série explore la complexité familiale avec une mise en scène patiente.</p>
+        <div class="bento-meta">
+          <span>il y a 8 h</span>
+        </div>
+      </a>
 
-    <!-- Side card 3 : YouTube -->
-    <a href="#" class="bento-card bento-side">
-      <div class="bento-thumb" style="background-image: url('https://picsum.photos/seed/banditrailer/400/225'); position: relative;">
-        <span style="position: absolute; bottom: 6px; right: 6px; background: rgba(0,0,0,0.85); color: #fff; padding: 2px 6px; border-radius: 3px; font-family: var(--font-mono); font-size: 10px;">12:43</span>
-      </div>
-      <div style="padding: 14px 0 0;">
+      <a href="#" class="bento-card bento-side">
+        <div class="bento-thumb" style="background-image: url('https://picsum.photos/seed/banditrailer/400/225'); position: relative;">
+          <span style="position: absolute; bottom: 6px; right: 6px; background: rgba(0,0,0,0.85); color: #fff; padding: 2px 6px; border-radius: 3px; font-family: var(--font-mono); font-size: 10px;">12:43</span>
+        </div>
         <div class="bento-source">
           <span class="type-pill video">🎥 Konbini</span>
         </div>
         <h3 class="bento-title">"Bandi : on a rencontré le casting en Martinique"</h3>
         <div class="bento-meta">
-          <span>👁️ 87k vues</span>
-          <span>· il y a 1j</span>
+          <span>👁️ 87 k vues</span>
+          <span>· il y a 1 j</span>
         </div>
-      </div>
-    </a>
+      </a>
 
-    <!-- Side card 4 : local -->
-    <a href="#" class="bento-card bento-side">
-      <div class="bento-source">
-        <span class="type-pill local">🇲🇶 NRJ Antilles</span>
-      </div>
-      <h3 class="bento-title">"La série Netflix qui change la donne pour la représentation antillaise"</h3>
-      <div class="bento-meta">
-        <span>il y a 12h</span>
-      </div>
-    </a>
-  </div>
-
-  <!-- ─── COMPTEURS ─── -->
-  <div class="section-header">
-    <div>
-      <h2>Compteurs viraux</h2>
-      <p>Mise à jour temps réel · sources Supabase + scrapers GitHub Actions</p>
+      <a href="#" class="bento-card bento-side">
+        <div class="bento-source">
+          <span class="type-pill local">🇲🇶 NRJ Antilles</span>
+        </div>
+        <h3 class="bento-title">"La série Netflix qui change la donne pour la représentation antillaise"</h3>
+        <div class="bento-meta">
+          <span>il y a 12 h</span>
+        </div>
+      </a>
     </div>
   </div>
 
-  <div class="stats-grid">
-    <div class="stat-card gold">
-      <div class="stat-num">487</div>
-      <div class="stat-label">articles presse<br/>indexés</div>
-      <div class="stat-trend">+23 dernières 24h</div>
+  <!-- ===== COMPTEURS VIRAUX (réutilise .kpi-grid + .kpi-card) ===== -->
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Compteurs viraux</h2>
+        <p class="panel-sub">Mise à jour temps réel · sources Supabase + scrapers GitHub Actions</p>
+      </div>
     </div>
-    <div class="stat-card green">
-      <div class="stat-num">2 318</div>
-      <div class="stat-label">posts sociaux<br/>(Reddit · YT · Bluesky · IG)</div>
-      <div class="stat-trend">+89 dernière heure</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-num">75 %</div>
-      <div class="stat-label">avis favorables<br/>(12 critiques presse)</div>
-      <div class="stat-trend">stable</div>
-    </div>
-    <div class="stat-card gold">
-      <div class="stat-num">6,2</div>
-      <div class="stat-label">note IMDb<br/>série consolidée</div>
-      <div class="stat-trend">+0,3 cette semaine</div>
-    </div>
-  </div>
 
-  <!-- ─── CONCURRENCE BOOSTÉE VISUELLEMENT ─── -->
-  <div class="section-header">
-    <div>
-      <h2>Concurrence — Top 10 TV Shows Netflix mondial · 02/05/2026</h2>
-      <p>Source FlixPatrol · Bandi est sorti du Top 10 Tudum officiel non-English après 3 sem.</p>
-    </div>
-  </div>
-
-  <div class="rivals-grid">
-    <div class="rival-card top1">
-      <div class="rival-rank">1</div>
-      <div class="rival-info">
-        <div class="rival-title">Sold Out on You</div>
-        <div class="rival-meta">K-DRAMA · 4,7M vues · S2 du 27/04</div>
-        <div class="rival-bar"><div class="rival-bar-fill" style="width: 100%"></div></div>
+    <div class="kpi-grid viral-grid">
+      <div class="kpi-card" style="--accent: #E4B84D;">
+        <div class="kpi-accent"></div>
+        <div class="kpi-head">
+          <span class="kpi-label">Articles presse indexés</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent);"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg>
+        </div>
+        <div class="kpi-value"><span>487</span></div>
+        <div class="kpi-trend viral-trend">+23 dernières 24 h</div>
       </div>
-    </div>
-    <div class="rival-card top2">
-      <div class="rival-rank">2</div>
-      <div class="rival-info">
-        <div class="rival-title">Ronaldinho: The One and Only</div>
-        <div class="rival-meta">DOC SPORT · 4,1M vues</div>
-        <div class="rival-bar"><div class="rival-bar-fill" style="width: 87%"></div></div>
+      <div class="kpi-card" style="--accent: #009739;">
+        <div class="kpi-accent"></div>
+        <div class="kpi-head">
+          <span class="kpi-label">Posts sociaux</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent);"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        </div>
+        <div class="kpi-value"><span>2 318</span></div>
+        <div class="kpi-trend viral-trend">+89 dernière heure</div>
       </div>
-    </div>
-    <div class="rival-card top3">
-      <div class="rival-rank">3</div>
-      <div class="rival-info">
-        <div class="rival-title">Roommates Season 2</div>
-        <div class="rival-meta">DRAMÉDIE · 3,2M vues</div>
-        <div class="rival-bar"><div class="rival-bar-fill" style="width: 68%"></div></div>
+      <div class="kpi-card" style="--accent: #CE1126;">
+        <div class="kpi-accent"></div>
+        <div class="kpi-head">
+          <span class="kpi-label">% avis favorables</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent);"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+        </div>
+        <div class="kpi-value"><span>75</span><span class="kpi-unit">%</span></div>
+        <div class="kpi-trend viral-trend">stable · 12 critiques</div>
       </div>
-    </div>
-    <div class="rival-card">
-      <div class="rival-rank">4</div>
-      <div class="rival-info">
-        <div class="rival-title">XO, Kitty</div>
-        <div class="rival-meta">TEEN · S1 cumul · 2,9M vues</div>
-        <div class="rival-bar"><div class="rival-bar-fill" style="width: 62%"></div></div>
-      </div>
-    </div>
-    <div class="rival-card">
-      <div class="rival-rank">5</div>
-      <div class="rival-info">
-        <div class="rival-title">Beef Season 2</div>
-        <div class="rival-meta">DRAMA · 2,4M vues</div>
-        <div class="rival-bar"><div class="rival-bar-fill" style="width: 51%"></div></div>
-      </div>
-    </div>
-    <div class="rival-card is-bandi">
-      <div class="rival-rank">~</div>
-      <div class="rival-info">
-        <div class="rival-title">🇲🇶 Bandi <span style="color: var(--gold); font-size: 11px;">(hors top, pic #1 non-EN S2)</span></div>
-        <div class="rival-meta">CRIME MARTINIQUE · cumul 9,2M vues</div>
-        <div class="rival-bar"><div class="rival-bar-fill" style="width: 100%; background: linear-gradient(90deg, var(--gold), var(--rouge));"></div></div>
+      <div class="kpi-card" style="--accent: #F5C518;">
+        <div class="kpi-accent"></div>
+        <div class="kpi-head">
+          <span class="kpi-label">Note IMDb</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent);"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <div class="kpi-value"><span>6,2</span><span class="kpi-unit">/10</span></div>
+        <div class="kpi-trend viral-trend">+0,3 cette semaine</div>
       </div>
     </div>
   </div>
 
-  <!-- ─── MUR D'IMAGES ─── -->
-  <div class="section-header">
-    <div>
-      <h2>Le mur</h2>
-      <p>Tout ce qui sort sur Bandi · presse + sociaux + extraits vidéos · scroll infini</p>
+  <!-- ===== CONCURRENCE BOOSTÉE ===== -->
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Concurrence — Top 10 TV Shows Netflix mondial</h2>
+        <p class="panel-sub">Source FlixPatrol · 02/05/2026 · Bandi est sorti du Top 10 Tudum officiel non-English après 3 sem.</p>
+      </div>
     </div>
-    <p style="font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);">
-      14 nouveaux items depuis ton dernier scroll
-    </p>
+
+    <div class="rivals-grid">
+      <a href="#" class="rival-card top1">
+        <div class="rival-rank">1</div>
+        <div class="rival-info">
+          <div class="rival-title">Sold Out on You</div>
+          <div class="rival-meta">K-DRAMA · 4,7 M VUES · S2 du 27/04</div>
+          <div class="rival-bar"><div class="rival-bar-fill" style="width: 100%"></div></div>
+        </div>
+      </a>
+      <a href="#" class="rival-card top2">
+        <div class="rival-rank">2</div>
+        <div class="rival-info">
+          <div class="rival-title">Ronaldinho: The One and Only</div>
+          <div class="rival-meta">DOC SPORT · 4,1 M VUES</div>
+          <div class="rival-bar"><div class="rival-bar-fill" style="width: 87%"></div></div>
+        </div>
+      </a>
+      <a href="#" class="rival-card top3">
+        <div class="rival-rank">3</div>
+        <div class="rival-info">
+          <div class="rival-title">Roommates Season 2</div>
+          <div class="rival-meta">DRAMÉDIE · 3,2 M VUES</div>
+          <div class="rival-bar"><div class="rival-bar-fill" style="width: 68%"></div></div>
+        </div>
+      </a>
+      <a href="#" class="rival-card">
+        <div class="rival-rank">4</div>
+        <div class="rival-info">
+          <div class="rival-title">XO, Kitty</div>
+          <div class="rival-meta">TEEN · S1 CUMUL · 2,9 M VUES</div>
+          <div class="rival-bar"><div class="rival-bar-fill" style="width: 62%"></div></div>
+        </div>
+      </a>
+      <a href="#" class="rival-card">
+        <div class="rival-rank">5</div>
+        <div class="rival-info">
+          <div class="rival-title">Beef Season 2</div>
+          <div class="rival-meta">DRAMA · 2,4 M VUES</div>
+          <div class="rival-bar"><div class="rival-bar-fill" style="width: 51%"></div></div>
+        </div>
+      </a>
+      <a href="#" class="rival-card is-bandi">
+        <div class="rival-rank">~</div>
+        <div class="rival-info">
+          <div class="rival-title">🇲🇶 Bandi <span style="color: var(--gold); font-size: 10px; font-family: var(--font-mono); letter-spacing: 0.06em;">(HORS TOP — PIC #1 S2)</span></div>
+          <div class="rival-meta">CRIME MARTINIQUE · CUMUL 9,2 M VUES · 71,4 M HEURES</div>
+          <div class="rival-bar"><div class="rival-bar-fill" style="width: 100%; background: linear-gradient(90deg, var(--gold), var(--rouge), var(--vert));"></div></div>
+        </div>
+      </a>
+    </div>
   </div>
 
-  <div class="wall">
-    <a href="#" class="wall-item" style="--ar: 3/4">
-      <div class="wall-corner-pill"><span class="type-pill press">📰 PRESSE</span></div>
-      <img src="https://picsum.photos/seed/bandiwall1/400/520" alt="">
-      <div class="wall-overlay">
-        <div class="wo-source">Variety France · il y a 2h</div>
-        <div class="wo-title">"Le phénomène Bandi : ce que la France ne savait pas sur la fiction antillaise"</div>
+  <!-- ===== MUR D'IMAGES ===== -->
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Le mur</h2>
+        <p class="panel-sub">Tout ce qui sort sur Bandi · presse + sociaux + extraits vidéos · scroll infini</p>
       </div>
-    </a>
-    <a href="#" class="wall-item" style="--ar: 1/1">
-      <div class="wall-corner-pill"><span class="type-pill social">💬 BLUESKY</span></div>
-      <img src="https://picsum.photos/seed/bandiwall2/400/400" alt="">
-      <div class="wall-overlay">
-        <div class="wo-source">@cinephile.bsky · 856 likes</div>
-        <div class="wo-title">"Bandi épisode 7 = le meilleur cliffhanger de l'année"</div>
-      </div>
-    </a>
-    <a href="#" class="wall-item" style="--ar: 4/3">
-      <div class="wall-corner-pill"><span class="type-pill video">🎥 YOUTUBE</span></div>
-      <img src="https://picsum.photos/seed/bandiwall3/400/300" alt="">
-      <div class="wall-overlay">
-        <div class="wo-source">Brut · 230k vues</div>
-        <div class="wo-title">"On est allé à la première de Bandi à Fort-de-France"</div>
-      </div>
-    </a>
-    <a href="#" class="wall-item" style="--ar: 3/4">
-      <div class="wall-corner-pill"><span class="type-pill local">🇲🇶 LOCAL</span></div>
-      <img src="https://picsum.photos/seed/bandiwall4/400/520" alt="">
-      <div class="wall-overlay">
-        <div class="wo-source">France-Antilles · il y a 6h</div>
-        <div class="wo-title">"Bandi propulse 8 acteurs martiniquais sur la scène internationale"</div>
-      </div>
-    </a>
-    <a href="#" class="wall-item" style="--ar: 4/5">
-      <div class="wall-corner-pill"><span class="type-pill press">📰 INRX</span></div>
-      <img src="https://picsum.photos/seed/bandiwall5/400/500" alt="">
-      <div class="wall-overlay">
-        <div class="wo-source">Les Inrockuptibles · il y a 8h</div>
-        <div class="wo-title">"L'art de Rochant : force et finesse"</div>
-      </div>
-    </a>
-    <a href="#" class="wall-item" style="--ar: 1/1">
-      <div class="wall-corner-pill"><span class="type-pill social">💬 REDDIT</span></div>
-      <img src="https://picsum.photos/seed/bandiwall6/400/400" alt="">
-      <div class="wall-overlay">
-        <div class="wo-source">r/television · 4,3k ⬆</div>
-        <div class="wo-title">"Just finished Bandi — Martinique is a game changer"</div>
-      </div>
-    </a>
-    <a href="#" class="wall-item" style="--ar: 2/3">
-      <div class="wall-corner-pill"><span class="type-pill press">📰 SCREEN RANT</span></div>
-      <img src="https://picsum.photos/seed/bandiwall7/400/600" alt="">
-      <div class="wall-overlay">
-        <div class="wo-source">Screen Rant · USA</div>
-        <div class="wo-title">"Gritty new 8-part crime series taking over streaming worldwide"</div>
-      </div>
-    </a>
-    <a href="#" class="wall-item" style="--ar: 4/3">
-      <div class="wall-corner-pill"><span class="type-pill social">📸 INSTAGRAM</span></div>
-      <img src="https://picsum.photos/seed/bandiwall8/400/300" alt="">
-      <div class="wall-overlay">
-        <div class="wo-source">@netflixfr · 89k likes</div>
-        <div class="wo-title">"BTS de la dernière scène · épisode 8"</div>
-      </div>
-    </a>
+      <p class="panel-sub" style="font-family: var(--font-mono); font-size: 10px;">14 nouveaux items depuis ton dernier scroll</p>
+    </div>
+
+    <div class="wall">
+      <a href="#" class="wall-item" style="--ar: 3/4">
+        <div class="wall-corner"><span class="type-pill press">📰 PRESSE</span></div>
+        <img src="https://picsum.photos/seed/bandiwall1/400/520" alt="">
+        <div class="wall-overlay">
+          <div class="wo-source">Variety France · il y a 2 h</div>
+          <div class="wo-title">"Le phénomène Bandi : ce que la France ne savait pas sur la fiction antillaise"</div>
+        </div>
+      </a>
+      <a href="#" class="wall-item" style="--ar: 1/1">
+        <div class="wall-corner"><span class="type-pill social">💬 BLUESKY</span></div>
+        <img src="https://picsum.photos/seed/bandiwall2/400/400" alt="">
+        <div class="wall-overlay">
+          <div class="wo-source">@cinephile.bsky · 856 likes</div>
+          <div class="wo-title">"Bandi épisode 7 = le meilleur cliffhanger de l'année"</div>
+        </div>
+      </a>
+      <a href="#" class="wall-item" style="--ar: 4/3">
+        <div class="wall-corner"><span class="type-pill video">🎥 YOUTUBE</span></div>
+        <img src="https://picsum.photos/seed/bandiwall3/400/300" alt="">
+        <div class="wall-overlay">
+          <div class="wo-source">Brut · 230 k vues</div>
+          <div class="wo-title">"On est allé à la première de Bandi à Fort-de-France"</div>
+        </div>
+      </a>
+      <a href="#" class="wall-item" style="--ar: 3/4">
+        <div class="wall-corner"><span class="type-pill local">🇲🇶 LOCAL</span></div>
+        <img src="https://picsum.photos/seed/bandiwall4/400/520" alt="">
+        <div class="wall-overlay">
+          <div class="wo-source">France-Antilles · il y a 6 h</div>
+          <div class="wo-title">"Bandi propulse 8 acteurs martiniquais sur la scène internationale"</div>
+        </div>
+      </a>
+      <a href="#" class="wall-item" style="--ar: 4/5">
+        <div class="wall-corner"><span class="type-pill press">📰 INRX</span></div>
+        <img src="https://picsum.photos/seed/bandiwall5/400/500" alt="">
+        <div class="wall-overlay">
+          <div class="wo-source">Les Inrockuptibles · il y a 8 h</div>
+          <div class="wo-title">"L'art de Rochant : force et finesse"</div>
+        </div>
+      </a>
+      <a href="#" class="wall-item" style="--ar: 1/1">
+        <div class="wall-corner"><span class="type-pill social">💬 REDDIT</span></div>
+        <img src="https://picsum.photos/seed/bandiwall6/400/400" alt="">
+        <div class="wall-overlay">
+          <div class="wo-source">r/television · 4,3 k ⬆</div>
+          <div class="wo-title">"Just finished Bandi — Martinique is a game changer"</div>
+        </div>
+      </a>
+      <a href="#" class="wall-item" style="--ar: 2/3">
+        <div class="wall-corner"><span class="type-pill press">📰 SCREEN RANT</span></div>
+        <img src="https://picsum.photos/seed/bandiwall7/400/600" alt="">
+        <div class="wall-overlay">
+          <div class="wo-source">Screen Rant · USA</div>
+          <div class="wo-title">"Gritty new 8-part crime series taking over streaming worldwide"</div>
+        </div>
+      </a>
+      <a href="#" class="wall-item" style="--ar: 4/3">
+        <div class="wall-corner"><span class="type-pill social">📸 INSTAGRAM</span></div>
+        <img src="https://picsum.photos/seed/bandiwall8/400/300" alt="">
+        <div class="wall-overlay">
+          <div class="wo-source">@netflixfr · 89 k likes</div>
+          <div class="wo-title">"BTS de la dernière scène · épisode 8"</div>
+        </div>
+      </a>
+    </div>
+
+    <button class="load-more-btn">CHARGER 14 ITEMS DE PLUS</button>
   </div>
 
 </main>
 
-<div class="reload-bar">
+<!-- Notification flottante -->
+<div class="reload-bar" onclick="this.querySelector('span:last-child').textContent='actualisation…'">
   <span class="live-dot"></span>
-  3 nouveaux articles · cliquez pour actualiser
+  <span>3 nouveaux articles · cliquez pour actualiser</span>
 </div>
 
 <script>
-  // Démo : simule un nouvel item qui apparaît dans la reload bar toutes les ~12s
+  // Démo : compteur reload toutes les 12s
   let n = 3;
   setInterval(() => {
     n++;
-    document.querySelector('.reload-bar').lastChild.textContent =
-      ` ${n} nouveaux articles · cliquez pour actualiser`;
+    const bar = document.querySelector('.reload-bar span:last-child');
+    if (bar) bar.textContent = `${n} nouveaux articles · cliquez pour actualiser`;
   }, 12000);
-
-  // Démo : alterne le badge "À la une" sur la grosse card toutes les 8s
-  const sources = ['Le Monde · 🇫🇷', 'Variety · 🇺🇸', 'Le Parisien · 🇫🇷', 'Première · 🇫🇷'];
-  let i = 0;
-  setInterval(() => {
-    i = (i + 1) % sources.length;
-    const el = document.querySelector('.bento-hero .bento-source');
-    if (el) el.firstElementChild.textContent = '📰 ' + sources[i].split(' · ')[0];
-  }, 8000);
 </script>
 
 </body>
