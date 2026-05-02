@@ -1,7 +1,13 @@
 /* ========================================
-   BANDI DASHBOARD · DONNÉES
-   Source : flixpatrol.com/title/bandi/
-   Dernière MAJ : 16 avril 2026
+   BANDI DASHBOARD · DONNÉES (FALLBACK STATIQUE)
+   Source : flixpatrol.com/title/bandi/ + Netflix Tudum + presse
+   Dernière MAJ : 02 mai 2026
+   ⚠️ Ce fichier sert UNIQUEMENT de fallback si Supabase est KO.
+      En prod, les valeurs `current` / `previous` / `historique` sont écrasées
+      par les données live (Object.assign après fetch). Si tu vois des valeurs
+      d'avril ici, c'est OK : elles sont juste là pour qu'un dashboard lancé
+      hors-ligne reste lisible. Le `_fallback: true` flag aide health-guard
+      à afficher un bandeau d'avertissement dans ce cas.
    ======================================== */
 
 // M1 (audit) : marqueur explicite du fallback statique. Il est remis à false
