@@ -486,12 +486,25 @@ function renderSourcesBadge() {
     const prev  = BANDI.previous?.rang;
     const score = BANDI.current?.score;
     const date  = BANDI.current?.date || '—';
-    if (!rang) return;
+    if (!rang) { badge.style.display = 'none'; return; }
     const inTop10 = rang <= 10;
+    const inTop30 = rang <= 30;
     const trend   = prev ? Math.sign(prev - rang) : 0;
     const arrow   = trend > 0 ? ' ↑' : trend < 0 ? ' ↓' : '';
-    badge.textContent  = inTop10 ? `✓ #${rang}${arrow}` : `⚠ #${rang}`;
-    badge.className    = `sources-badge ${inTop10 ? 'coherent' : 'warning'}`;
+    if (inTop10) {
+      badge.textContent = `✓ #${rang}${arrow}`;
+      badge.className   = 'sources-badge coherent';
+    } else if (inTop30) {
+      badge.textContent = `⚠ #${rang}${arrow}`;
+      badge.className   = 'sources-badge warning';
+    } else {
+      // Au-delà de #30, le rang FlixPatrol n'est plus parlant pour le badge :
+      // on affiche le pic atteint ("Pic #1") plutôt qu'un nombre dégringolé,
+      // pour rester cohérent avec le hero post-pic.
+      const peak = BANDI.launchWeek2?.rangNonEnglish === 1 ? '#1' : `#${BANDI.launchWeek?.peakNonEnglish ?? '—'}`;
+      badge.textContent = `Pic ${peak}`;
+      badge.className   = 'sources-badge coherent';
+    }
     badge.title        = `FlixPatrol TV Shows · #${rang} · ${score || '—'} pts · ${date}`;
     badge.style.display = '';
   } catch (_) {}
@@ -636,29 +649,80 @@ function renderOverview() {
   const cur = BANDI.current;
   const prev = BANDI.previous;
 
+  // Détection "post-pic" : rang absent ou hors Top 10 (>10).
+  // Quand Bandi est sorti du Top 10 (cas dès fin avril 2026), le hero ne doit
+  // plus afficher un rang sec "#15" trompeur — on bascule sur le bilan cumulé.
+  const rangNum = (cur.rang != null && cur.rang > 0) ? Number(cur.rang) : null;
+  const postPic = rangNum == null || rangNum > 10;
+
+  // Bandeau bilan en mode post-pic
+  const banner = document.getElementById('heroPostPicBanner');
+  if (banner) {
+    if (postPic) {
+      banner.style.display = '';
+      const cu = BANDI.cumulTudum;
+      const heuresM = cu?.heuresMillions != null ? `${String(cu.heuresMillions).replace('.', ',')} M heures` : '—';
+      const peak = BANDI.launchWeek2?.rangNonEnglish === 1 ? '#1' : `#${BANDI.launchWeek?.peakNonEnglish ?? '—'}`;
+      const sem = cu?.semainesTop10 != null ? `${cu.semainesTop10} sem. au Top 10` : '';
+      const txt = `Bandi est sorti du Top 10 mondial · ${sem} · ${heuresM} · pic ${peak} non-English`;
+      const hppText = document.getElementById('hppText');
+      if (hppText) hppText.textContent = txt;
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+  // Label du bloc rang : adapté au mode post-pic
+  const labelEl = document.getElementById('heroLabelText');
+  if (labelEl) {
+    labelEl.textContent = postPic
+      ? 'RANG MONDIAL · POSITION ACTUELLE'
+      : 'RANG MONDIAL · TV SHOWS NETFLIX';
+  }
+
   const rankEl = $("rankNumber");
-  rankEl.textContent = (cur.rang != null && cur.rang > 0) ? `#${cur.rang}` : "#—";
-  // Applique la classe de couleur selon la valeur du rang
-  rankEl.classList.remove('rank-green', 'rank-orange', 'rank-red');
-  rankEl.classList.add(getRankColor(cur.rang));
-  const rankDelta = prev.rang - cur.rang;
+  if (rankEl) {
+    rankEl.textContent = rangNum != null ? `#${rangNum}` : "#—";
+    rankEl.classList.remove('rank-green', 'rank-orange', 'rank-red');
+    rankEl.classList.add(getRankColor(rangNum));
+  }
+
+  // Sous-titre dynamique : si post-pic, affiche le bilan plutôt que le delta vs hier
   const rankDeltaEl = $("rankDelta");
   const rankDeltaValueEl = $("rankDeltaValue");
-
-  if (rankDelta > 0) {
-    rankDeltaValueEl.textContent = `+${rankDelta} places`;
-    rankDeltaEl.style.background = "rgba(0, 151, 57, 0.15)";
-    rankDeltaEl.style.borderColor = "rgba(0, 151, 57, 0.4)";
-    rankDeltaEl.style.color = "#009739";
-  } else if (rankDelta < 0) {
-    rankDeltaValueEl.textContent = `${rankDelta} places`;
-    rankDeltaEl.style.background = "rgba(206, 17, 38, 0.15)";
-    rankDeltaEl.style.borderColor = "rgba(206, 17, 38, 0.4)";
-    rankDeltaEl.style.color = "#CE1126";
-    const svg = rankDeltaEl.querySelector("svg");
-    if (svg) svg.style.transform = "rotate(180deg)";
+  if (postPic) {
+    const cu = BANDI.cumulTudum;
+    const peak = BANDI.launchWeek2?.rangNonEnglish === 1 ? '#1' : `#${BANDI.launchWeek?.peakNonEnglish ?? '—'}`;
+    const heuresM = cu?.heuresMillions != null ? `${String(cu.heuresMillions).replace('.', ',')} M h` : '—';
+    const sem = cu?.semainesTop10 != null ? `${cu.semainesTop10} sem.` : '—';
+    if (rankDeltaValueEl) rankDeltaValueEl.textContent = `Pic ${peak} non-EN · ${sem} Top 10 · ${heuresM} cumul`;
+    if (rankDeltaEl) {
+      rankDeltaEl.style.background = "rgba(228, 184, 77, 0.12)";
+      rankDeltaEl.style.borderColor = "rgba(228, 184, 77, 0.35)";
+      rankDeltaEl.style.color = "#E4B84D";
+      const svg = rankDeltaEl.querySelector("svg");
+      if (svg) svg.style.transform = "rotate(0deg)";
+    }
   } else {
-    rankDeltaValueEl.textContent = "stable";
+    const rankDelta = (prev?.rang ?? rangNum) - rangNum;
+    if (rankDelta > 0) {
+      if (rankDeltaValueEl) rankDeltaValueEl.textContent = `+${rankDelta} places`;
+      if (rankDeltaEl) {
+        rankDeltaEl.style.background = "rgba(0, 151, 57, 0.15)";
+        rankDeltaEl.style.borderColor = "rgba(0, 151, 57, 0.4)";
+        rankDeltaEl.style.color = "#009739";
+      }
+    } else if (rankDelta < 0) {
+      if (rankDeltaValueEl) rankDeltaValueEl.textContent = `${rankDelta} places`;
+      if (rankDeltaEl) {
+        rankDeltaEl.style.background = "rgba(206, 17, 38, 0.15)";
+        rankDeltaEl.style.borderColor = "rgba(206, 17, 38, 0.4)";
+        rankDeltaEl.style.color = "#CE1126";
+        const svg = rankDeltaEl.querySelector("svg");
+        if (svg) svg.style.transform = "rotate(180deg)";
+      }
+    } else {
+      if (rankDeltaValueEl) rankDeltaValueEl.textContent = "stable";
+    }
   }
 
   $("heroScore").textContent = cur.score ?? "—";
@@ -667,22 +731,49 @@ function renderOverview() {
   $("heroN1Count").textContent = cur.paysN1 ?? "—";
   $("heroPresence").textContent = cur.paysTop10 ?? "—";
 
+  // KPIs : sub-text adaptatif selon le mode (in-top10 vs post-pic).
+  // En post-pic, "vs hier" n'a plus de sens — on remplace par le pic atteint
+  // pour donner du contexte au lecteur.
+  const peakScore = Math.max(...(BANDI.historique || []).map(h => h.score ?? 0), 0);
+  const peakN1    = Math.max(...(BANDI.historique || []).map(h => h.paysN1 ?? 0), 0);
+  const peakTop10 = Math.max(...(BANDI.historique || []).map(h => h.paysTop10 ?? 0), 0);
+
   $("kpiScore").textContent = cur.score ?? "—";
-  $("kpiScoreTrend").textContent = formatDelta(scoreDelta) + " vs hier";
-  $("kpiScoreTrend").className = "kpi-trend " + trendClass(scoreDelta);
+  if (postPic) {
+    $("kpiScoreTrend").textContent = peakScore > 0 ? `Pic ${peakScore}` : '—';
+    $("kpiScoreTrend").className = "kpi-trend";
+  } else {
+    $("kpiScoreTrend").textContent = formatDelta(scoreDelta) + " vs hier";
+    $("kpiScoreTrend").className = "kpi-trend " + trendClass(scoreDelta);
+  }
 
   $("kpiN1").textContent = cur.paysN1 ?? "—";
   const n1Delta = (cur.paysN1 ?? 0) - (prev.paysN1 ?? 0);
-  $("kpiN1Trend").textContent = formatDelta(n1Delta) + " vs hier";
-  $("kpiN1Trend").className = "kpi-trend " + trendClass(n1Delta);
+  if (postPic) {
+    const peakN1Final = Math.max(peakN1, BANDI.launchWeek2?.paysN1 || 0);
+    $("kpiN1Trend").textContent = peakN1Final > 0 ? `Pic ${peakN1Final} pays` : '—';
+    $("kpiN1Trend").className = "kpi-trend";
+  } else {
+    $("kpiN1Trend").textContent = formatDelta(n1Delta) + " vs hier";
+    $("kpiN1Trend").className = "kpi-trend " + trendClass(n1Delta);
+  }
 
   $("kpiTop10").textContent = cur.paysTop10 ?? "—";
   const top10Delta = (cur.paysTop10 ?? 0) - (prev.paysTop10 ?? 0);
-  $("kpiTop10Trend").textContent = top10Delta === 0 ? "stable" : formatDelta(top10Delta) + " vs hier";
-  $("kpiTop10Trend").className = "kpi-trend " + trendClass(top10Delta);
+  if (postPic) {
+    const peakTop10Final = Math.max(peakTop10, BANDI.launchWeek?.paysTop10 || 0);
+    $("kpiTop10Trend").textContent = peakTop10Final > 0 ? `Pic ${peakTop10Final} pays` : '—';
+    $("kpiTop10Trend").className = "kpi-trend";
+  } else {
+    $("kpiTop10Trend").textContent = top10Delta === 0 ? "stable" : formatDelta(top10Delta) + " vs hier";
+    $("kpiTop10Trend").className = "kpi-trend " + trendClass(top10Delta);
+  }
 
   $("kpiAvg").textContent = cur.rangMoyen ?? "—";
-  if (cur.rangMoyen != null && prev.rangMoyen != null) {
+  if (postPic) {
+    $("kpiAvgTrend").textContent = "plus bas = mieux";
+    $("kpiAvgTrend").className = "kpi-trend";
+  } else if (cur.rangMoyen != null && prev.rangMoyen != null) {
     const avgDelta = (cur.rangMoyen - prev.rangMoyen).toFixed(1);
     $("kpiAvgTrend").textContent = formatDelta(avgDelta) + " · plus bas = mieux";
     $("kpiAvgTrend").className = "kpi-trend " + trendClass(parseFloat(avgDelta), true);
