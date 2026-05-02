@@ -60,14 +60,18 @@ jobs:
 
           if [ -z "${PR_NUMBER:-}" ] || [ "${PR_NUMBER}" = "null" ]; then
             echo "Création d'une nouvelle PR…"
-            # Récupère le dernier message de commit comme corps de PR
             COMMIT_TITLE=$(git log -1 --pretty=%s)
             COMMIT_BODY=$(git log -1 --pretty=%b)
+            # Newlines bruts dans la chaîne bash : pas besoin de $'\n' qui
+            # provoquait un parse error si mal fermé.
+            PR_BODY="${COMMIT_BODY}
+
+          _PR auto-générée par .github/workflows/auto-merge-claude.yml_"
             gh pr create \
               --base master \
               --head "$BRANCH" \
               --title "$COMMIT_TITLE" \
-              --body "$COMMIT_BODY"$'\n\n_PR auto-générée par .github/workflows/auto-merge-claude.yml_"
+              --body "$PR_BODY"
             PR_NUMBER=$(gh pr list --head "$BRANCH" --base master --state open --json number -q '.[0].number')
           else
             echo "PR existante : #$PR_NUMBER"
