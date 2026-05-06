@@ -1130,7 +1130,7 @@ function renderRivalsTudum() {
 
   const tvEn = weekRows.filter(r => r.categorie === 'tv_english').sort((a,b) => a.rang - b.rang);
   if (tvEn.length === 0) {
-    list.innerHTML = '<div class="tudum-empty">Données TV English non disponibles pour cette semaine.</div>';
+    list.innerHTML = '<div class="tudum-empty">Données TV non-anglophones non disponibles pour cette semaine.</div>';
     return;
   }
 
@@ -1252,11 +1252,10 @@ function renderSeriesTab() {
     if (cu.vuesMillions   != null) setText('cumulVues',     `${String(cu.vuesMillions).replace('.', ',')} M`);
     if (cu.heuresMillions != null) setText('cumulHeures',   `${String(cu.heuresMillions).replace('.', ',')} M`);
     if (cu.semaine3?.rangNonEnglishEstim != null) {
-      setText('cumulW3Rang', `≈ #${cu.semaine3.rangNonEnglishEstim}`);
+      setText('cumulW3Rang', `#${cu.semaine3.rangNonEnglishEstim}`);
     }
-    if (cu.semaine3?.detroneePar) {
-      setText('cumulW3Detrone', `détrôné par ${cu.semaine3.detroneePar}`);
-    }
+    // Toujours afficher le label factuel — on ne nomme plus la série concurrente
+    setText('cumulW3Detrone', 'Baisse importante après le pic S2');
     if (cu.source) setText('cumulTudumSource', cu.source);
     if (cu.semainesTop10) setText('cumulTudumSub', `${cu.semainesTop10} semaines · cumul live`);
   }

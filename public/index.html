@@ -315,15 +315,15 @@
           <li class="highlight">
             <div class="highlight-icon" style="background:rgba(0,151,57,.15); color:#009739;">🇭🇺</div>
             <div>
-              <strong>Percée inattendue en Hongrie</strong>
-              <span>De #10 à #1 en 4 jours</span>
+              <strong>Top 10 atteint en Hongrie</strong>
+              <span>#1 le 13/04 — Source FlixPatrol</span>
             </div>
           </li>
           <li class="highlight">
             <div class="highlight-icon" style="background:rgba(212,160,23,.15); color:#D4A017;">🇺🇸</div>
             <div>
-              <strong>Entrée aux États-Unis</strong>
-              <span>#10 le 12/04, percée du marché US</span>
+              <strong>Présence relevée aux États-Unis</strong>
+              <span>#10 le 12/04 — Source FlixPatrol</span>
             </div>
           </li>
           <li class="highlight">
@@ -336,8 +336,8 @@
           <li class="highlight">
             <div class="highlight-icon" style="background:rgba(0,151,57,.15); color:#009739;">🏆</div>
             <div>
-              <strong>Domination Caraïbes</strong>
-              <span>#1 dans 7 pays de la région</span>
+              <strong>Forte présence Caraïbes</strong>
+              <span>Plusieurs Top 10 nationaux relevés — Source FlixPatrol</span>
             </div>
           </li>
         </ul>
@@ -366,7 +366,7 @@
       <div class="panel-head">
         <div>
           <h2>Classement officiel Netflix</h2>
-          <p class="panel-sub">TV Shows anglais · Heures vues · Source Netflix Tudum</p>
+          <p class="panel-sub">TV Shows non-anglophones · Heures vues · Source officielle Netflix Tudum</p>
         </div>
         <span class="tudum-source-label">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
@@ -376,30 +376,36 @@
       <div class="tudum-mini-list" id="tudumMiniList"></div>
     </div>
 
-    <!-- ── Bento Stratégique B2B ── -->
-    <div class="bento-strategic" id="bentoStrategic">
+    <!-- ── Bento Stratégique B2B (masqué — audit 06/05) ──────────────────────
+         Les 3 modules ci-dessous (Breakthrough USA, Authenticité 91%, Forecast S2)
+         sont des claims non vérifiables publiquement ou des estimations internes.
+         Conservés dans le code mais masqués pour ne pas afficher de chiffres
+         marketing trop affirmatifs.
+         Pour réactiver : retirer style="display:none" du div parent. — 06/05/2026
+    -->
+    <div class="bento-strategic" id="bentoStrategic" style="display:none" aria-hidden="true">
 
       <a class="bento-usa" id="usaModule" href="https://flixpatrol.com/top10/netflix/united-states/" target="_blank" rel="noopener">
         <div class="bento-badge">EN VEDETTE</div>
         <div class="bento-usa-flag">🇺🇸</div>
-        <div class="bento-usa-label">BREAKTHROUGH USA</div>
-        <div class="bento-usa-rank" id="usaRankDisplay">#7</div>
+        <div class="bento-usa-label">PRÉSENCE USA</div>
+        <div class="bento-usa-rank" id="usaRankDisplay">#—</div>
         <div class="bento-usa-entry">▲ Première entrée</div>
-        <div class="bento-usa-sub">Top 10 TV · Netflix US</div>
-        <div class="bento-usa-note" id="usaNote">First French-Caribbean series to break US Top 10</div>
-        <div class="bento-usa-source">Source : FlixPatrol · <span id="usaDate">14/04/2026</span></div>
+        <div class="bento-usa-sub">Top 10 TV · Netflix US (FlixPatrol)</div>
+        <div class="bento-usa-note" id="usaNote">Présence relevée dans le Top 10 FlixPatrol USA</div>
+        <div class="bento-usa-source">Source : FlixPatrol · <span id="usaDate">—</span></div>
       </a>
 
       <div class="bento-auth-mini" id="authMini">
-        <div class="bento-auth-label">AUTHENTICITÉ</div>
+        <div class="bento-auth-label">CASTING LOCAL</div>
         <div class="bento-auth-gauge-wrap">
           <svg class="gauge-mini" viewBox="0 0 60 60">
             <circle class="gauge-bg" cx="30" cy="30" r="24" />
             <circle class="gauge-fill" cx="30" cy="30" r="24" id="authGaugeMini" />
           </svg>
-          <span class="gauge-pct" id="authPctMini">91%</span>
+          <span class="gauge-pct" id="authPctMini">—%</span>
         </div>
-        <div class="bento-auth-sub">Casting martiniquais</div>
+        <div class="bento-auth-sub">Estimation interne — à confirmer</div>
       </div>
 
       <div class="bento-forecast" id="forecastModule">
@@ -407,24 +413,26 @@
         <div class="bento-forecast-bar-wrap">
           <div class="bento-forecast-bar" id="forecastBar"></div>
         </div>
-        <div class="bento-forecast-pct" id="forecastPct">85%</div>
+        <div class="bento-forecast-pct" id="forecastPct">—%</div>
         <div class="bento-forecast-sub">Probabilité renouvellement</div>
-        <div class="bento-forecast-disclaimer">Estimation interne · non officielle</div>
+        <div class="bento-forecast-disclaimer">Estimation interne · non officielle Netflix</div>
       </div>
 
     </div>
 
     <!-- ── Zones de domination ── -->
-    <div class="zones-module" id="zonesModule">
+    <!-- Zones de domination — masqué (claim "domination" trop marketing,
+         à reformuler en factuel sourcé FlixPatrol — audit 06/05). -->
+    <div class="zones-module" id="zonesModule" style="display:none" aria-hidden="true">
       <div class="zones-header">
-        <span class="zones-title">ZONES DE DOMINATION</span>
-        <span class="zones-count" id="zonesCount">Bandi est #1 dans — pays</span>
+        <span class="zones-title">PRÉSENCE TERRITORIALE · FLIXPATROL</span>
+        <span class="zones-count" id="zonesCount">— pays Top 10</span>
       </div>
       <div class="zones-list" id="zonesList"></div>
     </div>
 
-    <!-- ── Forecast S2 détaillé ── -->
-    <div class="forecast-detail panel" id="forecastDetail">
+    <!-- ── Forecast S2 détaillé ── (masqué — estimation interne non officielle) -->
+    <div class="forecast-detail panel" id="forecastDetail" style="display:none" aria-hidden="true">
       <div class="forecast-header">
         <span class="forecast-tag">ANALYSE INTERNE</span>
         <h3 class="forecast-title">Forecast Saison 2</h3>
@@ -486,7 +494,7 @@
     <div class="panel mon-fresh-panel">
       <div class="panel-head">
         <h2>Fraîcheur des données</h2>
-        <span class="panel-sub">8 tables · scraping automatique</span>
+        <span class="panel-sub">8 tables · collecte quotidienne</span>
       </div>
       <div class="mon-fresh-list" id="monGrid">
         <!-- Rempli dynamiquement par loadMonFreshness() -->
@@ -647,13 +655,13 @@
     <div class="buzz-empty" id="buzzEmptyDB" style="display:none" role="status">
       <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
       <p><strong>Veille en cours de constitution.</strong></p>
-      <p class="buzz-empty-sub">Les scrapers tournent toutes les 30 minutes — reviens dans quelques instants.</p>
+      <p class="buzz-empty-sub">Veille en cours de constitution. La collecte tourne 1×/jour à 00:00 UTC.</p>
     </div>
 
     <!-- État : erreur de chargement -->
     <div class="buzz-empty buzz-empty--error" id="buzzError" style="display:none" role="alert">
       <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <p><strong>Chargement impossible.</strong></p>
+      <p><strong>Donnée temporairement indisponible</strong> — dernier relevé disponible affiché.</p>
       <p class="buzz-empty-sub" id="buzzErrorMsg">Vérifie ta connexion et réessaie.</p>
       <button type="button" class="buzz-retry-btn" id="buzzRetryBtn">Réessayer</button>
     </div>
@@ -958,15 +966,15 @@
         </div>
         <div class="stat-card">
           <span class="stat-num" id="cumulVues">9,2 M</span>
-          <span class="stat-label">vues complètes<br/><small>cumul S1 + S2 + S3</small></span>
+          <span class="stat-label">vues complètes<br/><small>cumul Semaines 1 + 2 + 3</small></span>
         </div>
         <div class="stat-card">
           <span class="stat-num" id="cumulHeures">71,4 M</span>
           <span class="stat-label">heures visionnées<br/><small>cumul 3 semaines</small></span>
         </div>
         <div class="stat-card">
-          <span class="stat-num" id="cumulW3Rang">≈ #5</span>
-          <span class="stat-label">rang semaine 3<br/><small id="cumulW3Detrone">détrôné par Sold Out on You</small></span>
+          <span class="stat-num" id="cumulW3Rang">#8</span>
+          <span class="stat-label">rang TV non-anglophone S3<br/><small id="cumulW3Detrone">Baisse importante après le pic S2</small></span>
         </div>
       </div>
       <p class="series-stats-source">
@@ -1001,8 +1009,9 @@
       </p>
     </div>
 
-    <!-- ── Indice d'authenticité martiniquaise ── -->
-    <div class="authenticite-module panel" id="authenticiteModule">
+    <!-- ── Indice d'authenticité martiniquaise ── (masqué — estimation interne
+         Maui Entertainment non vérifiée par source publique — audit 06/05) -->
+    <div class="authenticite-module panel" id="authenticiteModule" style="display:none" aria-hidden="true">
       <div class="auth-header">
         <span class="auth-tag">INDICATEUR CLÉ</span>
         <h3 class="auth-title">Indice d'Authenticité Martiniquaise</h3>
