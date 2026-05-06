@@ -28,7 +28,7 @@
 <!-- Leaflet.js pour la carte choroplèthe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<link rel="stylesheet" href="css/styles.css?v=20260507i" />
+<link rel="stylesheet" href="css/styles.css?v=20260507j" />
 
 <!-- Splash screen (inline pour afficher immédiatement, avant tout chargement) -->
 <style>
@@ -115,15 +115,17 @@
         <span class="brand-sub">Dashboard mondial Netflix</span>
       </div>
     </div>
-    <!-- Bloc « LIVE · timestamp · #rang » masqué temporairement (Bandi sorti
-         du Top 10 mondial — l'affichage live perd son sens quand le scraping
-         tourne 1×/jour à 00:00). Décommenter pour réactiver. — 06/05/2026 -->
-    <!--
     <div class="live-indicator">
       <span class="pulse-dot"></span>
       <span class="live-text">LIVE</span>
       <span class="live-time" id="liveTime">—</span>
-      <span class="sources-badge" id="sourcesBadge" title="" style="display:none"></span>
+      <!-- Badge classement #rang masqué temporairement (Bandi sorti du Top 10
+           mondial — chiffre erroné #10 sur FlixPatrol n'est plus pertinent).
+           L'élément reste dans le DOM avec display:none pour que
+           renderSourcesBadge() ne crashe pas en cherchant `sourcesBadge`.
+           Pour réactiver : retirer `!important` du display:none ci-dessous,
+           le JS le fera passer à `display: ''` automatiquement. — 06/05/2026 -->
+      <span class="sources-badge" id="sourcesBadge" title="" style="display:none !important" aria-hidden="true"></span>
       <button class="logout-btn" id="logoutBtn" type="button" title="Se déconnecter" aria-label="Se déconnecter">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -131,12 +133,6 @@
           <line x1="21" y1="12" x2="9" y2="12"/>
         </svg>
       </button>
-    </div>
-    -->
-    <div style="display:none" id="liveIndicatorPlaceholder" aria-hidden="true">
-      <span id="liveTime"></span>
-      <span id="sourcesBadge"></span>
-      <button id="logoutBtn" hidden></button>
     </div>
   </div>
 
@@ -1277,12 +1273,12 @@
 </nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/auth.js?v=20260507i"></script>
-<script src="js/data-fallback.js?v=20260507i"></script>
-<script src="js/config.js?v=20260507i"></script>
-<script src="js/monitoring.js?v=20260507i"></script>
-<script src="js/app.js?v=20260507i"></script>
-<script src="js/health-guard.js?v=20260507i"></script>
+<script src="js/auth.js?v=20260507j"></script>
+<script src="js/data-fallback.js?v=20260507j"></script>
+<script src="js/config.js?v=20260507j"></script>
+<script src="js/monitoring.js?v=20260507j"></script>
+<script src="js/app.js?v=20260507j"></script>
+<script src="js/health-guard.js?v=20260507j"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {
