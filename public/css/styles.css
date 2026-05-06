@@ -3031,3 +3031,451 @@ button, .tab, .bnav-item, .region-btn, .country-row, .kpi-card, .highlight, .buz
 /* Utilitaires */
 .mon-empty         { color: var(--dim); font-size: 13px; padding: 16px 0; }
 .mon-loading-inline { color: var(--muted); font-size: 13px; padding: 12px 0; }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   ONGLET SIGNAUX · système de fiabilité 6 catégories + composants
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Badge de fiabilité réutilisable partout ─── */
+.rel-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill, 999px);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--rel-color, #888);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  cursor: help;
+}
+.rel-badge .rel-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.rel-badge .rel-label {
+  font-weight: 700;
+  color: var(--rel-color, #888);
+  text-transform: uppercase;
+}
+.rel-badge .rel-score {
+  color: var(--text-sub, #aaa);
+  font-size: 9px;
+}
+
+/* ─── Disclaimer en haut de l'onglet ─── */
+.signals-disclaimer {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  background: var(--gold-soft, rgba(228, 184, 77, 0.12));
+  border-left: 3px solid var(--gold, #E4B84D);
+  border-radius: var(--radius, 10px);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-sub, #ccc);
+}
+.signals-disclaimer strong { color: var(--gold, #E4B84D); }
+
+/* ─── Confidence Index ─── */
+.signals-confidence-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+.ci-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.5fr) 2fr 70px;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.ci-row:last-child { border-bottom: none; }
+.ci-label {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text);
+}
+.ci-bar-wrap {
+  height: 6px;
+  background: var(--surface-3, #272727);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.ci-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s var(--ease);
+}
+.ci-score {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 13px;
+  text-align: right;
+}
+.ci-score-max {
+  color: var(--text-dim, #777);
+  font-weight: 400;
+  font-size: 10px;
+}
+
+/* ─── Tableau performance hebdomadaire ─── */
+.signals-weekly-table {
+  display: grid;
+  gap: 4px;
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+.sig-wk-row {
+  display: grid;
+  grid-template-columns: 50px 130px 60px 100px 90px 70px 70px 80px minmax(180px, auto);
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--surface-2, #1F1F1F);
+  border-radius: var(--radius, 10px);
+  font-family: var(--font-body);
+  font-size: 13px;
+  min-width: 900px;
+}
+.sig-wk-header {
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim, #777);
+  padding: 4px 12px;
+}
+.sig-wk-period {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-sub, #aaa);
+}
+.sig-rank {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--text);
+}
+.sig-rank-top {
+  color: var(--gold, #E4B84D);
+}
+.sig-up   { color: var(--vert, #009739); font-family: var(--font-mono); }
+.sig-down { color: var(--rouge, #CE1126); font-family: var(--font-mono); }
+
+/* ─── Totaux 3 semaines ─── */
+.sig-totals-card {
+  display: flex; align-items: center; gap: 24px;
+  flex-wrap: wrap;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, rgba(206, 17, 38, 0.10), rgba(0, 151, 57, 0.06));
+  border: 1px solid rgba(228, 184, 77, 0.35);
+  border-radius: var(--radius, 10px);
+}
+.sig-totals-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold, #E4B84D);
+}
+.sig-totals-values {
+  display: flex; gap: 28px;
+}
+.sig-totals-values div {
+  display: flex; flex-direction: column;
+}
+.sig-totals-values strong {
+  font-family: var(--font-display);
+  font-size: 32px;
+  line-height: 1;
+  color: var(--text);
+}
+.sig-totals-values span {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim, #777);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ─── Encadré CVE ─── */
+.signals-cve-box {
+  background: var(--surface-2, #1F1F1F);
+}
+.signals-cve-text {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-sub, #ccc);
+  margin: 0 0 14px;
+}
+.signals-cve-formula {
+  display: inline-block;
+  padding: 10px 18px;
+  background: var(--bg, #0F0F0F);
+  border: 1px dashed var(--gold, #E4B84D);
+  border-radius: var(--radius, 10px);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--gold, #E4B84D);
+  margin-bottom: 14px;
+}
+
+/* ─── Completion Score ─── */
+.sig-comp-num {
+  font-family: var(--font-display);
+  font-size: 72px;
+  line-height: 1;
+  color: var(--gold, #E4B84D);
+  letter-spacing: 0.02em;
+}
+.sig-comp-unit { font-size: 32px; color: var(--text-sub, #aaa); }
+.sig-comp-range {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-sub, #aaa);
+  margin: 8px 0 12px;
+}
+.sig-comp-text {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-sub, #ccc);
+  margin-top: 12px;
+}
+.sig-comp-warning {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: rgba(245, 158, 11, 0.10);
+  border-left: 3px solid #f59e0b;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 12px;
+  color: #f59e0b;
+  font-family: var(--font-mono);
+}
+
+/* ─── Funnel rétention ─── */
+.signals-funnel {
+  display: grid; gap: 8px;
+}
+.sig-funnel-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 60px 70px;
+  gap: 12px;
+  align-items: center;
+}
+.sig-funnel-ep {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--gold, #E4B84D);
+  text-align: center;
+}
+.sig-funnel-bar-wrap {
+  height: 22px;
+  background: var(--surface-3, #272727);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.sig-funnel-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--rouge, #CE1126), var(--gold, #E4B84D), var(--vert, #009739));
+  border-radius: 3px;
+  transition: width 0.6s var(--ease);
+}
+.sig-funnel-pct {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: right;
+}
+.sig-funnel-dur {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim, #777);
+  text-align: right;
+}
+.sig-funnel-meta {
+  margin-top: 14px;
+  display: flex; gap: 8px;
+}
+.sig-aud-card {
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--surface-2, #1F1F1F);
+  border-radius: var(--radius, 10px);
+  display: grid; gap: 10px;
+}
+.sig-aud-row {
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: var(--font-body);
+}
+.sig-aud-row strong {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--gold, #E4B84D);
+}
+.sig-aud-label {
+  font-size: 13px;
+  color: var(--text-sub, #ccc);
+}
+
+/* ─── Renewal Risk Matrix ─── */
+.signals-risk-matrix {
+  display: grid; gap: 4px;
+}
+.sig-risk-row {
+  display: grid;
+  grid-template-columns: 1.5fr 140px 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--surface-2, #1F1F1F);
+  border-radius: var(--radius-sm, 6px);
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+.sig-risk-header {
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-dim, #777);
+  padding: 4px 14px;
+}
+.sig-risk-signal { color: var(--text); }
+.sig-dir {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill, 999px);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sig-dir-fav { background: rgba(0, 151, 57, 0.18); color: var(--vert, #009739); border: 1px solid rgba(0, 151, 57, 0.4); }
+.sig-dir-def { background: rgba(206, 17, 38, 0.18); color: var(--rouge, #CE1126); border: 1px solid rgba(206, 17, 38, 0.4); }
+.sig-dir-mit { background: rgba(228, 184, 77, 0.18); color: var(--gold, #E4B84D); border: 1px solid rgba(228, 184, 77, 0.4); }
+.sig-dir-unk { background: rgba(107, 114, 128, 0.18); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.4); }
+
+/* ─── Instagram Netflix France ─── */
+.sig-ig-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.sig-ig-card {
+  padding: 14px 16px;
+  background: var(--surface-2, #1F1F1F);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius, 10px);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.sig-ig-card.sig-ig-highlight {
+  background: linear-gradient(135deg, rgba(228, 184, 77, 0.14), rgba(228, 184, 77, 0.04));
+  border-color: var(--gold, #E4B84D);
+}
+.sig-ig-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim, #777);
+}
+.sig-ig-card strong {
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1;
+  color: var(--text);
+}
+.sig-ig-card.sig-ig-highlight strong { color: var(--gold, #E4B84D); }
+.sig-ig-pct {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--vert, #009739);
+}
+.sig-ig-text {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-sub, #ccc);
+  margin: 0 0 10px;
+}
+.sig-ig-rels {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* ─── Subscriber Impact (Not Public) ─── */
+.sig-sub-card {
+  padding: 18px 20px;
+  background: rgba(107, 114, 128, 0.08);
+  border: 1px dashed rgba(107, 114, 128, 0.4);
+  border-radius: var(--radius, 10px);
+}
+.sig-sub-num {
+  font-family: var(--font-display);
+  font-size: 36px;
+  color: #9ca3af;
+  margin-bottom: 12px;
+}
+.sig-sub-text {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-sub, #ccc);
+  margin: 0 0 10px;
+}
+.sig-sub-warn {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  background: rgba(245, 158, 11, 0.08);
+  border-left: 2px solid #f59e0b;
+  font-size: 12px;
+  color: #f59e0b;
+  font-family: var(--font-mono);
+}
+
+/* ─── Conclusion ─── */
+.signals-conclusion {
+  background: linear-gradient(135deg, rgba(206, 17, 38, 0.06), rgba(0, 151, 57, 0.04));
+  border: 1px solid rgba(228, 184, 77, 0.25);
+}
+.signals-conclusion p {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-sub, #ccc);
+  margin: 0 0 14px;
+}
+.signals-conclusion p:last-child { margin-bottom: 0; }
+.signals-conclusion-note {
+  font-size: 12px !important;
+  color: var(--text-dim, #777) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 12px;
+  margin-top: 14px !important;
+}
+
+/* ─── Mobile ─── */
+@media (max-width: 720px) {
+  .sig-wk-row { min-width: 100%; grid-template-columns: 40px 1fr 50px 90px 70px; }
+  .sig-wk-row > *:nth-child(n+6) { display: none; }
+  .sig-wk-header > *:nth-child(n+6) { display: none; }
+  .sig-risk-row { grid-template-columns: 1fr; gap: 6px; padding: 12px; }
+  .sig-risk-header { display: none; }
+  .ci-row { grid-template-columns: 1fr 60px; }
+  .ci-row .ci-bar-wrap { display: none; }
+  .sig-comp-num { font-size: 56px; }
+  .sig-totals-values { gap: 18px; }
+  .sig-totals-values strong { font-size: 24px; }
+}

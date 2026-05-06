@@ -163,6 +163,161 @@ const BANDI = {
     ]
   },
 
+  // ═════════════════════════════════════════════════════════════════════════
+  // SIGNAUX DE RENOUVELLEMENT SAISON 2 (analyse défendable, mai 2026)
+  // ═════════════════════════════════════════════════════════════════════════
+  // Source : prompt analytique Allan 06/05/2026 — toutes les valeurs sont
+  // accompagnées d'un statut de fiabilité (6 catégories) pour distinguer
+  // strictement données officielles, calculées, estimées, hypothèses.
+  //
+  // RÈGLE D'OR : ne JAMAIS afficher l'annulation S2 comme une certitude.
+  // Hypothèse uniquement, basée sur signaux publics. Cause réelle = Not Public.
+  bandiPerformance: {
+    title: 'BANDI',
+    platform: 'Netflix',
+    releaseDate: '2026-04-09',
+    season: 1,
+    episodes: 8,
+    runtimeHours: 7.8,
+    episodeDurations: [
+      { episode: 1, durationMinutes: 59 },
+      { episode: 2, durationMinutes: 61 },
+      { episode: 3, durationMinutes: 62 },
+      { episode: 4, durationMinutes: 62 },
+      { episode: 5, durationMinutes: 54 },
+      { episode: 6, durationMinutes: 51 },
+      { episode: 7, durationMinutes: 52 },
+      { episode: 8, durationMinutes: 63 }
+    ],
+    weeklyNetflixTop10: [
+      {
+        weekLabel: '06–12 avril 2026',
+        weekNumber: 1,
+        rank: 6,
+        hoursViewed: 16_200_000,
+        viewsCVE: 2_100_000,
+        territoriesTop10: null,
+        numberOneTerritories: null,
+        weekOverWeekDrop: null,
+        reliability: { status: 'Official', score: 95, explanation: 'Classements publics Netflix Top 10 (Tudum).' }
+      },
+      {
+        weekLabel: '13–19 avril 2026',
+        weekNumber: 2,
+        rank: 1,
+        hoursViewed: 40_500_000,
+        viewsCVE: 5_200_000,
+        territoriesTop10: 48,
+        numberOneTerritories: 13,
+        weekOverWeekDrop: +150,
+        reliability: { status: 'Official / Verified', score: 90, explanation: 'Heures vues et rang : Netflix officiel. Territoires : presse locale + Tudum.' }
+      },
+      {
+        weekLabel: '20–26 avril 2026',
+        weekNumber: 3,
+        rank: 8,
+        hoursViewed: 14_700_000,
+        viewsCVE: 1_900_000,
+        territoriesTop10: 19,
+        numberOneTerritories: 3,    // Martinique, Guadeloupe, La Réunion
+        weekOverWeekDrop: -63.7,
+        reliability: { status: 'Official / Calculated', score: 90, explanation: 'Chute calculée à partir des heures vues publiques Netflix.' }
+      }
+    ],
+    totalsPublicTop10: {
+      hoursViewed: 71_400_000,
+      viewsCVE: 9_200_000,
+      reliability: { status: 'Official / Calculated', score: 95, explanation: 'Total calculé à partir des trois semaines publiques Netflix Top 10.' }
+    },
+    completionEstimate: {
+      central: 53,
+      low: 47,
+      high: 59,
+      reliability: { status: 'Estimated', score: 62, explanation: 'Estimation : heures vues / durée totale + chute hebdo + modèle de rétention. Netflix ne publie pas le taux réel.' }
+    },
+    retentionByEpisodeEstimate: [
+      { episode: 1, retention: 100 },
+      { episode: 2, retention: 80  },
+      { episode: 3, retention: 72  },
+      { episode: 4, retention: 66  },
+      { episode: 5, retention: 61  },
+      { episode: 6, retention: 58  },
+      { episode: 7, retention: 55  },
+      { episode: 8, retention: 53  }
+    ],
+    retentionReliability: { status: 'Estimated', score: 45, explanation: 'Modélisation. Netflix ne publie pas les abandons par épisode.' },
+    audienceEstimate: {
+      startersLow: 13.4,    // millions
+      startersHigh: 15,
+      completersLow: 7.1,
+      completersHigh: 8,
+      reliability: { status: 'Estimated', score: 50, explanation: 'Estimation indirecte : durée saison + heures vues + modèle complétion.' }
+    },
+    instagramNetflixFrance: {
+      account: '@netflixfr',
+      followersOnReleaseDate: 10_954_043,
+      followersOnMay01: 11_013_888,
+      measuredGain: 59_845,
+      growthPct: 0.55,
+      projectedGainToMay06Low: 70_000,
+      projectedGainToMay06High: 80_000,
+      postsOnReleaseDate: 11_235,
+      postsOnMay01: 11_327,
+      postsGain: 92,
+      reliabilityGain: { status: 'Verified', score: 75, explanation: 'Gain mesuré sur @netflixfr entre 09/04 et 01/05.' },
+      reliabilityProjection: { status: 'Estimated', score: 55, explanation: 'Projection prudente après le 01/05.' },
+      reliabilityAttribution: { status: 'Weak Signal', score: 30, explanation: 'Période BANDI mais Netflix France publie aussi sur d\'autres titres — attribution directe impossible.' }
+    },
+    subscriberImpact: {
+      reliability: { status: 'Not Public', score: 15, explanation: 'Netflix ne publie plus les abonnés trimestriels depuis 2025. Aucun chiffre attribuable à un titre.' }
+    },
+    season2Status: {
+      publicStatus: 'not_officially_confirmed',
+      hypothesisReliability: { status: 'Weak Signal', score: 25, explanation: 'Hypothèse analytique basée sur les signaux publics. Aucune source publique ne confirme le non-renouvellement.' },
+      realCauseReliability: { status: 'Not Public', score: 15, explanation: 'Les vraies métriques de décision (rétention réelle, ROI, acquisition abonnés) restent internes Netflix.' }
+    },
+    renewalRiskMatrix: [
+      { signal: 'Pic #1 mondial non-anglophone (S2)',         direction: 'favorable',    status: 'Official',                   score: 95 },
+      { signal: '40,5 M heures vues sur la meilleure semaine',direction: 'favorable',    status: 'Official',                   score: 95 },
+      { signal: 'Top 10 dans 48 pays au pic',                 direction: 'favorable',    status: 'Verified',                   score: 80 },
+      { signal: 'Ancrage Caraïbes / Outre-mer / France',      direction: 'favorable',    status: 'Verified',                   score: 75 },
+      { signal: 'Visibilité médiatique régionale',            direction: 'favorable',    status: 'Analytical / Verified',      score: 65 },
+      { signal: 'Chute -63,7 % en semaine 3',                 direction: 'défavorable', status: 'Calculated from Official',   score: 90 },
+      { signal: 'Sortie probable du Top 10 après 3 semaines', direction: 'défavorable', status: 'Verified / Observed',        score: 75 },
+      { signal: 'Completion Score estimé ≈ 53 %',             direction: 'mitigé',       status: 'Estimated',                  score: 62 },
+      { signal: 'Série longue (8 ép · 7,8 h)',                direction: 'défavorable', status: 'Analytical',                 score: 55 },
+      { signal: 'Impact abonnés Netflix non prouvable',       direction: 'inconnu',      status: 'Not Public',                 score: 15 },
+      { signal: 'Attribution Instagram Netflix FR à BANDI',   direction: 'mitigé',       status: 'Weak Signal',                score: 30 },
+      { signal: 'Cause réelle d\'un éventuel non-renouvellement', direction: 'inconnu', status: 'Not Public',                 score: 15 }
+    ],
+    confidenceIndex: [
+      { label: 'Heures vues Netflix Top 10',                score: 95 },
+      { label: 'Vues Netflix / CVE',                        score: 95 },
+      { label: 'Rang mondial Netflix',                      score: 95 },
+      { label: 'Pays Top 10',                               score: 80 },
+      { label: 'Completion Score estimé',                   score: 62 },
+      { label: 'Rétention épisode par épisode',             score: 45 },
+      { label: 'Starters estimés',                          score: 50 },
+      { label: 'Completers estimés',                        score: 50 },
+      { label: 'Impact Instagram global Netflix France',    score: 75 },
+      { label: 'Attribution Instagram à BANDI',             score: 30 },
+      { label: 'Impact abonnés Netflix',                    score: 15 },
+      { label: 'Cause réelle de non-renouvellement',        score: 15 },
+      { label: 'Hypothèse analytique de non-renouvellement',score: 25 }
+    ]
+  },
+
+  // Catégories de fiabilité (6 niveaux) — utilisées par renderReliabilityBadge()
+  // pour afficher un badge cohérent partout dans le dashboard.
+  dataReliabilityCategories: {
+    official:    { label: 'Official',    minScore: 90, maxScore: 100, color: '#22c55e', desc: 'Source primaire ou officielle.' },
+    verified:    { label: 'Verified',    minScore: 75, maxScore: 89,  color: '#3b82f6', desc: 'Source secondaire fiable ou recoupée.' },
+    calculated:  { label: 'Calculated',  minScore: 70, maxScore: 95,  color: '#10b981', desc: 'Calculée à partir de données officielles.' },
+    estimated:   { label: 'Estimated',   minScore: 45, maxScore: 74,  color: '#f59e0b', desc: 'Estimée à partir de plusieurs signaux publics.' },
+    weakSignal:  { label: 'Weak Signal', minScore: 20, maxScore: 44,  color: '#f97316', desc: 'Signal possible mais fragile ou difficilement attribuable.' },
+    notPublic:   { label: 'Not Public',  minScore: 0,  maxScore: 19,  color: '#6b7280', desc: 'Donnée non publiée ou impossible à connaître publiquement.' }
+  },
+
   // Score / rang actuel (16/04/2026) — source FlixPatrol
   // Note : paysN1 et paysTop10 sont recalculés à partir de la liste `pays`
   //        côté app.js (Object.assign après fetch Supabase) — les valeurs

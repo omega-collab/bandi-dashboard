@@ -613,6 +613,7 @@ function initTabs() {
     if (target === 'map')        initMapTab();
     if (target === 'buzz')       initBuzzTab();
     if (target === 'monitoring') initMonitoringTab();
+    if (target === 'signals')    renderSignalsTab();
   }
 
   allTabs.forEach(tab => {
@@ -3508,6 +3509,260 @@ function hideBandiSplash() {
 }
 // Filet : au pire 6s d'affichage même si tout crash côté render
 setTimeout(hideBandiSplash, 6000);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SIGNAUX DE RENOUVELLEMENT — onglet "Signaux"
+// ═══════════════════════════════════════════════════════════════════════════
+// Système 6 catégories (Official → Not Public) avec badge couleur + score /100
+// + micro-explication. Toutes les données viennent de BANDI.bandiPerformance
+// (data-fallback.js). Lazy-rendered au clic onglet.
+
+function reliabilityCategoryFor(score, statusHint) {
+  // Si statusHint connu (ex. "Calculated", "Verified"), on l'utilise pour
+  // choisir la catégorie. Sinon on tombe sur le score.
+  const cats = BANDI.dataReliabilityCategories || {};
+  if (statusHint) {
+    const s = statusHint.toLowerCase();
+    if (s.includes('not public'))   return cats.notPublic;
+    if (s.includes('weak'))         return cats.weakSignal;
+    if (s.includes('estimated'))    return cats.estimated;
+    if (s.includes('calculated'))   return cats.calculated;
+    if (s.includes('verified'))     return cats.verified;
+    if (s.includes('official'))     return cats.official;
+  }
+  if (score >= 90) return cats.official;
+  if (score >= 75) return cats.verified;
+  if (score >= 70) return cats.calculated;
+  if (score >= 45) return cats.estimated;
+  if (score >= 20) return cats.weakSignal;
+  return cats.notPublic;
+}
+
+function renderReliabilityBadge(reliability) {
+  if (!reliability) return '';
+  const score = reliability.score ?? 0;
+  const statusLabel = reliability.status || '';
+  const cat = reliabilityCategoryFor(score, statusLabel);
+  const label = cat ? cat.label : statusLabel;
+  const color = cat ? cat.color : '#888';
+  const expl = reliability.explanation || (cat?.desc || '');
+  return `<span class="rel-badge" style="--rel-color:${color}" title="${escapeHtml(expl)}">
+    <span class="rel-dot" style="background:${color}"></span>
+    <span class="rel-label">${escapeHtml(label)}</span>
+    <span class="rel-score">${score}/100</span>
+  </span>`;
+}
+
+function fmtMillions(n) {
+  if (n == null || isNaN(n)) return '—';
+  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace('.', ',')} M`;
+  if (Math.abs(n) >= 1_000)     return `${(n / 1_000).toFixed(1).replace('.', ',')} k`;
+  return String(n);
+}
+
+let signalsTabRendered = false;
+function renderSignalsTab() {
+  if (signalsTabRendered) return;
+  const data = BANDI.bandiPerformance;
+  if (!data) return;
+  signalsTabRendered = true;
+
+  // ─── 1. Confidence Index ─────────────────────────────────────────────────
+  const ciList = document.getElementById('signalsConfidenceList');
+  if (ciList && Array.isArray(data.confidenceIndex)) {
+    ciList.innerHTML = data.confidenceIndex.map(item => {
+      const cat = reliabilityCategoryFor(item.score);
+      const color = cat ? cat.color : '#888';
+      return `<div class="ci-row">
+        <span class="ci-label">${escapeHtml(item.label)}</span>
+        <div class="ci-bar-wrap"><div class="ci-bar" style="width:${item.score}%;background:${color}"></div></div>
+        <span class="ci-score" style="color:${color}">${item.score}<span class="ci-score-max">/100</span></span>
+      </div>`;
+    }).join('');
+  }
+
+  // ─── 2. Performance hebdomadaire Netflix Top 10 ─────────────────────────
+  const wkTable = document.getElementById('signalsWeeklyTable');
+  if (wkTable && Array.isArray(data.weeklyNetflixTop10)) {
+    const headerRow = `
+      <div class="sig-wk-row sig-wk-header">
+        <div>Semaine</div>
+        <div>Période</div>
+        <div>Rang</div>
+        <div>Heures vues</div>
+        <div>Vues CVE</div>
+        <div>Pays Top 10</div>
+        <div>#1 dans</div>
+        <div>Δ vs S–1</div>
+        <div>Fiabilité</div>
+      </div>`;
+    const rows = data.weeklyNetflixTop10.map(w => {
+      const drop = w.weekOverWeekDrop;
+      const dropDisplay = drop == null
+        ? '—'
+        : drop > 0
+          ? `<span class="sig-up">+${drop} %</span>`
+          : `<span class="sig-down">${drop.toString().replace('.', ',')} %</span>`;
+      const rankPill = w.rank === 1 ? `<span class="sig-rank sig-rank-top">#${w.rank}</span>` : `<span class="sig-rank">#${w.rank}</span>`;
+      return `
+        <div class="sig-wk-row">
+          <div><strong>S${w.weekNumber}</strong></div>
+          <div class="sig-wk-period">${escapeHtml(w.weekLabel)}</div>
+          <div>${rankPill}</div>
+          <div><strong>${fmtMillions(w.hoursViewed)}</strong></div>
+          <div>${fmtMillions(w.viewsCVE)}</div>
+          <div>${w.territoriesTop10 != null ? w.territoriesTop10 : '—'}</div>
+          <div>${w.numberOneTerritories != null ? w.numberOneTerritories : '—'}</div>
+          <div>${dropDisplay}</div>
+          <div>${renderReliabilityBadge(w.reliability)}</div>
+        </div>`;
+    }).join('');
+    wkTable.innerHTML = headerRow + rows;
+  }
+
+  const totalsEl = document.getElementById('signalsTotals');
+  if (totalsEl && data.totalsPublicTop10) {
+    const t = data.totalsPublicTop10;
+    totalsEl.innerHTML = `
+      <div class="sig-totals-card">
+        <span class="sig-totals-label">Cumul 3 semaines Top 10 mondial non-anglophone</span>
+        <div class="sig-totals-values">
+          <div><strong>${fmtMillions(t.hoursViewed)}</strong><span>heures vues</span></div>
+          <div><strong>${fmtMillions(t.viewsCVE)}</strong><span>vues CVE</span></div>
+        </div>
+        ${renderReliabilityBadge(t.reliability)}
+      </div>`;
+  }
+
+  // ─── 3. Encadré CVE — badge ──────────────────────────────────────────────
+  const cveBadge = document.getElementById('signalsCveBadge');
+  if (cveBadge) {
+    cveBadge.innerHTML = renderReliabilityBadge({ status: 'Official', score: 95, explanation: 'Méthode CVE = méthodologie publique Netflix.' });
+  }
+
+  // ─── 4. Completion Score estimé ──────────────────────────────────────────
+  const compCard = document.getElementById('signalsCompletionCard');
+  if (compCard && data.completionEstimate) {
+    const c = data.completionEstimate;
+    compCard.innerHTML = `
+      <div class="sig-comp-num">${c.central} <span class="sig-comp-unit">%</span></div>
+      <div class="sig-comp-range">Fourchette prudente : ${c.low} % à ${c.high} %</div>
+      ${renderReliabilityBadge(c.reliability)}
+      <p class="sig-comp-text">
+        Sur la base des heures vues publiques, de la durée totale (7,8 h) et de la chute après le pic S2, BANDI semble se situer autour de
+        <strong>${c.central} % de complétion estimée</strong>. Honorable, mais pas forcément ultra-sécurisant pour un renouvellement,
+        surtout si le coût de production ou les ambitions S2 sont élevés.
+      </p>
+      <p class="sig-comp-warning">⚠️ <strong>Estimated</strong> — Not official Netflix data. Netflix ne publie pas le taux réel de complétion.</p>
+    `;
+  }
+
+  // ─── 5. Funnel rétention par épisode ─────────────────────────────────────
+  const funnel = document.getElementById('signalsFunnel');
+  if (funnel && Array.isArray(data.retentionByEpisodeEstimate)) {
+    const rows = data.retentionByEpisodeEstimate.map((r, i) => {
+      const dur = data.episodeDurations?.[i]?.durationMinutes;
+      return `
+        <div class="sig-funnel-row">
+          <div class="sig-funnel-ep">É${r.episode}</div>
+          <div class="sig-funnel-bar-wrap">
+            <div class="sig-funnel-bar" style="width:${r.retention}%"></div>
+          </div>
+          <div class="sig-funnel-pct">${r.retention} %</div>
+          <div class="sig-funnel-dur">${dur ? dur + ' min' : '—'}</div>
+        </div>`;
+    }).join('');
+    funnel.innerHTML = rows + `<div class="sig-funnel-meta">${renderReliabilityBadge(data.retentionReliability)}</div>`;
+  }
+
+  const audEl = document.getElementById('signalsAudience');
+  if (audEl && data.audienceEstimate) {
+    const a = data.audienceEstimate;
+    audEl.innerHTML = `
+      <div class="sig-aud-card">
+        <div class="sig-aud-row">
+          <span class="sig-aud-label">Starters estimés</span>
+          <strong>${a.startersLow} M – ${a.startersHigh} M</strong>
+        </div>
+        <div class="sig-aud-row">
+          <span class="sig-aud-label">Completers estimés</span>
+          <strong>${a.completersLow} M – ${a.completersHigh} M</strong>
+        </div>
+        ${renderReliabilityBadge(a.reliability)}
+      </div>`;
+  }
+
+  // ─── 6. Renewal Risk Matrix ──────────────────────────────────────────────
+  const riskEl = document.getElementById('signalsRiskMatrix');
+  if (riskEl && Array.isArray(data.renewalRiskMatrix)) {
+    const dirIcon = (d) => ({
+      favorable:    '<span class="sig-dir sig-dir-fav">▲ Favorable</span>',
+      'défavorable':'<span class="sig-dir sig-dir-def">▼ Défavorable</span>',
+      mitigé:       '<span class="sig-dir sig-dir-mit">◆ Mitigé</span>',
+      inconnu:      '<span class="sig-dir sig-dir-unk">? Inconnu</span>'
+    }[d] || `<span class="sig-dir">${d}</span>`);
+    const headerRow = `<div class="sig-risk-row sig-risk-header">
+      <div>Signal</div><div>Sens</div><div>Fiabilité</div>
+    </div>`;
+    riskEl.innerHTML = headerRow + data.renewalRiskMatrix.map(item => `
+      <div class="sig-risk-row">
+        <div class="sig-risk-signal">${escapeHtml(item.signal)}</div>
+        <div>${dirIcon(item.direction)}</div>
+        <div>${renderReliabilityBadge({ status: item.status, score: item.score, explanation: '' })}</div>
+      </div>
+    `).join('');
+  }
+
+  // ─── 7. Instagram Netflix France ─────────────────────────────────────────
+  const igCard = document.getElementById('signalsInstagramCard');
+  if (igCard && data.instagramNetflixFrance) {
+    const ig = data.instagramNetflixFrance;
+    igCard.innerHTML = `
+      <div class="sig-ig-grid">
+        <div class="sig-ig-card">
+          <span class="sig-ig-label">Followers au 09/04 (sortie)</span>
+          <strong>${ig.followersOnReleaseDate.toLocaleString('fr-FR')}</strong>
+        </div>
+        <div class="sig-ig-card">
+          <span class="sig-ig-label">Followers au 01/05</span>
+          <strong>${ig.followersOnMay01.toLocaleString('fr-FR')}</strong>
+        </div>
+        <div class="sig-ig-card sig-ig-highlight">
+          <span class="sig-ig-label">Gain mesuré</span>
+          <strong>+${ig.measuredGain.toLocaleString('fr-FR')}</strong>
+          <span class="sig-ig-pct">≈ +${String(ig.growthPct).replace('.', ',')} %</span>
+        </div>
+        <div class="sig-ig-card">
+          <span class="sig-ig-label">Projection 06/05 (prudente)</span>
+          <strong>+${ig.projectedGainToMay06Low.toLocaleString('fr-FR')} à +${ig.projectedGainToMay06High.toLocaleString('fr-FR')}</strong>
+        </div>
+      </div>
+      <p class="sig-ig-text">
+        Depuis la sortie de BANDI, <strong>Netflix France a gagné au moins +${ig.measuredGain.toLocaleString('fr-FR')} followers</strong> mesurés entre le 09 avril et le 01 mai 2026. Ce gain accompagne la période de visibilité de la série, mais <strong>ne peut pas être attribué uniquement à BANDI</strong> car Netflix France publie simultanément sur de nombreux programmes.
+      </p>
+      <div class="sig-ig-rels">
+        ${renderReliabilityBadge(ig.reliabilityGain)}
+        ${renderReliabilityBadge(ig.reliabilityProjection)}
+        ${renderReliabilityBadge(ig.reliabilityAttribution)}
+      </div>`;
+  }
+
+  // ─── 8. Subscriber Impact (Not Public) ───────────────────────────────────
+  const subCard = document.getElementById('signalsSubscriberCard');
+  if (subCard && data.subscriberImpact) {
+    subCard.innerHTML = `
+      <div class="sig-sub-card">
+        <div class="sig-sub-num">Non public</div>
+        <p class="sig-sub-text">
+          Netflix ne publie plus régulièrement ses chiffres d'abonnés trimestriels depuis 2025. Aucun chiffre public ne permet donc de savoir combien d'abonnés Netflix a gagnés depuis la sortie de BANDI, ni combien d'abonnements seraient directement attribuables à la série.
+        </p>
+        <p class="sig-sub-warn">
+          ⚠️ Ne pas afficher « BANDI a gagné X abonnés à Netflix » — ce serait invérifiable.
+        </p>
+        ${renderReliabilityBadge(data.subscriberImpact.reliability)}
+      </div>`;
+  }
+}
 
 // ============ INIT ============
 document.addEventListener("DOMContentLoaded", async () => {
