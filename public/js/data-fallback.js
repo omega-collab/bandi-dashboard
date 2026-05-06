@@ -432,11 +432,7 @@ const BANDI = {
       acteursLocaux: 75,
       totalRoles: 82,
       _verified: false,
-      _source: 'Estimation interne Maui Entertainment — à confirmer',
-      comparaisons: [
-        { titre: 'Top Boy (UK)', pct: 50 },
-        { titre: 'Narcos (CO)',  pct: 40 }
-      ]
+      _source: 'Estimation interne Maui Entertainment — à confirmer'
     },
 
     // Forecast Saison 2 · modèle probabiliste interne · NON OFFICIEL
