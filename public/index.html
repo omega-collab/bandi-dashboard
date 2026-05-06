@@ -28,7 +28,7 @@
 <!-- Leaflet.js pour la carte choroplèthe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<link rel="stylesheet" href="css/styles.css?v=20260507d" />
+<link rel="stylesheet" href="css/styles.css?v=20260507e" />
 
 <!-- Splash screen (inline pour afficher immédiatement, avant tout chargement) -->
 <style>
@@ -170,8 +170,8 @@
 <!-- ================== MAIN ================== -->
 <main class="container">
 
-  <!-- ============ TAB: OVERVIEW ============ -->
-  <section class="tab-panel active" id="panel-overview">
+  <!-- ============ TAB: OVERVIEW (legacy — plus accessible via la nav, conservé pour ne pas casser renderOverview/renderChart qui écrivent dedans) ============ -->
+  <section class="tab-panel" id="panel-overview">
 
     <!-- Bannière "data stale" — affichée par health-guard.js si fallback actif -->
     <div id="hgStaleBanner" class="hg-stale-banner" hidden>
@@ -1275,12 +1275,12 @@
 </nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/auth.js?v=20260507d"></script>
-<script src="js/data-fallback.js?v=20260507d"></script>
-<script src="js/config.js?v=20260507d"></script>
-<script src="js/monitoring.js?v=20260507d"></script>
-<script src="js/app.js?v=20260507d"></script>
-<script src="js/health-guard.js?v=20260507d"></script>
+<script src="js/auth.js?v=20260507e"></script>
+<script src="js/data-fallback.js?v=20260507e"></script>
+<script src="js/config.js?v=20260507e"></script>
+<script src="js/monitoring.js?v=20260507e"></script>
+<script src="js/app.js?v=20260507e"></script>
+<script src="js/health-guard.js?v=20260507e"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {
