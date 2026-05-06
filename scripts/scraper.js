@@ -23,8 +23,22 @@ const COUNTRY_MAP = JSON.parse(readFileSync(join(__dir, 'country-mapping.json'),
 
 const { SUPABASE_URL, SUPABASE_SERVICE_KEY } = process.env;
 
+// Diagnostic explicite de l'environnement avant tout traitement.
+// Permet de voir DIRECTEMENT dans les logs Actions si le crash vient des
+// secrets ou d'autre chose, plutôt que d'avoir un "Failed after 0s" muet.
+console.log('━'.repeat(50));
+console.log('🎬 BANDI Scraper FlixPatrol · ' + new Date().toISOString());
+console.log('Node version:', process.version);
+console.log('SUPABASE_URL  :', SUPABASE_URL ? `✅ ${SUPABASE_URL.replace(/^https?:\/\//, '').split('/')[0]} (${SUPABASE_URL.length} chars)` : '❌ ABSENT');
+console.log('SUPABASE_KEY  :', SUPABASE_SERVICE_KEY ? `✅ présent (${SUPABASE_SERVICE_KEY.length} chars)` : '❌ ABSENT');
+console.log('━'.repeat(50));
+
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-  console.error('❌ Variables SUPABASE_URL et SUPABASE_SERVICE_KEY requises dans .env');
+  console.error('');
+  console.error('❌ ARRÊT : un secret manque.');
+  console.error('   → GitHub repo > Settings > Secrets and variables > Actions');
+  console.error('   → Vérifie que SUPABASE_URL et SUPABASE_SERVICE_KEY sont configurés.');
+  console.error('   → Sans ces secrets, le scraper ne peut pas écrire dans Supabase.');
   process.exit(1);
 }
 

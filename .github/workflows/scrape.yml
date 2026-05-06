@@ -24,11 +24,36 @@ jobs:
       - name: Install dependencies
         run: npm install --omit=dev
 
+      - name: Debug environment (secrets present ?)
+        # Log explicite de la présence/absence des secrets — sans révéler leur valeur.
+        # Permet de voir directement dans les logs Actions si c'est un problème de
+        # configuration de secrets (cause #1 des "Failed after 0s" sur le scraper).
+        run: |
+          echo "=== Debug env ==="
+          if [ -n "${{ secrets.SUPABASE_URL }}" ]; then
+            echo "✅ SUPABASE_URL : présent (${#SUPABASE_URL} chars)"
+            echo "   Domaine : $(echo "${{ secrets.SUPABASE_URL }}" | sed 's|https://||;s|/.*||')"
+          else
+            echo "❌ SUPABASE_URL : ABSENT — c'est probablement la cause du crash"
+            echo "   → Va dans Settings > Secrets and variables > Actions et ajoute SUPABASE_URL"
+          fi
+          if [ -n "${{ secrets.SUPABASE_SERVICE_KEY }}" ]; then
+            echo "✅ SUPABASE_SERVICE_KEY : présent ($(echo -n '${{ secrets.SUPABASE_SERVICE_KEY }}' | wc -c) chars)"
+          else
+            echo "❌ SUPABASE_SERVICE_KEY : ABSENT — c'est probablement la cause du crash"
+            echo "   → Va dans Settings > Secrets and variables > Actions et ajoute SUPABASE_SERVICE_KEY"
+          fi
+          echo "Node version: $(node --version)"
+          echo "================="
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+
       - name: Run scraper FlixPatrol
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: node scripts/scraper.js
+        continue-on-error: true   # ne plus bloquer Tudum si FlixPatrol échoue
 
       - name: Run scraper Tudum
         env:
