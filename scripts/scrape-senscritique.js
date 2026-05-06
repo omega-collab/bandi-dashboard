@@ -23,19 +23,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-const HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9',
-  'Accept-Language': 'fr-FR,fr;q=0.9',
-  'Cache-Control': 'no-cache'
-};
-
-async function fetchHtml(url) {
-  console.log(`📡 GET ${url}`);
-  const res = await fetch(url, { headers: HEADERS, redirect: 'follow' });
-  if (!res.ok) throw new Error(`HTTP ${res.status} pour ${url}`);
-  return await res.text();
-}
+import { fetchHtml, closePlaywright } from './_fetch-html.js';
 
 // Parcourt récursivement un objet JS à la recherche d'une paire rating+count
 function findRatingInObject(obj, depth = 0) {
@@ -167,7 +155,6 @@ async function main() {
   console.log('✅ SensCritique scraping OK');
 }
 
-main().catch(err => {
-  console.error('❌ SensCritique scraper crash :', err);
-  process.exit(1);
-});
+main()
+  .then(closePlaywright)
+  .catch(async err => { console.error('❌ SensCritique scraper crash :', err); await closePlaywright(); process.exit(1); });

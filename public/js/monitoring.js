@@ -276,7 +276,7 @@
     // Debug — visible dans la console du navigateur
     console.log('[MONITORING] FlixPatrol →', { rang, score, paysN1, paysTop10 });
     console.log('[MONITORING] Tudum Bandi →', bandiTudum ? `${bandiTudum.titre} rang#${bandiTudum.rang} ${heuresSem}M h` : 'absent');
-    console.log('[MONITORING] Complétion / Buzz / Note →', { completion, buzzScore, ratAvg });
+    console.log('[MONITORING] Données officielles →', { completion, presseFav, igGain, heuresCumul, vuesCumul, peakHeures, semTop10 });
 
     // Deltas J vs J-1 depuis l'historique (safe si valeurs null)
     const prev   = hist.length >= 2 ? hist[hist.length - 2] : null;

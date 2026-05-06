@@ -3,7 +3,7 @@ name: Scrape Social Bandi
 on:
   schedule:
     # Toutes les heures à :15 (décalé du scrape presse)
-    - cron: '15 * * * *'
+    - cron: '0 0 * * *'
   workflow_dispatch:
 
 jobs:

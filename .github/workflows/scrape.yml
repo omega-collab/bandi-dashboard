@@ -4,7 +4,7 @@ on:
   schedule:
     # Toutes les 2 heures (UTC) — FlixPatrol bouge plusieurs fois par jour,
     # un cron 6h laissait le hero afficher un rang stale de plusieurs heures.
-    - cron: '0 */2 * * *'
+    - cron: '0 0 * * *'
   workflow_dispatch:  # Déclenchement manuel possible depuis GitHub UI
 
 jobs:

@@ -3,7 +3,7 @@ name: Scrape Ratings (IMDb · TMDB · Allociné · SensCritique · RT · Filmaff
 on:
   schedule:
     # Toutes les 6h — 00h15, 06h15, 12h15, 18h15 UTC
-    - cron: '15 */6 * * *'
+    - cron: '0 0 * * *'
   workflow_dispatch:
 
 jobs:
@@ -24,6 +24,9 @@ jobs:
 
       - name: Install deps
         run: npm ci || npm install
+
+      - name: Install Playwright Chromium (bypass Cloudflare IMDb/RT/Allociné/SC/FA)
+        run: npx playwright install --with-deps chromium
 
       # Tous les scrapers passent par run-scraper.sh : capture stdout/stderr,
       # exit visible, ::error:: GitHub Actions UI si plante. continue-on-error

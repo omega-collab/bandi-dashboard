@@ -24,19 +24,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-const HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9',
-  'Accept-Language': 'en-US,en;q=0.9,fr-FR;q=0.8',
-  'Cache-Control': 'no-cache'
-};
-
-async function fetchHtml(url) {
-  console.log(`📡 GET ${url}`);
-  const res = await fetch(url, { headers: HEADERS, redirect: 'follow' });
-  if (!res.ok) throw new Error(`HTTP ${res.status} pour ${url}`);
-  return await res.text();
-}
+import { fetchHtml, closePlaywright } from './_fetch-html.js';
 
 // Extrait via l'attribut HTML <score-board tomatometerscore="85" audiencescore="92" ...>
 function extractScoreBoard(html) {
@@ -193,7 +181,6 @@ async function main() {
   console.log('✅ Rotten Tomatoes scraping OK');
 }
 
-main().catch(err => {
-  console.error('❌ RT scraper crash :', err);
-  process.exit(1);
-});
+main()
+  .then(closePlaywright)
+  .catch(async err => { console.error('❌ RT scraper crash :', err); await closePlaywright(); process.exit(1); });

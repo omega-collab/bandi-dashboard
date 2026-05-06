@@ -24,19 +24,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-const HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9',
-  'Accept-Language': 'es-ES,es;q=0.9,en;q=0.7',
-  'Cache-Control': 'no-cache'
-};
-
-async function fetchHtml(url) {
-  console.log(`📡 GET ${url}`);
-  const res = await fetch(url, { headers: HEADERS, redirect: 'follow' });
-  if (!res.ok) throw new Error(`HTTP ${res.status} pour ${url}`);
-  return await res.text();
-}
+import { fetchHtml, closePlaywright } from './_fetch-html.js';
 
 function parseLocaleNumber(s) {
   if (!s) return null;
@@ -140,7 +128,6 @@ async function main() {
   console.log('✅ Filmaffinity scraping OK');
 }
 
-main().catch(err => {
-  console.error('❌ Filmaffinity scraper crash :', err);
-  process.exit(1);
-});
+main()
+  .then(closePlaywright)
+  .catch(async err => { console.error('❌ Filmaffinity scraper crash :', err); await closePlaywright(); process.exit(1); });

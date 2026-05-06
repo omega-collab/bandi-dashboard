@@ -3,7 +3,7 @@ name: Scrape Netflix Tudum Top 10
 on:
   schedule:
     # Chaque mardi à 15h UTC (Tudum publie vers 14h UTC)
-    - cron: '0 15 * * 2'
+    - cron: '0 0 * * *'
   workflow_dispatch:  # Déclenchement manuel possible
 
 jobs:
