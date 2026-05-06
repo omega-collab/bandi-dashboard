@@ -26,15 +26,16 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-        run: node scripts/scrape-social.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-social.js
         continue-on-error: true
 
       - name: Scrape Instagram (Apify ou RSSHub fallback)
+        if: always()
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
-        run: node scripts/scrape-instagram.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-instagram.js
         continue-on-error: true
 
       - if: always()

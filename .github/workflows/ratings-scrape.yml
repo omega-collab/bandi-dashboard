@@ -3,9 +3,8 @@ name: Scrape Ratings (IMDb · TMDB · Allociné · SensCritique · RT · Filmaff
 on:
   schedule:
     # Toutes les 6h — 00h15, 06h15, 12h15, 18h15 UTC
-    # Décalé de 15 min pour ne pas tomber en même temps que buzz-scrape / flixpatrol-scrape
     - cron: '15 */6 * * *'
-  workflow_dispatch:  # Déclenchement manuel possible
+  workflow_dispatch:
 
 jobs:
   scrape-ratings:
@@ -26,47 +25,51 @@ jobs:
       - name: Install deps
         run: npm ci || npm install
 
-      # ─── Notes /10 (IMDb + TMDB + SensCritique + Filmaffinity) ────────
+      # Tous les scrapers passent par run-scraper.sh : capture stdout/stderr,
+      # exit visible, ::error:: GitHub Actions UI si plante. continue-on-error
+      # garde le pipeline complet : un scraper KO n'empêche pas les autres.
       - name: Scrape IMDb (aggregateRating)
         env:
           IMDB_TITLE_ID: tt37024175
-        run: node scripts/scrape-imdb.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-imdb.js
         continue-on-error: true
 
       - name: Scrape TMDB (API officielle)
         env:
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
           TMDB_TV_ID: '269161'
-        run: node scripts/scrape-tmdb.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-tmdb.js
         continue-on-error: true
 
       - name: Scrape SensCritique (communauté FR)
         env:
           SENSCRITIQUE_ID: '133850632'
           SENSCRITIQUE_SLUG: 'bandi'
-        run: node scripts/scrape-senscritique.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-senscritique.js
         continue-on-error: true
 
       - name: Scrape Filmaffinity (communauté ES)
         env:
           FILMAFFINITY_ID: '923114'
-        run: node scripts/scrape-filmaffinity.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-filmaffinity.js
         continue-on-error: true
 
-      # ─── Notes /5 ou /100 ──────────────────────────────────────────────
       - name: Scrape Allociné (public + presse)
         env:
           ALLOCINE_SERIE_ID: '1000000157'
-        run: node scripts/scrape-allocine.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-allocine.js
         continue-on-error: true
 
       - name: Scrape Rotten Tomatoes (tomatometer + audience)
         env:
           RT_TV_SLUG: 'bandi'
-        run: node scripts/scrape-rottentomatoes.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-rottentomatoes.js
         continue-on-error: true
 
-      # ─── Signal d'intérêt (Wikipedia pageviews) ───────────────────────
       - name: Scrape Wikipedia pageviews (FR + EN)
-        run: node scripts/scrape-wikipedia.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-wikipedia.js
         continue-on-error: true
+
+      - name: Log execution
+        if: always()
+        run: echo "Ratings scrape terminé à $(date -u)"

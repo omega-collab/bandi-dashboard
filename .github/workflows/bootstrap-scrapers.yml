@@ -35,13 +35,13 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: node scripts/scraper.js
+        run: bash .github/scripts/run-scraper.sh scripts/scraper.js
         continue-on-error: true
       - name: Scrape Tudum
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: node scripts/scrape-tudum.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-tudum.js
         continue-on-error: true
 
   press:
@@ -58,7 +58,7 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: node scripts/scrape-press.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-press.js
         continue-on-error: true
 
   social:
@@ -76,14 +76,14 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-        run: node scripts/scrape-social.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-social.js
         continue-on-error: true
       - name: Scrape Instagram
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
-        run: node scripts/scrape-instagram.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-instagram.js
         continue-on-error: true
 
   ratings:
@@ -100,42 +100,42 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: node scripts/scrape-imdb.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-imdb.js
         continue-on-error: true
       - name: Scrape TMDB
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
-        run: node scripts/scrape-tmdb.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-tmdb.js
         continue-on-error: true
       - name: Scrape SensCritique
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: node scripts/scrape-senscritique.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-senscritique.js
         continue-on-error: true
       - name: Scrape Filmaffinity
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: node scripts/scrape-filmaffinity.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-filmaffinity.js
         continue-on-error: true
       - name: Scrape Allociné
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: node scripts/scrape-allocine.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-allocine.js
         continue-on-error: true
       - name: Scrape Rotten Tomatoes
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: node scripts/scrape-rottentomatoes.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-rottentomatoes.js
         continue-on-error: true
       - name: Scrape Wikipedia
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: node scripts/scrape-wikipedia.js
+        run: bash .github/scripts/run-scraper.sh scripts/scrape-wikipedia.js
         continue-on-error: true
