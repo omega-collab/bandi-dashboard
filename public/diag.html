@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BANDI · diag</title>
+<style>
+  body { background: #0F0F0F; color: #f5f5f5; font-family: 'JetBrains Mono', ui-monospace, monospace; padding: 20px; line-height: 1.5; font-size: 13px; }
+  h1 { font-family: 'Anton', sans-serif; font-size: 28px; color: #E4B84D; letter-spacing: 0.05em; }
+  h2 { color: #CE1126; margin-top: 28px; font-size: 16px; border-top: 1px solid #333; padding-top: 14px; }
+  pre { background: #1a1a1a; padding: 14px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; }
+  .ok { color: #009739; }
+  .ko { color: #CE1126; }
+  .warn { color: #E4B84D; }
+  .copy-btn {
+    position: fixed; top: 14px; right: 14px;
+    padding: 10px 16px; background: #E4B84D; color: #000;
+    border: none; border-radius: 6px; font-weight: 700; cursor: pointer;
+    font-family: inherit;
+  }
+  .copy-btn:hover { background: #f5cf6c; }
+</style>
+</head>
+<body>
+
+<button class="copy-btn" onclick="copyAll()">📋 Tout copier</button>
+
+<h1>BANDI · DIAG</h1>
+<div id="report">Chargement…</div>
+
+<!-- Charge tout dans l'ordre exactement comme index.html -->
+<script src="js/auth.js"></script>
+<script src="js/data-fallback.js"></script>
+<script src="js/config.js"></script>
+<script src="js/monitoring.js"></script>
+<!-- app.js + health-guard NON chargés ici : on veut juste le diag des données
+     statiques + DOM côté index.html, pas du DOM côté diag.html. -->
+
+<script>
+  // Capture les erreurs JS pour les afficher dans le rapport
+  const _errors = [];
+  window.addEventListener('error', e => {
+    _errors.push(`${e.filename}:${e.lineno} → ${e.message}`);
+  });
+
+  function loadIndexHtml() {
+    return fetch('/').then(r => r.text());
+  }
+
+  function checkPresence(html, ids) {
+    return ids.map(id => {
+      const present = html.includes(`id="${id}"`);
+      const hidden = present && new RegExp(`id="${id}"[^>]*style="[^"]*display:\\s*none`, 'i').test(html);
+      return { id, present, hidden };
+    });
+  }
+
+  async function buildReport() {
+    const html = await loadIndexHtml().catch(() => '');
+    const cacheBust = (html.match(/\?v=([0-9a-z]+)/) || ['', 'inconnu'])[1];
+
+    const B = window.BANDI || {};
+    const cfg = window.SUPABASE_CONFIG;
+    const ua = navigator.userAgent;
+    const url = window.location.href;
+
+    // Onglet actif (lit le HTML chargé pour voir quel tab a .active dans le code)
+    const activeTabMatch = html.match(/class="tab active"\s+data-tab="([^"]+)"/);
+    const activeTab = activeTabMatch ? activeTabMatch[1] : 'inconnu';
+    const activePanelMatch = html.match(/class="tab-panel active"\s+id="([^"]+)"/);
+    const activePanel = activePanelMatch ? activePanelMatch[1] : 'inconnu';
+
+    // Présence des éléments DOM clés (inspectés dans le HTML servi)
+    const ids = [
+      'rankNumber', 'kpiScore', 'kpiN1', 'kpiTop10', 'kpiAvg',
+      'hubKpiHeures', 'hubKpiSem', 'hubKpiAvis',
+      'liveTime', 'sourcesBadge', 'logoutBtn',
+      'panel-series', 'panel-signals', 'panel-rivals', 'panel-overview',
+      'monAnalytics', 'monRatings', 'monGrid', 'monScrapers',
+      'launchWeekPanel', 'launchWeek2Panel', 'cumulTudumPanel',
+      'criticReviewsPanel', 'criticReviewsList',
+      'signalsConfidenceList', 'signalsWeeklyTable', 'signalsCompletionCard',
+      'signalsFunnel', 'signalsRiskMatrix', 'signalsInstagramCard',
+      'signalsSubscriberCard',
+      'launchVues', 'launchHeures', 'launchPays', 'launchPeak',
+      'launchW2Rang', 'launchW2Vues', 'launchW2Croissance',
+      'cumulSemaines', 'cumulVues', 'cumulHeures',
+      'criticScorePct', 'criticAlloNote', 'criticSpectNote'
+    ];
+    const dom = checkPresence(html, ids);
+
+    // Sections de nav présentes (pour vérifier ce qui est masqué)
+    const tabsInTopNav = [...html.matchAll(/<button class="tab[^"]*"\s+data-tab="([^"]+)"/g)].map(m => m[1]);
+    const tabsInBottomNav = [...html.matchAll(/class="bnav-item[^"]*"\s+data-tab="([^"]+)"/g)].map(m => m[1]);
+    const commentedRivals = (html.match(/<!--[^>]*data-tab="rivals"[^>]*-->/gs) || []).length;
+
+    // Validation Supabase : juste l'URL et la longueur de l'anonKey (pas la valeur)
+    const supabaseInfo = cfg
+      ? { url: cfg.url, anonKeyLen: cfg.anonKey ? cfg.anonKey.length : 0 }
+      : { url: 'NON CONFIGURÉ' };
+
+    // BANDI summary (pas tout le détail, juste les valeurs clés)
+    const bandiSummary = {
+      _fallback: B._fallback,
+      title: B.titre,
+      sortie: B.sortie,
+      'current.rang': B.current?.rang,
+      'current.score': B.current?.score,
+      'current.date': B.current?.date,
+      'current.paysN1': B.current?.paysN1,
+      'current.paysTop10': B.current?.paysTop10,
+      'cumulTudum.heuresMillions': B.cumulTudum?.heuresMillions,
+      'cumulTudum.vuesMillions': B.cumulTudum?.vuesMillions,
+      'cumulTudum.semainesTop10': B.cumulTudum?.semainesTop10,
+      'imdbCurrent.rating': B.imdbCurrent?.rating,
+      'criticReviews.scorePct': B.criticReviews?.scorePct,
+      'criticReviews.notePresseAlloMoy': B.criticReviews?.notePresseAlloMoy,
+      'criticReviews.notePresseAlloN': B.criticReviews?.notePresseAlloN,
+      'criticReviews.noteSpectAlloN': B.criticReviews?.noteSpectAlloN,
+      'bandiPerformance.completionEstimate.central': B.bandiPerformance?.completionEstimate?.central,
+      'bandiPerformance.totalsPublicTop10.hoursViewed': B.bandiPerformance?.totalsPublicTop10?.hoursViewed,
+      'bandiPerformance.instagramNetflixFrance.measuredGain': B.bandiPerformance?.instagramNetflixFrance?.measuredGain,
+    };
+
+    // Construit le rapport
+    const lines = [];
+    lines.push(`# DIAG BANDI · ${new Date().toISOString()}`);
+    lines.push(`URL chargée : ${url}`);
+    lines.push(`User-Agent  : ${ua}`);
+    lines.push('');
+    lines.push('## 1. Cache-bust effectif (côté index.html servi par Netlify)');
+    lines.push(`?v=${cacheBust}`);
+    lines.push('');
+    lines.push('## 2. Onglets — code HTML servi');
+    lines.push(`Top nav (visible)    : ${JSON.stringify(tabsInTopNav)}`);
+    lines.push(`Bottom nav (visible) : ${JSON.stringify(tabsInBottomNav)}`);
+    lines.push(`data-tab="rivals" commentés : ${commentedRivals} bloc(s)`);
+    lines.push(`Tab .active dans le code : ${activeTab}`);
+    lines.push(`Panel .active dans le code : ${activePanel}`);
+    lines.push('');
+    lines.push('## 3. Supabase config');
+    lines.push(JSON.stringify(supabaseInfo, null, 2));
+    lines.push('');
+    lines.push('## 4. BANDI · valeurs clés');
+    lines.push(JSON.stringify(bandiSummary, null, 2));
+    lines.push('');
+    lines.push('## 5. Présence des éléments DOM dans le HTML servi (pour vérifier qu\'on lit la bonne version)');
+    for (const r of dom) {
+      const mark = r.present ? '✅' : '❌';
+      const hint = r.hidden ? ' (display:none)' : '';
+      lines.push(`${mark} #${r.id}${hint}`);
+    }
+    lines.push('');
+    lines.push('## 6. Erreurs JS interceptées sur cette page');
+    lines.push(_errors.length ? _errors.join('\n') : '(aucune erreur)');
+    lines.push('');
+    lines.push('## 7. Logs console récents');
+    lines.push('(les logs de monitoring.js / app.js apparaissent dans la console DevTools)');
+    lines.push('');
+    lines.push('--- FIN DIAG ---');
+
+    document.getElementById('report').innerHTML = `<pre id="diagPre">${lines.join('\n').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</pre>`;
+  }
+
+  function copyAll() {
+    const pre = document.getElementById('diagPre');
+    if (!pre) return;
+    navigator.clipboard.writeText(pre.textContent).then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = '✅ Copié — colle dans le chat';
+      setTimeout(() => btn.textContent = '📋 Tout copier', 3000);
+    });
+  }
+
+  buildReport();
+</script>
+
+</body>
+</html>
