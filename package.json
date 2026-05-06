@@ -15,6 +15,7 @@
     "cheerio": "^1.0.0",
     "dotenv": "^16.4.5",
     "google-trends-api": "^4.9.2",
+    "playwright": "^1.48.0",
     "rss-parser": "^3.13.0"
   }
 }

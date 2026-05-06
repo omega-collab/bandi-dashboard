@@ -103,28 +103,82 @@ const REGIONS = {
   'Israel': 'Moyen-Orient', 'Turkey': 'Moyen-Orient'
 };
 
-// Retry wrapper avec backoff exponentiel + rotation User-Agent (I1 audit)
-// 4 tentatives max (1 + 3 fallbacks), attend 2s, 4s, 8s entre chaque.
-// À chaque retry on change le User-Agent pour passer Cloudflare/anti-bot
-// qui blackliste un UA après quelques échecs.
-async function fetchHtml(url, attempts = 4) {
-  for (let i = 0; i < attempts; i++) {
-    try {
-      const headers = i === 0 ? HEADERS : { ...HEADERS, 'User-Agent': FALLBACK_UAS[(i - 1) % FALLBACK_UAS.length] };
-      console.log(`📡 GET ${url}${i ? ` (tentative ${i + 1}/${attempts}, UA rotated)` : ''}`);
-      const res = await fetch(url, { headers, redirect: 'follow' });
-      if (!res.ok) {
-        // Loggue le détail HTTP pour faciliter le debug
-        const bodyPreview = (await res.text().catch(() => '')).slice(0, 200);
-        throw new Error(`HTTP ${res.status} ${res.statusText} · body: ${bodyPreview}`);
-      }
-      return await res.text();
-    } catch (err) {
-      if (i === attempts - 1) throw new Error(`${url} → ${err.message} (${attempts} tentatives)`);
-      const wait = 2000 * Math.pow(2, i);
-      console.warn(`⚠️ ${err.message} — retry dans ${wait}ms`);
-      await new Promise(r => setTimeout(r, wait));
+// Cache de l'instance Playwright (créée à la 1re demande, réutilisée pour
+// chaque URL → évite de relancer Chromium à chaque fetch).
+let _browser = null;
+let _ctx = null;
+async function getPlaywrightContext() {
+  if (_ctx) return _ctx;
+  const { chromium } = await import('playwright');
+  _browser = await chromium.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-blink-features=AutomationControlled']
+  });
+  _ctx = await _browser.newContext({
+    userAgent: HEADERS['User-Agent'],
+    viewport: { width: 1280, height: 800 },
+    locale: 'fr-FR',
+    timezoneId: 'Europe/Paris',
+    extraHTTPHeaders: {
+      'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7'
     }
+  });
+  return _ctx;
+}
+
+export async function closePlaywright() {
+  try { if (_ctx) await _ctx.close(); } catch (_) {}
+  try { if (_browser) await _browser.close(); } catch (_) {}
+  _ctx = null; _browser = null;
+}
+
+// Stratégie : 1 tentative fetch direct (rapide, suffit pour les sites sans
+// anti-bot), puis fallback Playwright Chromium headless (résout les challenges
+// Cloudflare "Just a moment..." en exécutant le JS du challenge).
+async function fetchHtml(url, attempts = 4) {
+  // 1. Tentative fetch direct (1 essai uniquement, puisque le rotation UA n'a
+  //    pas marché contre Cloudflare — log pour traçabilité).
+  try {
+    console.log(`📡 GET ${url} (fetch direct)`);
+    const res = await fetch(url, { headers: HEADERS, redirect: 'follow' });
+    if (res.ok) {
+      const html = await res.text();
+      // Détecte challenge Cloudflare : si "Just a moment..." dans le HTML, on
+      // bascule en Playwright même si le statut est 200.
+      if (!/Just a moment\.\.\.|cf-challenge|cf-browser-verification/i.test(html)) {
+        return html;
+      }
+      console.warn(`⚠️ Challenge Cloudflare détecté dans le HTML — fallback Playwright`);
+    } else {
+      console.warn(`⚠️ HTTP ${res.status} ${res.statusText} — fallback Playwright`);
+    }
+  } catch (err) {
+    console.warn(`⚠️ fetch direct KO : ${err.message} — fallback Playwright`);
+  }
+
+  // 2. Fallback Playwright headless Chromium — résout le challenge Cloudflare.
+  try {
+    console.log(`🎭 Playwright GET ${url}`);
+    const ctx = await getPlaywrightContext();
+    const page = await ctx.newPage();
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    // Attente qu'un éventuel challenge JS Cloudflare se résolve. 8s suffit
+    // dans 99 % des cas. On vérifie que le HTML final n'est plus un challenge.
+    for (let i = 0; i < 8; i++) {
+      await page.waitForTimeout(1000);
+      const html = await page.content();
+      if (!/Just a moment\.\.\.|cf-challenge|cf-browser-verification/i.test(html)) {
+        await page.close();
+        console.log(`✅ Playwright OK (challenge résolu en ${i + 1}s)`);
+        return html;
+      }
+    }
+    // Toujours challenge après 8s — on retourne quand même pour debug
+    const finalHtml = await page.content();
+    await page.close();
+    throw new Error(`Cloudflare challenge non résolu après 8s sur ${url}`);
+  } catch (err) {
+    throw new Error(`${url} → Playwright: ${err.message}`);
   }
 }
 
@@ -414,8 +468,11 @@ async function main() {
   } catch (err) {
     console.error('❌ Erreur :', err.message);
     console.error(err.stack);
+    await closePlaywright();
     process.exit(1);
   }
+  // Always close le browser pour ne pas laisser le job hanger
+  await closePlaywright();
 }
 
 main();

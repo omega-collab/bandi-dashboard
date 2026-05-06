@@ -24,13 +24,15 @@ jobs:
   flixpatrol:
     name: FlixPatrol + Tudum
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8       # +3 min pour install Chromium Playwright
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - name: Install deps
         run: npm install --omit=dev
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
       - name: Scrape FlixPatrol
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
