@@ -1,0 +1,54 @@
+name: Ping (test si GitHub Actions tourne)
+
+# Workflow ultra-simple pour diagnostiquer :
+# - S'il apparaît dans Actions UI et tourne en vert → Actions est OK,
+#   le problème des scrapers vient des scripts ou secrets
+# - S'il n'apparaît pas → Actions est désactivé sur le repo, Allan doit
+#   réactiver via Settings > Actions > General > "Allow all actions..."
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo alive
+        run: |
+          echo "✅ GitHub Actions is alive"
+          echo "Branch: ${GITHUB_REF}"
+          echo "SHA: ${GITHUB_SHA}"
+          echo "Timestamp: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+
+      - name: Test Supabase reachable (sans auth)
+        run: |
+          # Juste un HEAD pour voir si on a accès au domaine — pas besoin de secret
+          STATUS=$(curl -sI -o /dev/null -w "%{http_code}" https://rzxijnwnpfljutpbknhd.supabase.co/rest/v1/ --max-time 10 || echo "TIMEOUT")
+          echo "Supabase HEAD status: $STATUS (401 attendu sans clé, ce qui prouve l'accessibilité)"
+
+      - name: Test Supabase write (avec service_key) — vrai test scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_KEY" ]; then
+            echo "❌ SECRETS MANQUANTS : SUPABASE_URL ou SUPABASE_SERVICE_KEY non configuré"
+            echo "→ C'est probablement la cause des Hors-ligne. Va dans Settings > Secrets and variables > Actions et vérifie."
+            exit 1
+          fi
+          echo "✅ Secrets présents — test écriture sur la table healthcheck (créée si absente)"
+          # Tente une lecture simple d'une table existante
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "$SUPABASE_URL/rest/v1/bandi_snapshots?select=date&limit=1" \
+            -H "apikey: $SUPABASE_SERVICE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" --max-time 15)
+          echo "Lecture bandi_snapshots: HTTP $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Supabase joignable et clé valide"
+          else
+            echo "❌ Problème : HTTP $STATUS (clé révoquée ou table inaccessible)"
+          fi

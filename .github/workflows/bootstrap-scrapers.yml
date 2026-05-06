@@ -14,10 +14,7 @@ on:
   push:
     branches:
       - main
-    paths:
-      - '.netlify-trigger'      # uniquement si on touche le trigger
-      - 'scripts/scrape-*.js'   # ou si on modifie un script de scraping
-      - '.github/workflows/bootstrap-scrapers.yml'
+      - master
   workflow_dispatch:
 
 permissions:
