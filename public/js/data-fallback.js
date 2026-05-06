@@ -94,12 +94,11 @@ const BANDI = {
     fetchedAt: '2026-05-02'
   },
 
-  // IMDb : note série consolidée (mai 2026)
-  // L'aggregateRating série est désormais publié — plus besoin du fallback per-épisode
-  // qui faisait sens à la sortie (8.7-8.9 par ép.). La note série globale est plus
-  // sévère car elle pondère les épisodes par nombre de votes (la 1re tendance, plus
-  // de votes, dominent). Voir aussi screenrant.com 6.2/10.
-  imdbCurrent: { rating: 6.2, max: 10 },
+  // IMDb : note série consolidée (mise à jour 06/05/2026)
+  // L'aggregateRating série est désormais publié — plus besoin du fallback per-épisode.
+  // Note volatile avec peu de votes (199 reviews) — peut continuer à osciller entre 5.5 et 6.5.
+  // Source : screenrant.com 06/05 (« measly 5.9 score based on 199 reviews »)
+  imdbCurrent: { rating: 5.9, max: 10, voteCount: 199, fetchedAt: '2026-05-06' },
 
   // Plage de notes IMDb par épisode (S1) — rapport Gemini 19/04/2026
   // Conservé pour le contexte historique (pic d'enthousiasme à la sortie)
@@ -113,16 +112,17 @@ const BANDI = {
   // (RT n'a qu'1 critique seule = pas assez pour un score consensus).
   // Verdict : 'positif' | 'mitige' | 'negatif' — agrégation maison.
   criticReviews: {
-    fetchedAt: '2026-05-02',
+    fetchedAt: '2026-05-06',
     total: 12,
     positifs: 9,
     mitiges: 3,
     negatifs: 0,
     scorePct: 75,           // 9/12 = 75 % critiques favorables
-    notePresseAlloMoy: 3.9, // note presse Allociné (sur 5) — base 7 critiques (à jour 02/05)
-    notePresseAlloN: 7,     // nb critiques presse Allociné
+    notePresseAlloMoy: 3.9, // note presse Allociné (sur 5) — 06/05 : 8 critiques (vs 7 le 02/05)
+    notePresseAlloN: 8,     // nb critiques presse Allociné (élargi)
     noteSpectAlloMoy: 4.0,  // note spectateurs Allociné
-    noteSpectAlloN: 284,    // nb notes spectateurs (avec 83 critiques rédigées)
+    noteSpectAlloN: 313,    // nb notes spectateurs (06/05) — vs 284 le 02/05
+    noteSpectAlloCritN: 88, // nb critiques rédigées (06/05) — vs 83 le 02/05
     sources: [
       { media: 'Le Parisien',           pays: 'FR', verdict: 'positif',
         citation: '« Thriller social intense », tensions familiales et sociales brillamment captées.',
