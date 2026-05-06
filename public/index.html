@@ -28,7 +28,7 @@
 <!-- Leaflet.js pour la carte choroplèthe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<link rel="stylesheet" href="css/styles.css?v=20260507a" />
+<link rel="stylesheet" href="css/styles.css?v=20260507b" />
 
 <!-- Splash screen (inline pour afficher immédiatement, avant tout chargement) -->
 <style>
@@ -130,15 +130,15 @@
     </div>
   </div>
 
-  <!-- Onglets -->
+  <!-- Onglets — Fiche série devient l'accueil par défaut (chantier mai 2026) -->
   <nav class="tabs">
-    <button class="tab active" data-tab="overview">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 12l4-4 4 4 5-5"/></svg>
-      Vue d'ensemble
+    <button class="tab active" data-tab="series">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+      Fiche série
     </button>
     <button class="tab" data-tab="monitoring">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-      Monitoring
+      Stats
     </button>
     <button class="tab" data-tab="countries">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
@@ -151,10 +151,6 @@
     <button class="tab" data-tab="buzz">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       Buzz
-    </button>
-    <button class="tab" data-tab="series">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
-      Fiche série
     </button>
     <button class="tab" data-tab="signals">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h2l3-9 4 18 3-9h8"/></svg>
@@ -778,8 +774,8 @@
 
   </section>
 
-  <!-- ============ TAB: SERIES ============ -->
-  <section class="tab-panel" id="panel-series">
+  <!-- ============ TAB: SERIES (onglet par défaut depuis mai 2026) ============ -->
+  <section class="tab-panel active" id="panel-series">
     <div class="series-hero">
       <img src="assets/bandi-poster.jpeg" alt="Affiche Bandi" class="series-poster" />
       <div class="series-info">
@@ -1244,9 +1240,9 @@
 
 <!-- Bottom navigation mobile -->
 <nav class="bottom-nav" aria-label="Navigation mobile">
-  <button class="bnav-item active" data-tab="overview" aria-label="Vue d'ensemble">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 12l4-4 4 4 5-5"/></svg>
-    <span>Live</span>
+  <button class="bnav-item active" data-tab="series" aria-label="Fiche série">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+    <span>Série</span>
   </button>
   <button class="bnav-item" data-tab="monitoring" aria-label="Monitoring">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
@@ -1264,9 +1260,9 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
     <span>Rival</span>
   </button>
-  <button class="bnav-item" data-tab="series" aria-label="Fiche série">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
-    <span>Série</span>
+  <button class="bnav-item" data-tab="signals" aria-label="Signaux de renouvellement">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h2l3-9 4 18 3-9h8"/></svg>
+    <span>Signaux</span>
   </button>
   <button class="bnav-item" data-tab="history" aria-label="Historique">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 2 5-5"/></svg>
@@ -1279,12 +1275,12 @@
 </nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/auth.js?v=20260507a"></script>
-<script src="js/data-fallback.js?v=20260507a"></script>
-<script src="js/config.js?v=20260507a"></script>
-<script src="js/monitoring.js?v=20260507a"></script>
-<script src="js/app.js?v=20260507a"></script>
-<script src="js/health-guard.js?v=20260507a"></script>
+<script src="js/auth.js?v=20260507b"></script>
+<script src="js/data-fallback.js?v=20260507b"></script>
+<script src="js/config.js?v=20260507b"></script>
+<script src="js/monitoring.js?v=20260507b"></script>
+<script src="js/app.js?v=20260507b"></script>
+<script src="js/health-guard.js?v=20260507b"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {

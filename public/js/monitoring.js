@@ -250,15 +250,28 @@
     const score     = cur.score   || snap0.score_monde || 0;
     const paysN1    = cur.paysN1    ?? snap0.pays_n1   ?? null;
     const paysTop10 = cur.paysTop10 ?? snap0.pays_top10 ?? null;
-    const completion  = B.completionScore   ?? null;
-    const buzzScore   = B.buzz?.score       ?? null;
-    const ratAvg      = B.ratings?.average  ?? null;
     const heuresSem   = t0.heures_vues      != null ? parseFloat(t0.heures_vues)    : null;
-    const heuresCumul = B.heuresVuesCumul   ?? null;
-    const joursTop10  = B.joursEnTop10      ?? null;
-    // semaines_top10 n'existe pas en base → calculé côté app.js depuis tudumWeekly
-    const semTop10    = B.semTop10 ?? (t0.semaines_top10 != null ? parseInt(t0.semaines_top10) : null);
     const vuesSem     = t0.views_millions   != null ? parseFloat(t0.views_millions) : null;
+
+    // ── DONNÉES OFFICIELLES NETFLIX (BANDI.bandiPerformance) ─────────────
+    // Ces valeurs sont alimentées depuis le prompt analytique 06/05/2026 et
+    // remplacent les jauges anciennement inactives (completionScore, buzzScore,
+    // heuresVuesCumul, joursEnTop10) qui restaient à "—" en permanence.
+    const bp = B.bandiPerformance || {};
+    const bpTotals = bp.totalsPublicTop10 || {};
+    const bpComp = bp.completionEstimate || {};
+    const bpCrit = B.criticReviews || {};
+    const bpIg = bp.instagramNetflixFrance || {};
+    const bpWeek2 = (bp.weeklyNetflixTop10 || []).find(w => w.weekNumber === 2) || {};
+
+    const heuresCumul = bpTotals.hoursViewed != null ? bpTotals.hoursViewed / 1_000_000 : null;
+    const vuesCumul   = bpTotals.viewsCVE    != null ? bpTotals.viewsCVE / 1_000_000    : null;
+    const peakHeures  = bpWeek2.hoursViewed  != null ? bpWeek2.hoursViewed / 1_000_000  : null;
+    const completion  = bpComp.central                ?? null;
+    const semTop10    = (bp.weeklyNetflixTop10 || []).length || (B.cumulTudum?.semainesTop10 ?? null);
+    const presseFav   = bpCrit.scorePct               ?? null;
+    const igGain      = bpIg.measuredGain             ?? null;
+    const igGainK     = igGain != null ? Math.round(igGain / 1000) : null;
 
     // Debug — visible dans la console du navigateur
     console.log('[MONITORING] FlixPatrol →', { rang, score, paysN1, paysTop10 });
@@ -280,13 +293,14 @@
     const pctPN1   = paysN1   != null ? clamp(Math.round(paysN1   / 20 * 100),  0, 100) : 0;
     const pctPT10  = paysTop10!= null ? clamp(Math.round(paysTop10 / 50 * 100), 0, 100) : 0;
     const pctComp  = completion!= null ? clamp(Math.round(completion),           0, 100) : 0;
-    const pctBuzz  = buzzScore != null ? clamp(Math.round(buzzScore),            0, 100) : 0;
-    const pctRat   = ratAvg   != null ? clamp(Math.round(ratAvg / 10 * 100),    0, 100) : 0;
     const pctSem   = semTop10 != null ? clamp(Math.round(semTop10 / 12 * 100),  0, 100) : 0;
     const pctHsem  = heuresSem  != null ? clamp(Math.round(heuresSem / 30 * 100),   0, 100) : 0;
-    const pctHcum  = heuresCumul!= null ? clamp(Math.round(heuresCumul / 200 * 100),0, 100) : 0;
-    const pctJours = joursTop10 != null ? clamp(Math.round(joursTop10 / 500 * 100), 0, 100) : 0;
+    const pctHcum  = heuresCumul != null ? clamp(Math.round(heuresCumul / 100 * 100), 0, 100) : 0;
+    const pctVuesCumul = vuesCumul != null ? clamp(Math.round(vuesCumul / 15 * 100), 0, 100) : 0;
+    const pctPeak  = peakHeures != null ? clamp(Math.round(peakHeures / 50 * 100), 0, 100) : 0;
     const pctVues  = vuesSem    != null ? clamp(Math.round(vuesSem / 20 * 100),     0, 100) : 0;
+    const pctPresseFav = presseFav != null ? clamp(Math.round(presseFav), 0, 100) : 0;
+    const pctIg    = igGain != null ? clamp(Math.round(igGain / 100_000 * 100), 0, 100) : 0;
 
     // ── SECTION 1 : Classement FlixPatrol ─────────────────────────────────
     const s1 = [
@@ -324,73 +338,74 @@
       }
     ];
 
-    // ── SECTION 2 : Qualité & Engagement ──────────────────────────────────
-    const s2 = [
-      {
-        id: 'completion', label: 'Taux Complétion',
-        display: completion != null ? `${completion}%` : '—',  unit: 'SCORE COMBINÉ',
-        pct: pctComp,    color: gradColor(pctComp),
-        delta: '',
-        src: 'IMDb · RT · Buzz',  minL: '0%', maxL: '100%',
-        tooltip: 'Score composite : notes critiques + buzz presse + engagement'
-      },
-      {
-        id: 'buzz',      label: 'Buzz Presse',
-        display: (buzzScore != null && buzzScore > 0) ? buzzScore.toString() : '—',  unit: 'TENDANCE GOOGLE',
-        pct: pctBuzz,    color: gradColor(pctBuzz),
-        delta: '',
-        src: 'Google Trends',  minL: '0', maxL: '100',
-        tooltip: 'Indice de popularité de recherche Google (0-100 normalisé)'
-      },
-      {
-        id: 'rating',    label: 'Note Critique',
-        display: (ratAvg != null && ratAvg > 0) ? ratAvg.toFixed(1) : '—',  unit: 'SUR 10',
-        pct: pctRat,     color: gradColor(pctRat),
-        delta: '',
-        src: 'IMDb · Allociné · RT',  minL: '0', maxL: '10',
-        tooltip: 'Moyenne pondérée des 8 sources de notation (IMDb, RT, Allociné, TMDB…)'
-      },
-      {
-        id: 'semaines',  label: 'Semaines Top 10',
-        display: semTop10 ? semTop10.toString() : '—',  unit: 'SEMAINES',
-        pct: pctSem,     color: (semTop10 || 0) >= 6 ? '#009739' : (semTop10 || 0) >= 3 ? '#D4A017' : '#CE1126',
-        delta: '',
-        src: 'Netflix Tudum',  minL: '0', maxL: '12',
-        tooltip: 'Semaines cumulées dans le classement officiel Netflix Tudum'
-      }
-    ];
-
-    // ── SECTION 3 : Visionnage Netflix ────────────────────────────────────
-    const s3 = [];
-
-    s3.push({
-      id: 'hsem',      label: 'Heures / Semaine',
-      display: fmtHeures(heuresSem),  unit: 'HEURES VUES',
-      pct: pctHsem,    color: gradColor(pctHsem),
-      delta: '',
-      src: 'Netflix Tudum',  minL: '0', maxL: '30M',
-      tooltip: 'Heures de visionnage déclarées officiellement par Netflix (semaine courante)'
-    });
-
-    s3.push({
-      id: 'htot',      label: 'Heures Totales',
-      display: fmtHeures(heuresCumul),  unit: 'HEURES CUMULÉES',
+    // ── SECTION 2 : Performance Netflix officielle (cumul Tudum) ─────────
+    // Données fixes alimentées par BANDI.bandiPerformance — 100 % factuelles
+    // (Tudum/whatsonnetflix.com), avec leur indice de fiabilité visible.
+    const s2 = [];
+    s2.push({
+      id: 'htot',      label: 'Heures cumul Top 10',
+      display: heuresCumul != null ? `${heuresCumul.toFixed(1).replace('.', ',')}M` : '—',  unit: 'HEURES VUES',
       pct: pctHcum,    color: gradColor(pctHcum),
       delta: '',
-      src: 'Netflix Tudum',  minL: '0', maxL: '200M',
-      tooltip: 'Cumul total de toutes les heures de visionnage depuis la sortie'
+      src: 'Netflix Tudum · 3 sem.',  minL: '0', maxL: '100M',
+      tooltip: 'Heures de visionnage cumulées sur les 3 semaines au Top 10 mondial Netflix (06/04 → 26/04). Source officielle Netflix Tudum.'
     });
-
-    s3.push({
-      id: 'jours',     label: 'Jours en Top 10',
-      display: joursTop10 ? joursTop10.toLocaleString('fr') : '—',  unit: 'PAYS × JOURS',
-      pct: pctJours,   color: gradColor(pctJours),
+    s2.push({
+      id: 'vcumul',    label: 'Vues CVE cumul',
+      display: vuesCumul != null ? `${vuesCumul.toFixed(1).replace('.', ',')}M` : '—',  unit: 'VUES ÉQUIVALENTES',
+      pct: pctVuesCumul, color: gradColor(pctVuesCumul),
       delta: '',
-      src: 'FlixPatrol',  minL: '0', maxL: '500',
-      tooltip: 'Total des présences quotidiennes dans les top 10 nationaux (pays × jours)'
+      src: 'Netflix Tudum · 3 sem.',  minL: '0', maxL: '15M',
+      tooltip: 'Cumul Vues CVE = Heures vues / Durée totale saison. Méthodologie officielle Netflix.'
+    });
+    s2.push({
+      id: 'peak',      label: 'Pic Semaine 2',
+      display: peakHeures != null ? `${peakHeures.toFixed(1).replace('.', ',')}M` : '—',  unit: 'HEURES · 13–19/04',
+      pct: pctPeak,    color: gradColor(pctPeak),
+      delta: '',
+      src: 'Netflix Tudum',  minL: '0', maxL: '50M',
+      tooltip: 'Meilleure semaine : 40,5 M heures vues, +150 % vs S1. Bandi #1 mondial non-anglophone.'
+    });
+    s2.push({
+      id: 'semaines',  label: 'Semaines Top 10',
+      display: semTop10 ? semTop10.toString() : '—',  unit: 'SEMAINES',
+      pct: pctSem,     color: (semTop10 || 0) >= 6 ? '#009739' : (semTop10 || 0) >= 3 ? '#D4A017' : '#CE1126',
+      delta: '',
+      src: 'Netflix Tudum',  minL: '0', maxL: '12',
+      tooltip: 'Semaines cumulées dans le classement officiel Netflix Top 10.'
     });
 
-    // Colonne "vues" Netflix si disponible (depuis le TSV Tudum)
+    // ── SECTION 3 : Engagement & Réception ────────────────────────────────
+    // Remplace les anciennes jauges inactives (buzzScore, ratAvg, joursTop10)
+    // par des données réellement alimentées via le prompt analytique 06/05.
+    const s3 = [];
+    s3.push({
+      id: 'completion', label: 'Complétion estimée',
+      display: completion != null ? `${completion}%` : '—',  unit: 'ESTIMATED',
+      pct: pctComp,    color: gradColor(pctComp),
+      delta: '',
+      src: 'Modèle interne · 62/100',  minL: '0%', maxL: '100%',
+      tooltip: 'Estimation : heures vues / durée totale + chute hebdo. Netflix ne publie pas le taux réel. Reliability 62/100.'
+    });
+    s3.push({
+      id: 'pressefav', label: 'Avis presse favorables',
+      display: presseFav != null ? `${presseFav}%` : '—',  unit: '12 CRITIQUES',
+      pct: pctPresseFav, color: gradColor(pctPresseFav),
+      delta: '',
+      src: 'Agrégation maison',  minL: '0%', maxL: '100%',
+      tooltip: 'Score agrégé sur 12 critiques presse documentées (Le Monde, Le Parisien, Decider, Inrocks, Screen Rant…). 9 positifs / 3 mitigés / 0 négatif.'
+    });
+    s3.push({
+      id: 'iggain',    label: 'Followers Netflix FR',
+      display: igGainK != null ? `+${igGainK}k` : '—',  unit: '@NETFLIXFR · 09/04→01/05',
+      pct: pctIg,      color: gradColor(pctIg),
+      delta: '',
+      src: 'Mesure directe',  minL: '0', maxL: '+100k',
+      tooltip: igGain != null
+        ? `Gain mesuré sur le compte officiel @netflixfr pendant la fenêtre BANDI : +${igGain.toLocaleString('fr-FR')} followers. Attribution directe à BANDI non prouvable (Weak Signal 30/100).`
+        : 'Gain Instagram Netflix France pendant la fenêtre BANDI.'
+    });
+    // Vues semaine (Tudum) si dispo, sinon Pays #1 historique (Tudum S2 = 13)
     if (vuesSem != null) {
       s3.push({
         id: 'vues',    label: 'Vues / Semaine',
@@ -398,17 +413,19 @@
         pct: pctVues,  color: gradColor(pctVues),
         delta: '',
         src: 'Netflix Tudum',  minL: '0', maxL: '20M',
-        tooltip: 'Nombre de foyers ayant regardé Bandi dans la semaine (données officielles Netflix)'
+        tooltip: 'Vues de la semaine en cours (Tudum)'
       });
     } else {
-      // Placeholder si vues non disponibles encore — jauge grisée
+      // Pic pays #1 simultanément (cohérent avec le récit Netflix officiel)
+      const peakN1 = (B.launchWeek2?.paysN1) || 13;
       s3.push({
-        id: 'vues',    label: 'Vues / Semaine',
-        display: '—',  unit: 'M FOYERS',
-        pct: 0,        color: '#2a2a2a',
+        id: 'peakN1', label: 'Pic Pays #1',
+        display: `${peakN1}`,  unit: 'PAYS SIMULTANÉS',
+        pct: clamp(Math.round(peakN1 / 30 * 100), 0, 100),
+        color: '#E4B84D',
         delta: '',
-        src: 'Netflix Tudum',  minL: '0', maxL: '20M',
-        tooltip: 'Données vues en attente — Netflix publie cette donnée sporadiquement'
+        src: 'Netflix Tudum · S2',  minL: '0', maxL: '30',
+        tooltip: 'Pic atteint en semaine 2 : 13 pays où BANDI était simultanément #1 sur Netflix.'
       });
     }
 
@@ -431,9 +448,9 @@
         <span class="mg-topbar-sub">↻ mise à jour automatique · 6h</span>
       </div>
       ${dataLine}
-      ${section('Classement FlixPatrol', s1)}
-      ${section('Qualité &amp; Engagement', s2)}
-      ${section('Visionnage Netflix', s3)}
+      ${section('Classement FlixPatrol (live)', s1)}
+      ${section('Performance Netflix officielle (cumul Tudum)', s2)}
+      ${section('Engagement &amp; Réception', s3)}
       <div class="mg-sep"></div>
     `;
 
