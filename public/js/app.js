@@ -1753,11 +1753,11 @@ function fmtEngagement(n) {
   return String(n);
 }
 
-const BUZZ_ICONS  = { press: '📰', reddit: '💬', youtube: '🎥', bluesky: '🦋', instagram: '📸' };
-const BUZZ_LABELS = { press: 'Presse', reddit: 'Reddit', youtube: 'YouTube', bluesky: 'Bluesky', instagram: 'Instagram' };
+const BUZZ_ICONS  = { press: '📰', reddit: '💬', youtube: '🎥', bluesky: '🦋' };
+const BUZZ_LABELS = { press: 'Presse', reddit: 'Reddit', youtube: 'YouTube', bluesky: 'Bluesky' };
 const SOURCE_COLORS = { local: '#CE1126', national: '#009739', international: '#D4A017' };
 const SOURCE_LABELS = { local: 'Local', national: 'National', international: 'International' };
-const ENGAGE_ICONS = { reddit: '↑', youtube: '▶', bluesky: '♥', instagram: '♥', press: '' };
+const ENGAGE_ICONS = { reddit: '↑', youtube: '▶', bluesky: '♥', press: '' };
 
 // Classifie un post social (Reddit/YouTube/Bluesky/Instagram) en local/national/international
 // par heuristique sur author_name + content. Utilisé par loadBuzzData() pour
@@ -1953,7 +1953,6 @@ function computeBuzzFilterCounts() {
       reddit:    base.filter(i => i.platform === 'reddit').length,
       youtube:   base.filter(i => i.platform === 'youtube').length,
       bluesky:   base.filter(i => i.platform === 'bluesky').length,
-      instagram: base.filter(i => i.platform === 'instagram').length,
     },
     period: {
       '1':   buzzAllItems.filter(i => (now - i.publishedAt.getTime()) <=  1 * 86400000).length,
