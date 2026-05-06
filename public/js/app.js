@@ -3197,9 +3197,13 @@ function monTimeAgo(dateStr) {
   return { label: `il y a ${Math.round(h / 24)}j`, hours: h };
 }
 function monFreshCls(h, weekly = false) {
+  // Seuils assouplis (mai 2026) — un scraper qui n'a pas tourné depuis 2-3
+  // jours est "en retard" (orange), pas "hors-ligne" (rouge alarmant). On
+  // bascule en rouge seulement après 7+ jours, ce qui correspond à un vrai
+  // problème durable et non à un creux ponctuel d'Actions.
   if (!isFinite(h)) return 'mon-stale';
-  if (weekly)  return h < 192 ? 'mon-ok' : h < 240 ? 'mon-warn' : 'mon-stale';
-  return h < 8 ? 'mon-ok' : h < 36 ? 'mon-warn' : 'mon-stale';
+  if (weekly)  return h < 192 ? 'mon-ok' : h < 360 ? 'mon-warn' : 'mon-stale';   // ok < 8j, warn < 15j
+  return h < 12 ? 'mon-ok' : h < 168 ? 'mon-warn' : 'mon-stale';                  // ok < 12h, warn < 7j
 }
 function monFmtDate(str) {
   if (!str) return '—';
@@ -3436,8 +3440,11 @@ function renderMonScrapers() {
   const buzzSocDate = BANDI._freshness?.buzzSoc ?? null;
 
   // Statut calculé : âge data → {cls, badge}
+  // Seuils (mai 2026) : Actif < 12h · Retard 12h-7j · Hors-ligne > 7j
+  // Date absente → "En attente" (plus doux que "Hors-ligne") car peut être
+  // une table jamais alimentée (cas tudum_global_weekly avant 1er mardi).
   const status = (date, weekly = false) => {
-    if (!date) return { cls: 'mon-stale', badge: 'Hors-ligne' };
+    if (!date) return { cls: 'mon-warn', badge: 'En attente' };
     const { hours } = monTimeAgo(date);
     const cls = monFreshCls(hours, weekly);
     const badge = cls === 'mon-ok' ? 'Actif' : cls === 'mon-warn' ? 'Retard' : 'Hors-ligne';

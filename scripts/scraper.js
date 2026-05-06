@@ -31,10 +31,30 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 const HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9',
-  'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8'
+  // User-Agent moderne (Chrome 131+) avec sec-ch-ua-* pour passer Cloudflare/anti-bot.
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+  'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Cache-Control': 'no-cache',
+  'Pragma': 'no-cache',
+  'Sec-Ch-Ua': '"Chromium";v="131", "Not_A Brand";v="24", "Google Chrome";v="131"',
+  'Sec-Ch-Ua-Mobile': '?0',
+  'Sec-Ch-Ua-Platform': '"macOS"',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-User': '?1',
+  'Upgrade-Insecure-Requests': '1',
+  'Referer': 'https://www.google.com/'
 };
+
+// User-Agents de fallback rotatifs si le 1er est bloqué
+const FALLBACK_UAS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:131.0) Gecko/20100101 Firefox/131.0'
+];
 
 // Mapping pays → région (complet)
 const REGIONS = {
@@ -69,14 +89,21 @@ const REGIONS = {
   'Israel': 'Moyen-Orient', 'Turkey': 'Moyen-Orient'
 };
 
-// Retry wrapper avec backoff exponentiel (I1 audit)
-// 3 tentatives max, attend 2s, 4s entre chaque
-async function fetchHtml(url, attempts = 3) {
+// Retry wrapper avec backoff exponentiel + rotation User-Agent (I1 audit)
+// 4 tentatives max (1 + 3 fallbacks), attend 2s, 4s, 8s entre chaque.
+// À chaque retry on change le User-Agent pour passer Cloudflare/anti-bot
+// qui blackliste un UA après quelques échecs.
+async function fetchHtml(url, attempts = 4) {
   for (let i = 0; i < attempts; i++) {
     try {
-      console.log(`📡 GET ${url}${i ? ` (tentative ${i + 1}/${attempts})` : ''}`);
-      const res = await fetch(url, { headers: HEADERS });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const headers = i === 0 ? HEADERS : { ...HEADERS, 'User-Agent': FALLBACK_UAS[(i - 1) % FALLBACK_UAS.length] };
+      console.log(`📡 GET ${url}${i ? ` (tentative ${i + 1}/${attempts}, UA rotated)` : ''}`);
+      const res = await fetch(url, { headers, redirect: 'follow' });
+      if (!res.ok) {
+        // Loggue le détail HTTP pour faciliter le debug
+        const bodyPreview = (await res.text().catch(() => '')).slice(0, 200);
+        throw new Error(`HTTP ${res.status} ${res.statusText} · body: ${bodyPreview}`);
+      }
       return await res.text();
     } catch (err) {
       if (i === attempts - 1) throw new Error(`${url} → ${err.message} (${attempts} tentatives)`);
