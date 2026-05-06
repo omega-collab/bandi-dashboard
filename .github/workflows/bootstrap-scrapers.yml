@@ -1,0 +1,144 @@
+name: Bootstrap scrapers (réveil après inactivité)
+
+# Déclencheur : à chaque push sur main, on relance TOUS les scrapers en
+# parallèle. Sert de "kick" pour rattraper le retard si les crons GitHub
+# Actions ne tournent plus (par exemple après une période sans activité).
+#
+# Ne remplace PAS les workflows cron existants (scrape.yml, buzz-scrape.yml, etc.).
+# C'est une couche en plus qui relance la machinerie sur demande.
+#
+# Usage : il suffit de pousser sur main pour déclencher.
+# Désactivation : supprimer ce fichier ou commenter le `on: push`.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.netlify-trigger'      # uniquement si on touche le trigger
+      - 'scripts/scrape-*.js'   # ou si on modifie un script de scraping
+      - '.github/workflows/bootstrap-scrapers.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  flixpatrol:
+    name: FlixPatrol + Tudum
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Install deps
+        run: npm install --omit=dev
+      - name: Scrape FlixPatrol
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/scraper.js
+        continue-on-error: true
+      - name: Scrape Tudum
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/scrape-tudum.js
+        continue-on-error: true
+
+  press:
+    name: Presse + GDELT
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Install deps
+        run: npm install --omit=dev
+      - name: Scrape presse
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/scrape-press.js
+        continue-on-error: true
+
+  social:
+    name: Reddit · YouTube · Bluesky · Instagram
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Install deps
+        run: npm install --omit=dev
+      - name: Scrape social
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: node scripts/scrape-social.js
+        continue-on-error: true
+      - name: Scrape Instagram
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
+        run: node scripts/scrape-instagram.js
+        continue-on-error: true
+
+  ratings:
+    name: 8 sources notes + Wikipedia
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Install deps
+        run: npm install --omit=dev
+      - name: Scrape IMDb
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/scrape-imdb.js
+        continue-on-error: true
+      - name: Scrape TMDB
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: node scripts/scrape-tmdb.js
+        continue-on-error: true
+      - name: Scrape SensCritique
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/scrape-senscritique.js
+        continue-on-error: true
+      - name: Scrape Filmaffinity
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/scrape-filmaffinity.js
+        continue-on-error: true
+      - name: Scrape Allociné
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/scrape-allocine.js
+        continue-on-error: true
+      - name: Scrape Rotten Tomatoes
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/scrape-rottentomatoes.js
+        continue-on-error: true
+      - name: Scrape Wikipedia
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/scrape-wikipedia.js
+        continue-on-error: true
