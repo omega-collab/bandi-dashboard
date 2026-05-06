@@ -338,6 +338,44 @@ async function loadLiveData() {
       .sort((a, b) => (a.date < b.date ? -1 : 1))
       .map(r => ({ date: r.date.slice(5).replace('-', '/'), rang: r.rang }));
 
+    // ── Historique complet : tous les pays jamais entrés au Top 10 BANDI ──
+    // Agrège paysHist (500 dernières lignes de bandi_country_rankings) en une
+    // ligne par pays, avec meilleur rang, jours dans Top 10, dernière date,
+    // statut présent/absent aujourd'hui. Sert au panel "Tous les pays passés
+    // dans le Top 10" de l'onglet Historique.
+    const presentToday = new Set(paysData.map(p => p.pays));
+    const byCountry = {};
+    paysHist.forEach(r => {
+      if (!r.pays) return;
+      if (!byCountry[r.pays]) byCountry[r.pays] = { ranks: [], dates: [] };
+      byCountry[r.pays].ranks.push(r.rang);
+      byCountry[r.pays].dates.push(r.date);
+    });
+    const countryAllHistory = Object.entries(byCountry).map(([paysEn, agg]) => {
+      const enriched = enrichedPays.find(p => p.paysEn === paysEn);
+      const code = enriched?.code || COUNTRY_FR_MAP[paysEn]?.code || '';
+      const region = enriched?.region || COUNTRY_FR_MAP[paysEn]?.region || 'Autre';
+      const datesSorted = [...new Set(agg.dates)].sort();
+      const lastDate = datesSorted[datesSorted.length - 1] || null;
+      const firstDate = datesSorted[0] || null;
+      const bestRank = Math.min(...agg.ranks);
+      const isPresent = presentToday.has(paysEn);
+      const currentRank = enrichedPays.find(p => p.paysEn === paysEn)?.rang || null;
+      return {
+        pays: enriched?.pays || COUNTRY_FR_MAP[paysEn]?.fr || paysEn,
+        paysEn,
+        flag: enriched?.flag || codeToFlag(code),
+        code,
+        region,
+        bestRank,
+        currentRank: isPresent ? currentRank : null,
+        daysInTop10: datesSorted.length,
+        firstDate,
+        lastDate,
+        status: isPresent ? 'present' : 'past'
+      };
+    });
+
     // ── Cohérence forcée : recalcul des agrégats à partir de enrichedPays ──
     // bandi_snapshots peut diverger légèrement de bandi_country_rankings (timing
     // entre l'insert du snapshot et l'insert des pays par le scraper). On force
@@ -391,6 +429,7 @@ async function loadLiveData() {
       pays: enrichedPays.length > 0 ? enrichedPays : BANDI.pays,
       snapshots30: snapshots,
       countryPerf,
+      countryAllHistory,
       martiniqueRanks,
       rivals: (() => {
         // ── Source de vérité : FlixPatrol ── netflix_tv_top10_world ──
@@ -1422,6 +1461,121 @@ function renderHistoryTab() {
   }
 
   renderCountryPerfTable();
+  renderCountryAllHistoryTable();
+}
+
+// État local du panel "Tous les pays passés au Top 10"
+let histAllRegionFilter = 'Toutes';
+let histAllSortMode = 'days'; // 'days' | 'best' | 'recent'
+
+function fmtHistDate(iso) {
+  if (!iso) return '—';
+  // 2026-04-15 → 15/04
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  return m ? `${m[3]}/${m[2]}` : iso;
+}
+
+function renderCountryAllHistoryTable() {
+  const all = BANDI.countryAllHistory;
+  const list = document.getElementById('histAllList');
+  if (!list) return;
+  if (!Array.isArray(all) || all.length === 0) {
+    list.innerHTML = '<div style="padding:32px;text-align:center;color:#8A8A8A;">Historique pays indisponible.</div>';
+    return;
+  }
+
+  // Stats résumé
+  const present = all.filter(c => c.status === 'present').length;
+  const past    = all.length - present;
+  const statsEl = document.getElementById('histAllStats');
+  if (statsEl) {
+    statsEl.innerHTML = `
+      <span><strong>${all.length}</strong> pays au total</span>
+      <span class="buzz-stat-sep">·</span>
+      <span><strong style="color:#009739">${present}</strong> aujourd'hui</span>
+      <span class="buzz-stat-sep">·</span>
+      <span><strong style="color:#8A8A8A">${past}</strong> sortis</span>
+    `;
+  }
+
+  // Filtres région (regroupe les régions présentes)
+  const regions = ['Toutes', ...new Set(all.map(c => c.region).filter(Boolean))];
+  const regionContainer = document.getElementById('histAllRegionFilters');
+  if (regionContainer && !regionContainer.dataset.bound) {
+    regionContainer.innerHTML = regions.map(r =>
+      `<button class="region-btn ${r === histAllRegionFilter ? 'active' : ''}" data-region="${r}">${r}</button>`
+    ).join('');
+    regionContainer.querySelectorAll('.region-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        histAllRegionFilter = btn.dataset.region;
+        regionContainer.querySelectorAll('.region-btn').forEach(b =>
+          b.classList.toggle('active', b.dataset.region === histAllRegionFilter));
+        renderCountryAllHistoryTable();
+      });
+    });
+    regionContainer.dataset.bound = '1';
+  } else if (regionContainer) {
+    regionContainer.querySelectorAll('.region-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.region === histAllRegionFilter));
+  }
+
+  // Boutons de tri
+  const sortBtns = document.querySelectorAll('.hist-all-sort .stoggle');
+  if (sortBtns.length && !sortBtns[0].dataset.bound) {
+    sortBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        histAllSortMode = btn.dataset.sort;
+        sortBtns.forEach(b => b.classList.toggle('active', b.dataset.sort === histAllSortMode));
+        renderCountryAllHistoryTable();
+      });
+      btn.dataset.bound = '1';
+    });
+  }
+
+  // Filtre + tri
+  let filtered = all.filter(c => histAllRegionFilter === 'Toutes' || c.region === histAllRegionFilter);
+  if (histAllSortMode === 'days') {
+    filtered.sort((a, b) => b.daysInTop10 - a.daysInTop10 || a.bestRank - b.bestRank);
+  } else if (histAllSortMode === 'best') {
+    filtered.sort((a, b) => a.bestRank - b.bestRank || b.daysInTop10 - a.daysInTop10);
+  } else {
+    // recent : ordre alpha sur lastDate desc, puis fallback bestRank
+    filtered.sort((a, b) => (b.lastDate || '').localeCompare(a.lastDate || '') || a.bestRank - b.bestRank);
+  }
+
+  list.innerHTML = filtered.map(c => {
+    const regionColor = (window.REGION_COLORS && window.REGION_COLORS[c.region]) || '#8A8A8A';
+    const statusBadge = c.status === 'present'
+      ? `<span class="hist-all-status hist-all-status-present">Aujourd'hui : <strong>#${c.currentRank}</strong></span>`
+      : `<span class="hist-all-status hist-all-status-past">Sorti du Top 10</span>`;
+    const period = c.firstDate === c.lastDate
+      ? `Le ${fmtHistDate(c.firstDate)}`
+      : `Du ${fmtHistDate(c.firstDate)} au ${fmtHistDate(c.lastDate)}`;
+    return `
+      <div class="hist-all-row hist-all-row--${c.status}">
+        <span class="hist-all-flag">${c.flag}</span>
+        <div class="hist-all-info">
+          <span class="hist-all-name">${escapeHtml(c.pays)}</span>
+          <span class="hist-all-region" style="background:${regionColor}20;color:${regionColor};">${escapeHtml(c.region)}</span>
+        </div>
+        <div class="hist-all-metrics">
+          <div class="hist-all-metric">
+            <span class="hist-all-metric-label">Meilleur rang</span>
+            <strong class="hist-all-metric-val ${c.bestRank === 1 ? 'is-one' : ''}">#${c.bestRank}</strong>
+          </div>
+          <div class="hist-all-metric">
+            <span class="hist-all-metric-label">Jours Top 10</span>
+            <strong class="hist-all-metric-val">${c.daysInTop10}</strong>
+          </div>
+          <div class="hist-all-metric hist-all-metric--period">
+            <span class="hist-all-metric-label">Période</span>
+            <strong class="hist-all-metric-val">${period}</strong>
+          </div>
+        </div>
+        ${statusBadge}
+      </div>
+    `;
+  }).join('');
 }
 
 function renderCountryPerfTable() {
@@ -3595,10 +3749,10 @@ function renderSignalsTab() {
         <div>Période</div>
         <div>Rang</div>
         <div>Heures vues</div>
-        <div>Vues CVE</div>
+        <div>Vues</div>
         <div>Pays Top 10</div>
         <div>#1 dans</div>
-        <div>Δ vs S–1</div>
+        <div>Évolution</div>
         <div>Fiabilité</div>
       </div>`;
     const rows = data.weeklyNetflixTop10.map(w => {
@@ -3630,10 +3784,10 @@ function renderSignalsTab() {
     const t = data.totalsPublicTop10;
     totalsEl.innerHTML = `
       <div class="sig-totals-card">
-        <span class="sig-totals-label">Cumul 3 semaines Top 10 mondial non-anglophone</span>
+        <span class="sig-totals-label">Cumul 3 semaines · Top 10 mondial non-anglophone</span>
         <div class="sig-totals-values">
           <div><strong>${fmtMillions(t.hoursViewed)}</strong><span>heures vues</span></div>
-          <div><strong>${fmtMillions(t.viewsCVE)}</strong><span>vues CVE</span></div>
+          <div><strong>${fmtMillions(t.viewsCVE)}</strong><span>vues</span></div>
         </div>
         ${renderReliabilityBadge(t.reliability)}
       </div>`;
@@ -3654,11 +3808,11 @@ function renderSignalsTab() {
       <div class="sig-comp-range">Fourchette prudente : ${c.low} % à ${c.high} %</div>
       ${renderReliabilityBadge(c.reliability)}
       <p class="sig-comp-text">
-        Sur la base des heures vues publiques, de la durée totale (7,8 h) et de la chute après le pic S2, BANDI semble se situer autour de
-        <strong>${c.central} % de complétion estimée</strong>. Honorable, mais pas forcément ultra-sécurisant pour un renouvellement,
-        surtout si le coût de production ou les ambitions S2 sont élevés.
+        En croisant les heures vues publiques, la durée totale de la saison (7,8 h) et la baisse observée après le pic de la semaine 2,
+        on estime qu'environ <strong>${c.central} % des spectateurs ont vu BANDI en entier</strong>. Un chiffre honorable, mais qui
+        n'est pas forcément suffisant pour garantir une saison 2 — surtout si le budget ou les ambitions sont élevés.
       </p>
-      <p class="sig-comp-warning">⚠️ <strong>Estimated</strong> — Not official Netflix data. Netflix ne publie pas le taux réel de complétion.</p>
+      <p class="sig-comp-warning">⚠️ <strong>Estimation</strong> — chiffre non officiel. Netflix ne publie pas le vrai taux de complétion.</p>
     `;
   }
 
@@ -3686,11 +3840,11 @@ function renderSignalsTab() {
     audEl.innerHTML = `
       <div class="sig-aud-card">
         <div class="sig-aud-row">
-          <span class="sig-aud-label">Starters estimés</span>
+          <span class="sig-aud-label">Spectateurs ayant commencé la série</span>
           <strong>${a.startersLow} M – ${a.startersHigh} M</strong>
         </div>
         <div class="sig-aud-row">
-          <span class="sig-aud-label">Completers estimés</span>
+          <span class="sig-aud-label">Spectateurs l'ayant probablement terminée</span>
           <strong>${a.completersLow} M – ${a.completersHigh} M</strong>
         </div>
         ${renderReliabilityBadge(a.reliability)}
@@ -3757,12 +3911,12 @@ function renderSignalsTab() {
   if (subCard && data.subscriberImpact) {
     subCard.innerHTML = `
       <div class="sig-sub-card">
-        <div class="sig-sub-num">Non public</div>
+        <div class="sig-sub-num">Donnée non publique</div>
         <p class="sig-sub-text">
-          Netflix ne publie plus régulièrement ses chiffres d'abonnés trimestriels depuis 2025. Aucun chiffre public ne permet donc de savoir combien d'abonnés Netflix a gagnés depuis la sortie de BANDI, ni combien d'abonnements seraient directement attribuables à la série.
+          Depuis 2025, Netflix ne communique plus le nombre d'abonnés gagnés ou perdus chaque trimestre. Impossible donc de savoir combien d'abonnements ont été directement portés par BANDI : ce chiffre n'existe nulle part publiquement.
         </p>
         <p class="sig-sub-warn">
-          ⚠️ Ne pas afficher « BANDI a gagné X abonnés à Netflix » — ce serait invérifiable.
+          ⚠️ Toute affirmation du type « BANDI a fait gagner X abonnés à Netflix » serait invérifiable.
         </p>
         ${renderReliabilityBadge(data.subscriberImpact.reliability)}
       </div>`;

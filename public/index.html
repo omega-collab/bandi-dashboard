@@ -28,7 +28,7 @@
 <!-- Leaflet.js pour la carte choroplèthe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<link rel="stylesheet" href="css/styles.css?v=20260507k" />
+<link rel="stylesheet" href="css/styles.css?v=20260507l" />
 
 <!-- Splash screen (inline pour afficher immédiatement, avant tout chargement) -->
 <style>
@@ -756,6 +756,26 @@
       <div id="countryPerfList"></div>
     </div>
 
+    <!-- ── Tous les pays jamais passés au Top 10 BANDI ── -->
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Tous les pays passés dans le Top 10</h2>
+          <p class="panel-sub">Pays actuellement classés <strong>et</strong> pays qui en sont sortis · Source FlixPatrol</p>
+        </div>
+        <div class="hist-all-stats" id="histAllStats"></div>
+      </div>
+      <div class="hist-all-toolbar">
+        <div class="region-filters" id="histAllRegionFilters"></div>
+        <div class="hist-all-sort" role="group" aria-label="Tri">
+          <button class="stoggle active" data-sort="days">Durée Top 10</button>
+          <button class="stoggle" data-sort="best">Meilleur rang</button>
+          <button class="stoggle" data-sort="recent">Plus récent</button>
+        </div>
+      </div>
+      <div id="histAllList" class="hist-all-list"></div>
+    </div>
+
   </section>
 
   <!-- ============ TAB: MAP ============ -->
@@ -1100,21 +1120,21 @@
     <div class="panel">
       <div class="panel-head">
         <div>
-          <h2>Signaux de renouvellement · Saison 2</h2>
-          <p class="panel-sub">Analyse défendable basée sur les données publiques · chaque chiffre porte un indice de fiabilité</p>
+          <h2>Signaux pour une saison 2</h2>
+          <p class="panel-sub">Lecture des données publiques disponibles · chaque chiffre indique son niveau de fiabilité</p>
         </div>
       </div>
       <p class="signals-disclaimer">
-        ⚠️ <strong>Statut S2 publique :</strong> non confirmé officiellement. Ce dashboard ne prétend pas connaître les métriques internes Netflix. Il reconstruit une lecture analytique à partir des données publiques disponibles.
+        ⚠️ <strong>Saison 2 :</strong> aucune annonce officielle à ce jour. Ce panneau ne reconstruit pas les chiffres internes de Netflix — il s'appuie uniquement sur ce qui est public.
       </p>
     </div>
 
-    <!-- Confidence Index (vue d'ensemble fiabilité) -->
+    <!-- Fiabilité des chiffres (vue d'ensemble) -->
     <div class="panel" id="signalsConfidencePanel">
       <div class="panel-head">
         <div>
-          <h3 class="panel-title">Confidence Index</h3>
-          <p class="panel-sub">Niveau de fiabilité de chaque donnée affichée dans cet onglet</p>
+          <h3 class="panel-title">Fiabilité des chiffres</h3>
+          <p class="panel-sub">À quel point chaque donnée affichée dans cette page est sûre</p>
         </div>
       </div>
       <div id="signalsConfidenceList" class="signals-confidence-list"></div>
@@ -1124,8 +1144,8 @@
     <div class="panel" id="signalsWeeklyPanel">
       <div class="panel-head">
         <div>
-          <h3 class="panel-title">Performance hebdomadaire Netflix Top 10</h3>
-          <p class="panel-sub">Heures vues · Vues CVE · Rang non-anglophone · Pays Top 10</p>
+          <h3 class="panel-title">Performance semaine par semaine</h3>
+          <p class="panel-sub">Source officielle Netflix Tudum · heures vues, rang mondial et nombre de pays au Top 10</p>
         </div>
       </div>
       <div class="signals-weekly-table" id="signalsWeeklyTable"></div>
@@ -1135,23 +1155,23 @@
     <!-- Encadré pédagogique CVE -->
     <div class="panel signals-cve-box">
       <div class="panel-head">
-        <h3 class="panel-title">Comment lire les vues Netflix ?</h3>
+        <h3 class="panel-title">Comment lire les chiffres de Netflix ?</h3>
       </div>
       <p class="signals-cve-text">
-        Netflix ne publie <strong>pas</strong> les abandons par épisode ni les vrais taux de complétion. Les <em>« views »</em> Netflix sont des <strong>vues équivalentes saison complète (CVE)</strong> : heures vues divisées par la durée totale. Utile pour comparer les titres, mais ne dit pas combien de personnes ont réellement terminé la saison.
+        Netflix communique des <em>« vues »</em> calculées simplement : <strong>heures vues ÷ durée totale de la saison</strong>. C'est utile pour comparer deux séries entre elles, mais cela ne dit pas combien de spectateurs ont réellement terminé tous les épisodes. Netflix ne publie ni les taux d'abandon, ni les vraies courbes de complétion.
       </p>
       <div class="signals-cve-formula">
-        CVE = Heures vues ÷ Durée totale de la saison
+        Vues = Heures vues ÷ Durée totale de la saison
       </div>
       <div id="signalsCveBadge"></div>
     </div>
 
-    <!-- Completion Score estimé -->
+    <!-- Taux de complétion estimé -->
     <div class="panel" id="signalsCompletionPanel">
       <div class="panel-head">
         <div>
-          <h3 class="panel-title">Estimated Completion Score</h3>
-          <p class="panel-sub">Estimation prudente basée sur heures vues + chute hebdo + modèle rétention</p>
+          <h3 class="panel-title">Combien de spectateurs ont vu BANDI en entier ?</h3>
+          <p class="panel-sub">Estimation prudente — Netflix ne publie pas le vrai taux de complétion</p>
         </div>
       </div>
       <div class="signals-completion-card" id="signalsCompletionCard"></div>
@@ -1161,42 +1181,42 @@
     <div class="panel" id="signalsRetentionPanel">
       <div class="panel-head">
         <div>
-          <h3 class="panel-title">Rétention estimée par épisode</h3>
-          <p class="panel-sub">Modélisation : Netflix ne publie pas les abandons par épisode</p>
+          <h3 class="panel-title">Combien restent regarder, épisode après épisode ?</h3>
+          <p class="panel-sub">Estimation — Netflix ne publie pas les abandons par épisode</p>
         </div>
       </div>
       <div class="signals-funnel" id="signalsFunnel"></div>
       <div class="signals-audience" id="signalsAudience"></div>
     </div>
 
-    <!-- Renewal Risk Matrix -->
+    <!-- Signaux pour ou contre la saison 2 -->
     <div class="panel" id="signalsRiskPanel">
       <div class="panel-head">
         <div>
-          <h3 class="panel-title">Renewal Risk Matrix</h3>
-          <p class="panel-sub">Lecture des signaux favorables, défavorables, mitigés et inconnus</p>
+          <h3 class="panel-title">Ce qui joue pour ou contre une saison 2</h3>
+          <p class="panel-sub">Synthèse des signaux favorables, défavorables et mitigés</p>
         </div>
       </div>
       <div id="signalsRiskMatrix" class="signals-risk-matrix"></div>
     </div>
 
-    <!-- Impact Instagram Netflix France -->
+    <!-- Croissance Instagram Netflix France -->
     <div class="panel" id="signalsInstagramPanel">
       <div class="panel-head">
         <div>
-          <h3 class="panel-title">Social Lift · @netflixfr</h3>
-          <p class="panel-sub">Croissance du compte Netflix France pendant la fenêtre BANDI</p>
+          <h3 class="panel-title">Croissance Instagram de Netflix France</h3>
+          <p class="panel-sub">Évolution du compte officiel pendant la fenêtre de visibilité BANDI</p>
         </div>
       </div>
       <div id="signalsInstagramCard"></div>
     </div>
 
-    <!-- Impact abonnés (Not Public) -->
+    <!-- Impact abonnés (donnée non publique) -->
     <div class="panel" id="signalsSubscriberPanel">
       <div class="panel-head">
         <div>
-          <h3 class="panel-title">Subscriber Impact</h3>
-          <p class="panel-sub">Aucun chiffre public — Netflix ne communique plus les abonnés trimestriels depuis 2025</p>
+          <h3 class="panel-title">Impact sur les abonnés Netflix</h3>
+          <p class="panel-sub">Donnée non publique : Netflix ne communique plus le nombre d'abonnés depuis 2025</p>
         </div>
       </div>
       <div id="signalsSubscriberCard"></div>
@@ -1285,12 +1305,12 @@
 </nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/auth.js?v=20260507k"></script>
-<script src="js/data-fallback.js?v=20260507k"></script>
-<script src="js/config.js?v=20260507k"></script>
-<script src="js/monitoring.js?v=20260507k"></script>
-<script src="js/app.js?v=20260507k"></script>
-<script src="js/health-guard.js?v=20260507k"></script>
+<script src="js/auth.js?v=20260507l"></script>
+<script src="js/data-fallback.js?v=20260507l"></script>
+<script src="js/config.js?v=20260507l"></script>
+<script src="js/monitoring.js?v=20260507l"></script>
+<script src="js/app.js?v=20260507l"></script>
+<script src="js/health-guard.js?v=20260507l"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {

@@ -285,10 +285,7 @@ const BANDI = {
       { signal: 'Chute -63,7 % en semaine 3',                 direction: 'défavorable', status: 'Calculated from Official',   score: 90 },
       { signal: 'Sortie probable du Top 10 après 3 semaines', direction: 'défavorable', status: 'Verified / Observed',        score: 75 },
       { signal: 'Completion Score estimé ≈ 53 %',             direction: 'mitigé',       status: 'Estimated',                  score: 62 },
-      { signal: 'Série longue (8 ép · 7,8 h)',                direction: 'défavorable', status: 'Analytical',                 score: 55 },
-      { signal: 'Impact abonnés Netflix non prouvable',       direction: 'inconnu',      status: 'Not Public',                 score: 15 },
-      { signal: 'Attribution Instagram Netflix FR à BANDI',   direction: 'mitigé',       status: 'Weak Signal',                score: 30 },
-      { signal: 'Cause réelle d\'un éventuel non-renouvellement', direction: 'inconnu', status: 'Not Public',                 score: 15 }
+      { signal: 'Série longue (8 ép · 7,8 h)',                direction: 'défavorable', status: 'Analytical',                 score: 55 }
     ],
     confidenceIndex: [
       { label: 'Heures vues Netflix Top 10',                score: 95 },
@@ -299,11 +296,7 @@ const BANDI = {
       { label: 'Rétention épisode par épisode',             score: 45 },
       { label: 'Starters estimés',                          score: 50 },
       { label: 'Completers estimés',                        score: 50 },
-      { label: 'Impact Instagram global Netflix France',    score: 75 },
-      { label: 'Attribution Instagram à BANDI',             score: 30 },
-      { label: 'Impact abonnés Netflix',                    score: 15 },
-      { label: 'Cause réelle de non-renouvellement',        score: 15 },
-      { label: 'Hypothèse analytique de non-renouvellement',score: 25 }
+      { label: 'Impact Instagram global Netflix France',    score: 75 }
     ]
   },
 

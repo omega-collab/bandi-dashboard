@@ -1406,6 +1406,106 @@ body::before {
 .perf-delta.stable { background: var(--surface-3); color: var(--muted); }
 .perf-delta.new    { background: var(--gold-soft); color: var(--gold); }
 
+/* ── Tous les pays passés au Top 10 (panel historique enrichi) ── */
+.hist-all-stats {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-mono); font-size: 12px; color: var(--muted);
+  flex-wrap: wrap;
+}
+.hist-all-stats strong { font-weight: 700; }
+
+.hist-all-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  padding: 8px 12px 12px;
+}
+.hist-all-sort {
+  display: inline-flex; gap: 4px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-pill); padding: 3px;
+}
+.hist-all-sort .stoggle {
+  background: transparent; color: var(--muted); border: none;
+  padding: 6px 12px; border-radius: var(--radius-pill);
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  font-family: var(--font-body);
+  transition: all var(--dur-fast) var(--ease);
+}
+.hist-all-sort .stoggle.active {
+  background: var(--surface-3); color: var(--text);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.hist-all-list { padding: 0 4px 8px; }
+
+.hist-all-row {
+  display: grid;
+  grid-template-columns: 32px 1fr auto auto;
+  align-items: center; gap: 14px;
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  transition: background var(--dur-fast) var(--ease);
+}
+.hist-all-row:last-child { border-bottom: none; }
+.hist-all-row:hover { background: var(--surface-2); }
+.hist-all-row--past { opacity: 0.78; }
+
+.hist-all-flag { font-size: 24px; line-height: 1; }
+.hist-all-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.hist-all-name {
+  font-weight: 600; font-size: 14px; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hist-all-region {
+  font-size: 10px; padding: 1px 6px; border-radius: var(--radius-sm);
+  font-weight: 600; align-self: flex-start;
+}
+
+.hist-all-metrics {
+  display: flex; align-items: center; gap: 18px;
+  font-family: var(--font-mono);
+}
+.hist-all-metric {
+  display: flex; flex-direction: column; align-items: flex-end;
+  min-width: 64px;
+}
+.hist-all-metric-label {
+  font-size: 9.5px; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 0.04em; font-family: var(--font-body); font-weight: 600;
+}
+.hist-all-metric-val { font-size: 14px; font-weight: 700; color: var(--text); }
+.hist-all-metric-val.is-one { color: var(--rouge); }
+
+.hist-all-status {
+  font-family: var(--font-mono); font-size: 11px;
+  padding: 4px 10px; border-radius: var(--radius-pill);
+  font-weight: 600; white-space: nowrap;
+}
+.hist-all-status-present {
+  background: var(--vert-soft); color: var(--vert);
+  border: 1px solid rgba(0,151,57,0.3);
+}
+.hist-all-status-past {
+  background: var(--surface-3); color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+@media (max-width: 720px) {
+  .hist-all-row {
+    grid-template-columns: 32px 1fr;
+    grid-template-areas:
+      "flag info"
+      "metrics metrics"
+      "status status";
+    row-gap: 10px;
+  }
+  .hist-all-flag    { grid-area: flag; }
+  .hist-all-info    { grid-area: info; }
+  .hist-all-metrics { grid-area: metrics; gap: 12px; flex-wrap: wrap; }
+  .hist-all-status  { grid-area: status; align-self: flex-start; }
+  .hist-all-metric--period { display: none; }
+  .hist-all-metric { min-width: 0; align-items: flex-start; }
+}
+
 /* ============ 19. BUZZ TAB ============ */
 .buzz-filters-panel {
   display: flex; flex-direction: column; gap: 10px;
