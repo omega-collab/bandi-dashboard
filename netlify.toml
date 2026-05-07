@@ -1,6 +1,7 @@
 [build]
   publish = "public"
-  command = "echo 'Static site, no build needed'"
+  # Régénère public/version.txt avec le SHA exact du déploiement avant publish
+  command = "bash scripts/build-version.sh"
 
 # Redirection racine → dashboard
 # (auth désactivée : la page /login.html reste accessible directement
