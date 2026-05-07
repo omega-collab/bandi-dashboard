@@ -31,7 +31,7 @@
 <!-- Leaflet.js pour la carte choroplèthe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<link rel="stylesheet" href="css/styles.css?v=20260507w" />
+<link rel="stylesheet" href="css/styles.css?v=20260507x" />
 
 <!-- Splash screen (inline pour afficher immédiatement, avant tout chargement) -->
 <style>
@@ -1044,9 +1044,9 @@
           <span class="reception-score-num" id="criticScorePress">—/100</span>
           <span class="reception-score-sub" id="criticScorePressN">— sources vérifiées</span>
           <div class="reception-score-detail">
-            <span class="critic-stat critic-stat--pos"><strong id="criticPos">—</strong> positifs</span>
-            <span class="critic-stat critic-stat--mid"><strong id="criticMid">—</strong> mitigés</span>
-            <span class="critic-stat critic-stat--neg"><strong id="criticNeg">—</strong> négatifs</span>
+            <span class="critic-stat critic-stat--pos"><strong id="criticPos">—</strong> <span id="criticPosLabel">positifs</span></span>
+            <span class="critic-stat critic-stat--mid"><strong id="criticMid">—</strong> <span id="criticMidLabel">mitigés</span></span>
+            <span class="critic-stat critic-stat--neg"><strong id="criticNeg">—</strong> <span id="criticNegLabel">négatifs</span></span>
           </div>
         </div>
 
@@ -1435,13 +1435,13 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/auth.js?v=20260507w"></script>
-<script src="js/data-fallback.js?v=20260507w"></script>
-<script src="js/bandi-reception-sources.js?v=20260507w"></script>
-<script src="js/config.js?v=20260507w"></script>
-<script src="js/monitoring.js?v=20260507w"></script>
-<script src="js/app.js?v=20260507w"></script>
-<script src="js/health-guard.js?v=20260507w"></script>
+<script src="js/auth.js?v=20260507x"></script>
+<script src="js/data-fallback.js?v=20260507x"></script>
+<script src="js/bandi-reception-sources.js?v=20260507x"></script>
+<script src="js/config.js?v=20260507x"></script>
+<script src="js/monitoring.js?v=20260507x"></script>
+<script src="js/app.js?v=20260507x"></script>
+<script src="js/health-guard.js?v=20260507x"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {

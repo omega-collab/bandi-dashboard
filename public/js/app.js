@@ -1423,28 +1423,40 @@ function renderCriticReviews() {
   window.BANDI_RECEPTION_SCORES = scores;
 
   const setText = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.textContent = val; };
+  // Helper pluriel français : "0 source / 1 source / 2 sources" (s ajouté seulement à partir de 2)
+  const plural = (n, singular, plur) => `${n} ${n >= 2 ? (plur || singular + 's') : singular}`;
 
   // Score presse + détail sentiments
   setText('criticScorePress', scores.press.value != null ? `${scores.press.value}/100` : '—');
-  setText('criticScorePressN', `${scores.press.count} sources vérifiées`);
+  setText('criticScorePressN', plural(scores.press.count, 'source vérifiée'));
   setText('criticPos', scores.press.counts.positive);
   setText('criticMid', scores.press.counts.mixed);
   setText('criticNeg', scores.press.counts.negative);
+  // Accord du label sentiment (singulier sous 2)
+  const setLabel = (id, n, sing) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = n >= 2 ? sing + 's' : sing;
+  };
+  setLabel('criticPosLabel', scores.press.counts.positive, 'positif');
+  setLabel('criticMidLabel', scores.press.counts.mixed,    'mitigé');
+  setLabel('criticNegLabel', scores.press.counts.negative, 'négatif');
 
   // Score public
   setText('criticScorePublic',  scores.public.value != null ? `${scores.public.value}/100` : '—');
-  setText('criticScorePublicN', `${scores.public.count} agrégateurs`);
+  setText('criticScorePublicN', plural(scores.public.count, 'agrégateur'));
 
   // Score impact médiatique
   setText('criticScoreImpact',  scores.mediaImpact.value != null ? `${scores.mediaImpact.value}/100` : '—');
-  setText('criticScoreImpactN', `${scores.mediaImpact.count} articles`);
+  setText('criticScoreImpactN', plural(scores.mediaImpact.count, 'article'));
 
   // Score global
   setText('criticScoreGlobal',  scores.global != null ? `${scores.global}/100` : '—');
 
-  // Sous-titre dynamique
-  const total = scores.press.count + scores.public.count + scores.mediaImpact.count;
-  setText('criticReviewsSub', `${total} sources structurées · 3 scores séparés (presse · public · impact)`);
+  // Sous-titre dynamique : on indique le nombre RÉEL de sources documentées
+  // (= window.BANDI_RECEPTION_SOURCES.length, pas la somme des 3 catégories
+  // qui double-compte les sources cross-catégorie).
+  const totalUnique = (window.BANDI_RECEPTION_SOURCES || []).length;
+  setText('criticReviewsSub', `${totalUnique} sources documentées · 3 scores séparés (presse · public · impact)`);
 }
 
 // Liste détaillée pour la modale "Voir les sources"
