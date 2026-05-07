@@ -31,7 +31,7 @@
 <!-- Leaflet.js pour la carte choroplèthe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<link rel="stylesheet" href="css/styles.css?v=20260508e" />
+<link rel="stylesheet" href="css/styles.css?v=20260508f" />
 
 <!-- Splash screen (inline pour afficher immédiatement, avant tout chargement) -->
 <style>
@@ -142,6 +142,10 @@
     <button class="tab active" data-tab="series">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
       Fiche série
+    </button>
+    <button class="tab" data-tab="impact">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v8l3 3"/><circle cx="12" cy="14" r="8"/></svg>
+      Impact
     </button>
     <button class="tab" data-tab="monitoring">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
@@ -1163,6 +1167,309 @@
     </div>
   </section>
 
+  <!-- ============ TAB: IMPACT (économique & culturel) ============ -->
+  <!-- Panneau statique alimenté par les sources médias antillaises et France
+       Antilles · Outremers360 · NRJ Antilles · Netflix Tudum. Documente ce
+       que la production a apporté à la Martinique au-delà des chiffres
+       Netflix : techniciens locaux, figurants, artisans, communes, etc. -->
+  <section class="tab-panel" id="panel-impact" aria-label="Impact économique et culturel de BANDI">
+
+    <!-- Hero / intro Impact -->
+    <div class="panel impact-hero">
+      <div class="impact-hero-tag">Impact économique &amp; culturel</div>
+      <h2 class="impact-hero-title">BANDI au-delà des chiffres Netflix</h2>
+      <p class="impact-hero-sub">
+        La série n'a pas seulement servi de vitrine culturelle. Elle a généré un
+        <strong>véritable effet économique et médiatique</strong> pour une partie
+        de la Martinique et plus largement des Antilles. Recensement structuré
+        des secteurs, acteurs et bénéficiaires.
+      </p>
+    </div>
+
+    <!-- KPI clés en haut -->
+    <div class="impact-kpi-grid">
+      <div class="impact-kpi">
+        <div class="impact-kpi-icon">🎥</div>
+        <div class="impact-kpi-num">110</div>
+        <div class="impact-kpi-label">techniciens / jour</div>
+        <div class="impact-kpi-sub">dont <strong>60&nbsp;%</strong> originaires de Martinique, Guadeloupe et Guyane</div>
+      </div>
+      <div class="impact-kpi">
+        <div class="impact-kpi-icon">🎭</div>
+        <div class="impact-kpi-num">75<span class="impact-kpi-num-sub">/ 82</span></div>
+        <div class="impact-kpi-label">rôles parlants martiniquais</div>
+        <div class="impact-kpi-sub">Plus de <strong>4&nbsp;000 personnes</strong> castées au total</div>
+      </div>
+      <div class="impact-kpi">
+        <div class="impact-kpi-icon">👥</div>
+        <div class="impact-kpi-num">1&nbsp;500<span class="impact-kpi-num-sub">+</span></div>
+        <div class="impact-kpi-label">figurants locaux</div>
+        <div class="impact-kpi-sub">Comédiens débutants, artistes, danseurs, profils de rue</div>
+      </div>
+      <div class="impact-kpi">
+        <div class="impact-kpi-icon">📅</div>
+        <div class="impact-kpi-num">100<span class="impact-kpi-num-sub">+</span></div>
+        <div class="impact-kpi-label">jours de tournage</div>
+        <div class="impact-kpi-sub">Production aux <strong>standards internationaux</strong> en Martinique</div>
+      </div>
+    </div>
+
+    <!-- 10 secteurs d'impact -->
+    <div class="impact-sectors-grid">
+
+      <!-- 1. Filière audiovisuelle -->
+      <article class="impact-card impact-card--featured">
+        <div class="impact-card-head">
+          <span class="impact-card-num">01</span>
+          <span class="impact-card-icon">🎬</span>
+          <h3 class="impact-card-title">Filière audiovisuelle antillaise</h3>
+        </div>
+        <p class="impact-card-lead">
+          L'impact <strong>le plus massif</strong>. Plus de 100 jours de tournage
+          avec une équipe majoritairement locale.
+        </p>
+        <ul class="impact-card-list">
+          <li>Assistants caméra · électros · machinos</li>
+          <li>Régie · décoration · plateau</li>
+          <li>HMC (habillage, maquillage, coiffure)</li>
+          <li>Son · transport · sécurité</li>
+          <li>Catering · logistique</li>
+        </ul>
+        <div class="impact-card-foot">
+          <span class="impact-tag">📈 Changement d'échelle</span>
+          <span class="impact-tag">🚀 Accélérateur de carrière</span>
+        </div>
+      </article>
+
+      <!-- 2. Acteurs / figurants -->
+      <article class="impact-card">
+        <div class="impact-card-head">
+          <span class="impact-card-num">02</span>
+          <span class="impact-card-icon">🎭</span>
+          <h3 class="impact-card-title">Acteurs, figurants et artistes locaux</h3>
+        </div>
+        <p class="impact-card-lead">
+          Première exposition internationale pour de nombreux profils.
+        </p>
+        <ul class="impact-card-list">
+          <li>Comédiens débutants → projection internationale</li>
+          <li>Artistes, danseurs, rappeurs locaux</li>
+          <li>Influenceurs antillais</li>
+          <li>Personnalités martiniquaises</li>
+        </ul>
+        <div class="impact-card-foot">
+          <span class="impact-tag">🌐 Visibilité TikTok / Instagram</span>
+        </div>
+      </article>
+
+      <!-- 3. Artisans / créateurs -->
+      <article class="impact-card">
+        <div class="impact-card-head">
+          <span class="impact-card-num">03</span>
+          <span class="impact-card-icon">🪡</span>
+          <h3 class="impact-card-title">Artisans et créateurs locaux</h3>
+        </div>
+        <p class="impact-card-lead">
+          Plus discret, mais bien réel : accessoires, bijoux, objets de déco,
+          vêtements et éléments culturels fabriqués localement.
+        </p>
+        <ul class="impact-card-list">
+          <li>Mobilier de plateau · accessoires déco</li>
+          <li>Vêtements · costumes</li>
+          <li>Éléments culturels authentiques</li>
+          <li>Matériaux locaux</li>
+        </ul>
+        <div class="impact-card-foot">
+          <span class="impact-tag">✨ Panor — créateur cité</span>
+        </div>
+      </article>
+
+      <!-- 4. Restauration -->
+      <article class="impact-card">
+        <div class="impact-card-head">
+          <span class="impact-card-num">04</span>
+          <span class="impact-card-icon">🍽️</span>
+          <h3 class="impact-card-title">Restauration et services</h3>
+        </div>
+        <p class="impact-card-lead">
+          100+ jours · 100+ personnes / jour → dépenses restauration massives.
+        </p>
+        <ul class="impact-card-list">
+          <li>Catering plateau · repas équipes</li>
+          <li>Snacks et food trucks</li>
+          <li>Traiteurs martiniquais</li>
+          <li>Restaurants partenaires</li>
+          <li>Commerces de proximité</li>
+        </ul>
+      </article>
+
+      <!-- 5. Hébergements -->
+      <article class="impact-card">
+        <div class="impact-card-head">
+          <span class="impact-card-num">05</span>
+          <span class="impact-card-icon">🏨</span>
+          <h3 class="impact-card-title">Hébergements et hôtels</h3>
+        </div>
+        <p class="impact-card-lead">
+          Équipe venant de métropole, étranger et autres territoires antillais →
+          besoin durable en logements.
+        </p>
+        <ul class="impact-card-list">
+          <li>Hôtels · villas · Airbnb longue durée</li>
+          <li>Locations de véhicules</li>
+          <li>Prestataires d'accueil</li>
+          <li>Services touristiques</li>
+        </ul>
+      </article>
+
+      <!-- 6. Communes -->
+      <article class="impact-card">
+        <div class="impact-card-head">
+          <span class="impact-card-num">06</span>
+          <span class="impact-card-icon">🏝️</span>
+          <h3 class="impact-card-title">Communes et territoires</h3>
+        </div>
+        <p class="impact-card-lead">
+          Visibilité énorme pour Saint-Joseph et la Martinique entière.
+          Effet vitrine mondiale.
+        </p>
+        <div class="impact-before-after">
+          <div class="impact-ba-col impact-ba-col--before">
+            <span class="impact-ba-tag">Avant</span>
+            <ul>
+              <li>Carte postale touristique</li>
+              <li>Plages, cocotiers</li>
+            </ul>
+          </div>
+          <div class="impact-ba-arrow">→</div>
+          <div class="impact-ba-col impact-ba-col--after">
+            <span class="impact-ba-tag">Après</span>
+            <ul>
+              <li>Territoire vivant</li>
+              <li>Socialement complexe</li>
+              <li>Cinématographiquement crédible</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <!-- 7. Commerces et logistique -->
+      <article class="impact-card">
+        <div class="impact-card-head">
+          <span class="impact-card-num">07</span>
+          <span class="impact-card-icon">🛒</span>
+          <h3 class="impact-card-title">Commerces et prestataires logistiques</h3>
+        </div>
+        <p class="impact-card-lead">
+          Souvent invisibles publiquement, mais indispensables au quotidien.
+        </p>
+        <ul class="impact-card-list impact-card-list--two-cols">
+          <li>Location véhicules</li>
+          <li>Carburant</li>
+          <li>Quincaillerie</li>
+          <li>Sécurité</li>
+          <li>Transport matériel</li>
+          <li>Générateurs</li>
+          <li>Imprimeries</li>
+          <li>Textile</li>
+          <li>Nettoyage</li>
+          <li>Construction déco</li>
+        </ul>
+      </article>
+
+      <!-- 8. Cinémas / événements -->
+      <article class="impact-card">
+        <div class="impact-card-head">
+          <span class="impact-card-num">08</span>
+          <span class="impact-card-icon">🎟️</span>
+          <h3 class="impact-card-title">Cinémas et événements culturels</h3>
+        </div>
+        <p class="impact-card-lead">
+          Avant-première au <strong>Madiana</strong> à fort impact symbolique
+          et médiatique.
+        </p>
+        <ul class="impact-card-list">
+          <li>Cinéma · presse locale</li>
+          <li>Influenceurs · médias</li>
+          <li>Photographes</li>
+          <li>Communication événementielle</li>
+        </ul>
+      </article>
+
+      <!-- 9. Médias antillais -->
+      <article class="impact-card">
+        <div class="impact-card-head">
+          <span class="impact-card-num">09</span>
+          <span class="impact-card-icon">📱</span>
+          <h3 class="impact-card-title">Médias et créateurs antillais</h3>
+        </div>
+        <p class="impact-card-lead">
+          Vague TikTok / Instagram / YouTube + médias antillais et podcasts
+          culturels.
+        </p>
+        <ul class="impact-card-list">
+          <li>France-Antilles · Outremers360</li>
+          <li>NRJ Antilles · RCI Martinique</li>
+          <li>Chroniqueurs et podcasts</li>
+          <li>Trafic, vues, débats, collaborations</li>
+        </ul>
+      </article>
+
+      <!-- 10. Crédibilité Martinique - mise en avant -->
+      <article class="impact-card impact-card--highlight">
+        <div class="impact-card-head">
+          <span class="impact-card-num">10</span>
+          <span class="impact-card-icon">🇲🇶</span>
+          <h3 class="impact-card-title">Crédibilité de la Martinique pour les futures productions</h3>
+        </div>
+        <p class="impact-card-lead">
+          <strong>Le vrai « gagnant caché »</strong>. Avant BANDI : peu de
+          productions lourdes aux Antilles françaises. Après BANDI :
+        </p>
+        <ul class="impact-card-list">
+          <li>Territoire de tournage <strong>crédible</strong></li>
+          <li>Techniciens <strong>compétents</strong></li>
+          <li>Décors naturels puissants</li>
+          <li>Identité visuelle forte</li>
+          <li>Capacité logistique réelle</li>
+        </ul>
+        <div class="impact-card-foot">
+          <span class="impact-tag impact-tag--gold">📈 Structuration de filière</span>
+          <span class="impact-tag impact-tag--gold">🌍 Ouverture internationale</span>
+        </div>
+      </article>
+
+    </div>
+
+    <!-- Synthèse / conclusion -->
+    <div class="panel impact-conclusion">
+      <h3 class="impact-conclusion-title">Ce que BANDI laisse derrière elle</h3>
+      <p class="impact-conclusion-text">
+        Même sans renouvellement officiel, BANDI a déjà :
+      </p>
+      <div class="impact-conclusion-grid">
+        <span class="impact-conclusion-item">💶 Injecté de l'argent localement</span>
+        <span class="impact-conclusion-item">👷 Donné du travail à des centaines de Martiniquais</span>
+        <span class="impact-conclusion-item">🌍 Offert une visibilité mondiale à l'île</span>
+        <span class="impact-conclusion-item">🎬 Professionnalisé une partie du secteur audiovisuel antillais</span>
+        <span class="impact-conclusion-item">🏆 Créé un précédent historique pour Netflix dans la Caraïbe francophone</span>
+      </div>
+      <p class="impact-conclusion-foot">
+        Ces gains restent acquis pour <strong>les techniciens, les artistes, les
+        artisans, les communes, les entreprises locales et l'image
+        internationale de la Martinique</strong>.
+      </p>
+    </div>
+
+    <p class="impact-sources-note">
+      Sources : Netflix Tudum · France-Antilles · Outremers360 · NRJ Antilles ·
+      RCI Martinique · presse régionale et internationale relayée dans le
+      panneau « Réception &amp; Impact ». Recensement structuré sur la base
+      des couvertures médiatiques disponibles à date.
+    </p>
+
+  </section>
+
   <!-- ============ TAB: SIGNALS (renouvellement S2) ============ -->
   <!-- Lazy-rendered au clic onglet par renderSignalsTab() — analyse défendable
        avec système de fiabilité 6 catégories (badges Official → Not Public). -->
@@ -1321,6 +1628,10 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
     <span>Série</span>
   </button>
+  <button class="bnav-item" data-tab="impact" aria-label="Impact économique et culturel">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8l3 3"/><circle cx="12" cy="14" r="8"/></svg>
+    <span>Impact</span>
+  </button>
   <button class="bnav-item" data-tab="monitoring" aria-label="Monitoring">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
     <span>Stats</span>
@@ -1435,13 +1746,13 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/auth.js?v=20260508e"></script>
-<script src="js/data-fallback.js?v=20260508e"></script>
-<script src="js/bandi-reception-sources.js?v=20260508e"></script>
-<script src="js/config.js?v=20260508e"></script>
-<script src="js/monitoring.js?v=20260508e"></script>
-<script src="js/app.js?v=20260508e"></script>
-<script src="js/health-guard.js?v=20260508e"></script>
+<script src="js/auth.js?v=20260508f"></script>
+<script src="js/data-fallback.js?v=20260508f"></script>
+<script src="js/bandi-reception-sources.js?v=20260508f"></script>
+<script src="js/config.js?v=20260508f"></script>
+<script src="js/monitoring.js?v=20260508f"></script>
+<script src="js/app.js?v=20260508f"></script>
+<script src="js/health-guard.js?v=20260508f"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {

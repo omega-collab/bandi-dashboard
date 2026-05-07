@@ -3938,3 +3938,264 @@ button, .tab, .bnav-item, .region-btn, .country-row, .kpi-card, .highlight, .buz
   .rs-meta { font-size: 9.5px; }
   .rs-include { margin-left: 0; width: 100%; }
 }
+
+/* ============ 30. ONGLET IMPACT (économique & culturel) ============ */
+/* Mise en page panel-friendly : hero, KPI grid, sectors grid, conclusion. */
+
+#panel-impact { padding-bottom: 32px; }
+
+/* ── Hero intro Impact ─────────────────────────────────────────────── */
+.impact-hero {
+  background: linear-gradient(135deg, rgba(206,17,38,0.08), rgba(0,151,57,0.06) 50%, rgba(228,184,77,0.08));
+  border-left: 3px solid var(--gold);
+  padding: 22px 24px;
+}
+.impact-hero-tag {
+  display: inline-block;
+  font-family: var(--font-body); font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--gold);
+  padding: 4px 10px;
+  background: rgba(228,184,77,0.10);
+  border: 1px solid rgba(228,184,77,0.28);
+  border-radius: var(--radius-pill);
+  margin-bottom: 12px;
+}
+.impact-hero-title {
+  font-family: var(--font-display);
+  font-size: 30px; letter-spacing: 0.02em; line-height: 1.05;
+  color: var(--text); margin: 0 0 10px;
+}
+.impact-hero-sub {
+  font-size: 13.5px; line-height: 1.55; color: var(--text-sub);
+  max-width: 680px; margin: 0;
+}
+.impact-hero-sub strong { color: var(--text); }
+
+/* ── KPI grid (4 chiffres clés) ────────────────────────────────────── */
+.impact-kpi-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  margin: 16px 0;
+}
+.impact-kpi {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 16px;
+  display: flex; flex-direction: column; gap: 4px;
+  position: relative; overflow: hidden;
+  transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.impact-kpi::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 2px; background: linear-gradient(90deg, var(--rouge), var(--gold));
+}
+.impact-kpi:hover {
+  transform: translateY(-2px);
+  border-color: rgba(228,184,77,0.35);
+}
+.impact-kpi-icon { font-size: 22px; line-height: 1; }
+.impact-kpi-num {
+  font-family: var(--font-display);
+  font-size: 38px; line-height: 1;
+  color: var(--gold); margin-top: 6px;
+}
+.impact-kpi-num-sub {
+  font-size: 18px; color: var(--muted); font-weight: 400;
+  margin-left: 2px;
+}
+.impact-kpi-label {
+  font-family: var(--font-body); font-size: 11px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600;
+  margin-top: 2px;
+}
+.impact-kpi-sub {
+  font-size: 11.5px; line-height: 1.4; color: var(--text-sub);
+  margin-top: 6px;
+}
+.impact-kpi-sub strong { color: var(--text); }
+
+/* ── Grille des 10 secteurs ────────────────────────────────────────── */
+.impact-sectors-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;
+  margin: 16px 0;
+}
+.impact-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 18px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+  transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  position: relative;
+}
+.impact-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(206,17,38,0.30);
+}
+.impact-card--featured {
+  grid-column: span 2;
+  border-left: 3px solid var(--rouge);
+}
+.impact-card--highlight {
+  grid-column: span 2;
+  border: 1px solid rgba(228,184,77,0.35);
+  background: linear-gradient(135deg, var(--surface), rgba(228,184,77,0.04));
+  border-left: 3px solid var(--gold);
+}
+
+.impact-card-head {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 4px;
+}
+.impact-card-num {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--muted); font-weight: 700;
+  letter-spacing: 0.04em;
+  background: var(--surface-2); padding: 3px 7px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.impact-card-icon {
+  font-size: 22px; line-height: 1; flex-shrink: 0;
+}
+.impact-card-title {
+  font-family: var(--font-body);
+  font-size: 14.5px; font-weight: 700;
+  color: var(--text); margin: 0;
+  line-height: 1.3; letter-spacing: 0.005em;
+}
+
+.impact-card-lead {
+  font-size: 12.5px; line-height: 1.55;
+  color: var(--text-sub); margin: 0;
+}
+.impact-card-lead strong { color: var(--text); }
+
+.impact-card-list {
+  list-style: none; padding: 0; margin: 4px 0 0;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.impact-card-list li {
+  font-size: 12px; line-height: 1.5; color: var(--text-sub);
+  padding-left: 14px; position: relative;
+}
+.impact-card-list li::before {
+  content: '•'; position: absolute; left: 0; top: -1px;
+  color: var(--gold); font-weight: 700;
+}
+.impact-card-list li strong { color: var(--text); }
+.impact-card-list--two-cols {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px;
+}
+
+.impact-card-foot {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-top: 6px; padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+.impact-tag {
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 600;
+  padding: 3px 9px; border-radius: var(--radius-pill);
+  background: var(--surface-2); color: var(--text-sub);
+  border: 1px solid var(--border);
+  letter-spacing: 0.02em;
+}
+.impact-tag--gold {
+  background: rgba(228,184,77,0.12); color: var(--gold);
+  border-color: rgba(228,184,77,0.30);
+}
+
+/* ── Carte « Avant / Après » (communes) ────────────────────────────── */
+.impact-before-after {
+  display: grid; grid-template-columns: 1fr 26px 1fr;
+  gap: 10px; align-items: center;
+  margin-top: 4px;
+  padding: 10px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.impact-ba-col { display: flex; flex-direction: column; gap: 6px; }
+.impact-ba-tag {
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted);
+}
+.impact-ba-col--before .impact-ba-tag { color: var(--muted); }
+.impact-ba-col--after  .impact-ba-tag { color: var(--vert); }
+.impact-ba-col ul {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.impact-ba-col li {
+  font-size: 11.5px; line-height: 1.4;
+  color: var(--text-sub);
+}
+.impact-ba-col--after li { color: var(--text); }
+.impact-ba-arrow {
+  font-family: var(--font-display); font-size: 22px;
+  color: var(--gold); text-align: center;
+}
+
+/* ── Conclusion / synthèse ─────────────────────────────────────────── */
+.impact-conclusion {
+  background: linear-gradient(135deg, rgba(206,17,38,0.05), rgba(0,151,57,0.05) 50%, rgba(228,184,77,0.05));
+  border-left: 3px solid var(--rouge);
+  padding: 22px 24px;
+}
+.impact-conclusion-title {
+  font-family: var(--font-display); font-size: 22px;
+  letter-spacing: 0.02em; color: var(--text); margin: 0 0 8px;
+}
+.impact-conclusion-text {
+  font-size: 13px; color: var(--text-sub); margin: 0 0 14px;
+}
+.impact-conclusion-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+  margin-bottom: 14px;
+}
+.impact-conclusion-item {
+  font-size: 12.5px; line-height: 1.45;
+  color: var(--text);
+  padding: 10px 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.impact-conclusion-foot {
+  font-size: 12.5px; line-height: 1.55;
+  color: var(--text-sub); margin: 0;
+  padding-top: 12px; border-top: 1px dashed var(--border);
+}
+.impact-conclusion-foot strong { color: var(--text); }
+
+.impact-sources-note {
+  font-family: var(--font-mono); font-size: 10.5px;
+  color: var(--muted); opacity: 0.75;
+  text-align: center; padding: 14px 16px 0;
+  line-height: 1.55;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .impact-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 720px) {
+  .impact-hero { padding: 18px 16px; }
+  .impact-hero-title { font-size: 24px; }
+  .impact-hero-sub { font-size: 13px; }
+  .impact-kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .impact-kpi { padding: 14px 14px; }
+  .impact-kpi-num { font-size: 30px; }
+  .impact-sectors-grid { grid-template-columns: 1fr; gap: 12px; }
+  .impact-card--featured,
+  .impact-card--highlight { grid-column: span 1; }
+  .impact-card-list--two-cols { grid-template-columns: 1fr; }
+  .impact-before-after {
+    grid-template-columns: 1fr; gap: 8px;
+  }
+  .impact-ba-arrow { transform: rotate(90deg); }
+  .impact-conclusion-grid { grid-template-columns: 1fr; }
+  .impact-conclusion-title { font-size: 19px; }
+}
+@media (max-width: 480px) {
+  .impact-kpi-grid { grid-template-columns: 1fr; }
+  .impact-kpi-num { font-size: 32px; }
+}
