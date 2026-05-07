@@ -303,12 +303,12 @@ const BANDI = {
   // Catégories de fiabilité (6 niveaux) — utilisées par renderReliabilityBadge()
   // pour afficher un badge cohérent partout dans le dashboard.
   dataReliabilityCategories: {
-    official:    { label: 'Official',    minScore: 90, maxScore: 100, color: '#22c55e', desc: 'Source primaire ou officielle.' },
-    verified:    { label: 'Verified',    minScore: 75, maxScore: 89,  color: '#3b82f6', desc: 'Source secondaire fiable ou recoupée.' },
-    calculated:  { label: 'Calculated',  minScore: 70, maxScore: 95,  color: '#10b981', desc: 'Calculée à partir de données officielles.' },
-    estimated:   { label: 'Estimated',   minScore: 45, maxScore: 74,  color: '#f59e0b', desc: 'Estimée à partir de plusieurs signaux publics.' },
-    weakSignal:  { label: 'Weak Signal', minScore: 20, maxScore: 44,  color: '#f97316', desc: 'Signal possible mais fragile ou difficilement attribuable.' },
-    notPublic:   { label: 'Not Public',  minScore: 0,  maxScore: 19,  color: '#6b7280', desc: 'Donnée non publiée ou impossible à connaître publiquement.' }
+    official:    { label: 'Officiel',     minScore: 90, maxScore: 100, color: '#22c55e', desc: 'Source primaire ou officielle.' },
+    verified:    { label: 'Vérifié',      minScore: 75, maxScore: 89,  color: '#3b82f6', desc: 'Source secondaire fiable ou recoupée.' },
+    calculated:  { label: 'Calculé',      minScore: 70, maxScore: 95,  color: '#10b981', desc: 'Calculée à partir de données officielles.' },
+    estimated:   { label: 'Estimé',       minScore: 45, maxScore: 74,  color: '#f59e0b', desc: 'Estimée à partir de plusieurs signaux publics.' },
+    weakSignal:  { label: 'Signal faible', minScore: 20, maxScore: 44, color: '#f97316', desc: 'Signal possible mais fragile ou difficilement attribuable.' },
+    notPublic:   { label: 'Non public',   minScore: 0,  maxScore: 19,  color: '#6b7280', desc: 'Donnée non publiée ou impossible à connaître publiquement.' }
   },
 
   // Score / rang actuel (16/04/2026) — source FlixPatrol
@@ -414,7 +414,7 @@ const BANDI = {
     usaRang: 8,
     usaDate: '15/04/2026',
     usaEntry: true,
-    usaNote: 'First French-Caribbean series to break US Top 10',
+    usaNote: 'Première série française des Caraïbes à entrer dans le Top 10 US',
 
     // 91% du casting est martiniquais · Source : Maui Entertainment / casting interne
     // À VALIDER par la production avant toute présentation officielle

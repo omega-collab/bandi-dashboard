@@ -385,7 +385,7 @@
     const s3 = [];
     s3.push({
       id: 'completion', label: 'Complétion estimée',
-      display: completion != null ? `${completion}%` : '—',  unit: 'ESTIMATED',
+      display: completion != null ? `${completion}%` : '—',  unit: 'ESTIMÉ',
       pct: pctComp,    color: gradColor(pctComp),
       delta: '',
       src: 'Modèle interne · 62/100',  minL: '0%', maxL: '100%',
