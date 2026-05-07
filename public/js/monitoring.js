@@ -307,22 +307,24 @@
     const pctIg    = igGain != null ? clamp(Math.round(igGain / 100_000 * 100), 0, 100) : 0;
 
     // ── SECTION 1 : Classement FlixPatrol ─────────────────────────────────
+    // Labels précisés 'FlixPatrol' pour éviter toute confusion avec le
+    // classement Netflix Tudum officiel (qui suit une autre méthodologie).
     const s1 = [
       {
-        id: 'rang',      label: 'Rang Mondial',
-        display: rang ? `#${rang}` : '—',  unit: 'TV SHOWS · MONDE',
+        id: 'rang',      label: 'Rang FlixPatrol',
+        display: rang ? `#${rang}` : '—',  unit: 'TOUS TYPES · MONDE',
         pct: pctRang,    color: rankColor(rang),
         delta: dltHtml(dRang, false),
         src: 'FlixPatrol',  minL: '#10', maxL: '#1',
-        tooltip: 'Position dans le Top 10 TV Shows Netflix mondial (FlixPatrol)'
+        tooltip: 'Position FlixPatrol (classement composite tous types Netflix monde — différent du Tudum non-anglophone officiel).'
       },
       {
-        id: 'score',     label: 'Score Popularité',
-        display: score ? score.toString() : '—',  unit: 'POINTS',
+        id: 'score',     label: 'Score FlixPatrol',
+        display: score ? score.toString() : '—',  unit: 'POINTS POPULARITÉ',
         pct: pctScore,   color: gradColor(pctScore),
         delta: dltHtml(dScore, false),
         src: 'FlixPatrol',  minL: '0', maxL: '1 200',
-        tooltip: 'Score de popularité FlixPatrol (agrégation des classements pays)'
+        tooltip: 'Score composite FlixPatrol (agrégation des classements pays).'
       },
       {
         id: 'pn1',       label: 'Pays N°1',
@@ -454,8 +456,8 @@
 
     container.innerHTML = `
       <div class="mg-topbar">
-        <span class="mg-topbar-title">Performance en temps réel</span>
-        <span class="mg-topbar-sub">↻ mise à jour automatique · 6h</span>
+        <span class="mg-topbar-title">Performance live · FlixPatrol + cumul Tudum</span>
+        <span class="mg-topbar-sub">↻ collecte automatique · 1×/jour à 00:00 UTC</span>
       </div>
       ${dataLine}
       ${section('Classement FlixPatrol (live)', s1)}
