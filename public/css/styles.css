@@ -3788,10 +3788,13 @@ button, .tab, .bnav-item, .region-btn, .country-row, .kpi-card, .highlight, .buz
   font-family: var(--font-display); font-size: 26px;
   letter-spacing: 0.02em; color: var(--text);
   margin-top: 4px;
+  /* Couleur réelle pilotée par classe rs-num--good/mid/low (set via JS).
+     La couleur de catégorie reste sur la barre verticale gauche
+     (border-left), pour identifier le type sans fausser la lecture. */
 }
-.reception-score--press  .reception-score-num { color: var(--rouge); }
-.reception-score--public .reception-score-num { color: var(--vert); }
-.reception-score--impact .reception-score-num { color: var(--gold); }
+.reception-score-num.rs-num--good { color: #22c55e; }    /* >= 70 */
+.reception-score-num.rs-num--mid  { color: var(--gold); } /* 50-69 */
+.reception-score-num.rs-num--low  { color: var(--rouge); } /* < 50 */
 
 .reception-score-sub {
   font-family: var(--font-mono); font-size: 11px;

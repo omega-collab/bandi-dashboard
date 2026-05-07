@@ -1425,9 +1425,26 @@ function renderCriticReviews() {
   const setText = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.textContent = val; };
   // Helper pluriel français : "0 source / 1 source / 2 sources" (s ajouté seulement à partir de 2)
   const plural = (n, singular, plur) => `${n} ${n >= 2 ? (plur || singular + 's') : singular}`;
+  // Couleur du score d'après sa valeur (cohérent avec les jauges monitoring) :
+  // ≥70 vert · 50-69 or · <50 rouge. La barre verticale gauche conserve la
+  // couleur de catégorie pour l'identification.
+  const scoreClass = (n) => {
+    if (n == null) return '';
+    if (n >= 70) return 'rs-num--good';
+    if (n >= 50) return 'rs-num--mid';
+    return 'rs-num--low';
+  };
+  const setScore = (id, n) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = n != null ? `${n}/100` : '—/100';
+    el.classList.remove('rs-num--good', 'rs-num--mid', 'rs-num--low');
+    const cls = scoreClass(n);
+    if (cls) el.classList.add(cls);
+  };
 
   // Score presse + détail sentiments
-  setText('criticScorePress', scores.press.value != null ? `${scores.press.value}/100` : '—');
+  setScore('criticScorePress', scores.press.value);
   setText('criticScorePressN', plural(scores.press.count, 'source vérifiée'));
   setText('criticPos', scores.press.counts.positive);
   setText('criticMid', scores.press.counts.mixed);
@@ -1442,15 +1459,15 @@ function renderCriticReviews() {
   setLabel('criticNegLabel', scores.press.counts.negative, 'négatif');
 
   // Score public
-  setText('criticScorePublic',  scores.public.value != null ? `${scores.public.value}/100` : '—');
+  setScore('criticScorePublic', scores.public.value);
   setText('criticScorePublicN', plural(scores.public.count, 'agrégateur'));
 
   // Score impact médiatique
-  setText('criticScoreImpact',  scores.mediaImpact.value != null ? `${scores.mediaImpact.value}/100` : '—');
+  setScore('criticScoreImpact', scores.mediaImpact.value);
   setText('criticScoreImpactN', plural(scores.mediaImpact.count, 'article'));
 
-  // Score global
-  setText('criticScoreGlobal',  scores.global != null ? `${scores.global}/100` : '—');
+  // Score global (garde sa couleur or pour le distinguer comme "récap")
+  setText('criticScoreGlobal', scores.global != null ? `${scores.global}/100` : '—');
 
   // Sous-titre dynamique : on indique le nombre RÉEL de sources documentées
   // (= window.BANDI_RECEPTION_SOURCES.length, pas la somme des 3 catégories
