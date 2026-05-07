@@ -1,4 +1,4 @@
-43f627941e1e6c93eb60ba7e191044f1c967b9b2
-43f6279
-Netlify : no-cache sur index.html + cache CSS
-2026-05-07 03:44:04 +0000
+611743a665109305f1e65d7eaa956d4ad95e1126
+611743a
+Endpoint /version.txt : permet de vérifier le commit servi par Netlify
+2026-05-07 03:52:10 +0000
