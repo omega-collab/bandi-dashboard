@@ -1569,7 +1569,7 @@ function renderCountryAllHistoryTable() {
       ? `Le ${fmtHistDate(c.firstDate)}`
       : `Du ${fmtHistDate(c.firstDate)} au ${fmtHistDate(c.lastDate)}`;
     return `
-      <div class="hist-all-row hist-all-row--${c.status}">
+      <div class="hist-all-row hist-all-row--${c.status}" data-pays-en="${escapeHtml(c.paysEn)}" tabindex="0" role="button" aria-label="Voir l'historique de ${escapeHtml(c.pays)}">
         <span class="hist-all-flag">${c.flag}</span>
         <div class="hist-all-info">
           <span class="hist-all-name">${escapeHtml(c.pays)}</span>
@@ -1593,6 +1593,18 @@ function renderCountryAllHistoryTable() {
       </div>
     `;
   }).join('');
+
+  // Branche le click handler sur chaque ligne (filtre/tri inclus)
+  list.querySelectorAll('.hist-all-row').forEach(row => {
+    const open = () => {
+      const paysEn = row.dataset.paysEn;
+      if (paysEn) openCountryDetailModal(paysEn);
+    };
+    row.addEventListener('click', open);
+    row.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+    });
+  });
 }
 
 function renderCountryPerfTable() {
@@ -1674,8 +1686,8 @@ let countryModalChart = null;
 let countryModalState = {
   paysEn: null,
   period: 30,
-  compare: 'none',  // 'none' | 'global' | 'region'
-  scale: 'auto'     // 'auto' | 'top10' | 'top30'
+  compare: 'global',  // 'none' | 'global' | 'region' — défaut : vs Rang mondial
+  scale: 'auto'       // 'auto' | 'top10' | 'top30'
 };
 
 function openCountryDetailModal(paysEn) {
@@ -1683,14 +1695,14 @@ function openCountryDetailModal(paysEn) {
   if (!modal) return;
   countryModalState.paysEn = paysEn;
   countryModalState.period = 30;
-  countryModalState.compare = 'none';
+  countryModalState.compare = 'global';
   countryModalState.scale = 'auto';
 
-  // Reset des boutons à leur état par défaut
+  // Reset des boutons à leur état par défaut (vs Rang mondial · 30j · Auto)
   modal.querySelectorAll('[data-cmperiod]').forEach(b =>
     b.classList.toggle('active', b.dataset.cmperiod === '30'));
   modal.querySelectorAll('[data-cmcompare]').forEach(b =>
-    b.classList.toggle('active', b.dataset.cmcompare === 'none'));
+    b.classList.toggle('active', b.dataset.cmcompare === 'global'));
   modal.querySelectorAll('[data-cmscale]').forEach(b =>
     b.classList.toggle('active', b.dataset.cmscale === 'auto'));
 

@@ -3598,15 +3598,18 @@ button, .tab, .bnav-item, .region-btn, .country-row, .kpi-card, .highlight, .buz
 }
 
 /* ============ 28. MODALE DÉTAIL PAYS (onglet Historique) ============ */
+/* Dimensionnée pour laisser voir le dashboard en fond (backdrop semi-transparent
+   + max-height ~78vh). Clic sur backdrop ou bouton × pour fermer. */
 .country-modal {
   position: fixed; inset: 0; z-index: 9999;
   display: flex; align-items: center; justify-content: center;
-  padding: 24px;
+  padding: 16px;
 }
 .country-modal-backdrop {
   position: absolute; inset: 0;
-  background: rgba(0,0,0,0.78);
-  backdrop-filter: blur(6px);
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(2px);
+  cursor: pointer;
   animation: modalBackdropIn 0.2s ease-out;
 }
 .country-modal-content {
@@ -3614,9 +3617,10 @@ button, .tab, .bnav-item, .region-btn, .country-row, .kpi-card, .highlight, .buz
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  width: 100%; max-width: 920px; max-height: calc(100vh - 48px);
+  width: min(720px, calc(100% - 24px));
+  max-height: 80vh;
   display: flex; flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(206,17,38,0.12);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.55), 0 0 40px rgba(206,17,38,0.14);
   animation: modalContentIn 0.25s var(--ease-spring);
   overflow: hidden;
 }
@@ -3679,9 +3683,9 @@ button, .tab, .bnav-item, .region-btn, .country-row, .kpi-card, .highlight, .buz
 
 .country-modal-chart-wrap {
   position: relative;
-  flex: 1; min-height: 0;
-  padding: 18px 22px 22px;
-  height: 380px;
+  flex: 1; min-height: 220px;
+  padding: 14px 18px 18px;
+  height: 280px;
 }
 .country-modal-empty {
   padding: 48px 24px; text-align: center;
@@ -3689,19 +3693,21 @@ button, .tab, .bnav-item, .region-btn, .country-row, .kpi-card, .highlight, .buz
 }
 
 @media (max-width: 720px) {
-  .country-modal { padding: 0; }
+  /* On reste en pop-over (pas plein écran) — l'utilisateur veut voir le
+     dashboard en fond et pouvoir cliquer hors de la fenêtre pour la fermer. */
+  .country-modal { padding: 12px; }
   .country-modal-content {
-    max-width: 100%; max-height: 100vh; height: 100vh;
-    border-radius: 0; border: none;
+    width: calc(100% - 16px);
+    max-height: 86vh;
   }
-  .country-modal-header { padding: 14px 16px; }
-  .country-modal-title h2 { font-size: 18px; }
-  .country-modal-flag { font-size: 28px; }
-  .country-modal-stats { padding: 10px 16px; font-size: 11px; gap: 6px 14px; }
-  .country-modal-filters { padding: 12px 16px; gap: 10px; }
+  .country-modal-header { padding: 12px 14px; }
+  .country-modal-title h2 { font-size: 17px; }
+  .country-modal-flag { font-size: 26px; }
+  .country-modal-stats { padding: 9px 14px; font-size: 11px; gap: 6px 14px; }
+  .country-modal-filters { padding: 10px 14px; gap: 9px; }
   .cm-filter-label { min-width: 60px; font-size: 9px; }
-  .country-modal-chart-wrap { padding: 12px 8px; height: 320px; }
-  .country-modal-filters .stoggle { padding: 5px 10px; font-size: 10.5px; }
+  .country-modal-chart-wrap { padding: 10px 8px 14px; height: 240px; }
+  .country-modal-filters .stoggle { padding: 4px 9px; font-size: 10.5px; }
 }
 
 .country-perf-row {
