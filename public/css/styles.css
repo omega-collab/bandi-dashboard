@@ -3596,3 +3596,118 @@ button, .tab, .bnav-item, .region-btn, .country-row, .kpi-card, .highlight, .buz
   .sig-totals-values { gap: 18px; }
   .sig-totals-values strong { font-size: 24px; }
 }
+
+/* ============ 28. MODALE DÉTAIL PAYS (onglet Historique) ============ */
+.country-modal {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.country-modal-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.78);
+  backdrop-filter: blur(6px);
+  animation: modalBackdropIn 0.2s ease-out;
+}
+.country-modal-content {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 100%; max-width: 920px; max-height: calc(100vh - 48px);
+  display: flex; flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(206,17,38,0.12);
+  animation: modalContentIn 0.25s var(--ease-spring);
+  overflow: hidden;
+}
+@keyframes modalBackdropIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modalContentIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.country-modal-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.country-modal-title { display: flex; align-items: center; gap: 14px; }
+.country-modal-flag { font-size: 36px; line-height: 1; }
+.country-modal-title h2 {
+  font-family: var(--font-display); font-size: 22px;
+  letter-spacing: 0.02em; margin: 0; color: var(--text);
+}
+.country-modal-sub { font-size: 11px; color: var(--muted); margin: 4px 0 0; }
+.country-modal-close {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text); width: 36px; height: 36px;
+  border-radius: 50%; cursor: pointer;
+  font-size: 24px; line-height: 1; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--dur-fast) var(--ease);
+  flex-shrink: 0;
+}
+.country-modal-close:hover {
+  background: var(--rouge); color: #fff;
+  border-color: var(--rouge);
+}
+
+.country-modal-stats {
+  display: flex; flex-wrap: wrap; gap: 8px 18px;
+  padding: 12px 22px; background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono); font-size: 12px;
+  color: var(--text);
+}
+.country-modal-stats > span { color: var(--muted); }
+.country-modal-stats > span strong { color: var(--text); font-weight: 700; }
+.cm-stat-best { color: var(--rouge) !important; }
+.cm-stat-current { color: var(--vert) !important; }
+
+.country-modal-filters {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--border);
+}
+.cm-filter-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cm-filter-label {
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); min-width: 84px;
+}
+
+.country-modal-chart-wrap {
+  position: relative;
+  flex: 1; min-height: 0;
+  padding: 18px 22px 22px;
+  height: 380px;
+}
+.country-modal-empty {
+  padding: 48px 24px; text-align: center;
+  color: var(--muted); font-size: 13px;
+}
+
+@media (max-width: 720px) {
+  .country-modal { padding: 0; }
+  .country-modal-content {
+    max-width: 100%; max-height: 100vh; height: 100vh;
+    border-radius: 0; border: none;
+  }
+  .country-modal-header { padding: 14px 16px; }
+  .country-modal-title h2 { font-size: 18px; }
+  .country-modal-flag { font-size: 28px; }
+  .country-modal-stats { padding: 10px 16px; font-size: 11px; gap: 6px 14px; }
+  .country-modal-filters { padding: 12px 16px; gap: 10px; }
+  .cm-filter-label { min-width: 60px; font-size: 9px; }
+  .country-modal-chart-wrap { padding: 12px 8px; height: 320px; }
+  .country-modal-filters .stoggle { padding: 5px 10px; font-size: 10.5px; }
+}
+
+.country-perf-row {
+  cursor: pointer;
+}
+.country-perf-row:focus-visible {
+  outline: 2px solid var(--rouge); outline-offset: -2px;
+}
+

@@ -28,7 +28,7 @@
 <!-- Leaflet.js pour la carte choroplèthe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<link rel="stylesheet" href="css/styles.css?v=20260507p" />
+<link rel="stylesheet" href="css/styles.css?v=20260507q" />
 
 <!-- Splash screen (inline pour afficher immédiatement, avant tout chargement) -->
 <style>
@@ -1318,13 +1318,70 @@
   </button>
 </nav>
 
+<!-- ============ MODALE · Détail pays ============ -->
+<!-- Ouverte au clic sur une ligne de "Performance par pays" (onglet Historique).
+     Affiche un graphique d'évolution du rang du pays sur la période choisie,
+     avec 3 filtres : période, vue (avec/sans comparaison), échelle Y. -->
+<div class="country-modal" id="countryModal" role="dialog" aria-modal="true" aria-labelledby="countryModalTitle" style="display:none">
+  <div class="country-modal-backdrop" id="countryModalBackdrop"></div>
+  <div class="country-modal-content">
+    <div class="country-modal-header">
+      <div class="country-modal-title">
+        <span class="country-modal-flag" id="countryModalFlag">🏳️</span>
+        <div>
+          <h2 id="countryModalTitle">Pays</h2>
+          <p class="country-modal-sub" id="countryModalSub">Évolution du rang BANDI sur 30 jours</p>
+        </div>
+      </div>
+      <button class="country-modal-close" id="countryModalClose" type="button" aria-label="Fermer">×</button>
+    </div>
+
+    <div class="country-modal-stats" id="countryModalStats"></div>
+
+    <div class="country-modal-filters">
+      <div class="cm-filter-group">
+        <span class="cm-filter-label">Période</span>
+        <div class="source-toggle" role="group" aria-label="Période">
+          <button class="stoggle" data-cmperiod="7">7 jours</button>
+          <button class="stoggle" data-cmperiod="14">14 jours</button>
+          <button class="stoggle active" data-cmperiod="30">30 jours</button>
+        </div>
+      </div>
+      <div class="cm-filter-group">
+        <span class="cm-filter-label">Comparaison</span>
+        <div class="source-toggle" role="group" aria-label="Comparaison">
+          <button class="stoggle active" data-cmcompare="none">Pays seul</button>
+          <button class="stoggle" data-cmcompare="global">vs Rang mondial</button>
+          <button class="stoggle" data-cmcompare="region">vs Moyenne région</button>
+        </div>
+      </div>
+      <div class="cm-filter-group">
+        <span class="cm-filter-label">Échelle</span>
+        <div class="source-toggle" role="group" aria-label="Échelle Y">
+          <button class="stoggle active" data-cmscale="auto">Auto</button>
+          <button class="stoggle" data-cmscale="top10">Top 10</button>
+          <button class="stoggle" data-cmscale="top30">Top 30</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="country-modal-chart-wrap">
+      <canvas id="countryModalChart"></canvas>
+    </div>
+
+    <div class="country-modal-empty" id="countryModalEmpty" style="display:none">
+      Pas assez de données historiques pour ce pays.
+    </div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/auth.js?v=20260507p"></script>
-<script src="js/data-fallback.js?v=20260507p"></script>
-<script src="js/config.js?v=20260507p"></script>
-<script src="js/monitoring.js?v=20260507p"></script>
-<script src="js/app.js?v=20260507p"></script>
-<script src="js/health-guard.js?v=20260507p"></script>
+<script src="js/auth.js?v=20260507q"></script>
+<script src="js/data-fallback.js?v=20260507q"></script>
+<script src="js/config.js?v=20260507q"></script>
+<script src="js/monitoring.js?v=20260507q"></script>
+<script src="js/app.js?v=20260507q"></script>
+<script src="js/health-guard.js?v=20260507q"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {

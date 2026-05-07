@@ -1640,7 +1640,7 @@ function renderCountryPerfTable() {
     const regionColor = (window.REGION_COLORS && window.REGION_COLORS[p.region]) || '#8A8A8A';
 
     return `
-      <div class="country-perf-row">
+      <div class="country-perf-row" data-pays-en="${escapeHtml(p.paysEn || p.pays)}" tabindex="0" role="button" aria-label="Voir l'historique de ${escapeHtml(p.pays)}">
         <span class="country-flag" style="font-size:22px;">${p.flag}</span>
         <div class="country-perf-info">
           <span class="country-name">${p.pays}</span>
@@ -1655,6 +1655,276 @@ function renderCountryPerfTable() {
       </div>
     `;
   }).join('');
+
+  // Branche le click handler après chaque rendu (filtre région inclus)
+  list.querySelectorAll('.country-perf-row').forEach(row => {
+    const open = () => {
+      const paysEn = row.dataset.paysEn;
+      if (paysEn) openCountryDetailModal(paysEn);
+    };
+    row.addEventListener('click', open);
+    row.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+    });
+  });
+}
+
+// ============ MODALE DÉTAIL PAYS ============
+let countryModalChart = null;
+let countryModalState = {
+  paysEn: null,
+  period: 30,
+  compare: 'none',  // 'none' | 'global' | 'region'
+  scale: 'auto'     // 'auto' | 'top10' | 'top30'
+};
+
+function openCountryDetailModal(paysEn) {
+  const modal = document.getElementById('countryModal');
+  if (!modal) return;
+  countryModalState.paysEn = paysEn;
+  countryModalState.period = 30;
+  countryModalState.compare = 'none';
+  countryModalState.scale = 'auto';
+
+  // Reset des boutons à leur état par défaut
+  modal.querySelectorAll('[data-cmperiod]').forEach(b =>
+    b.classList.toggle('active', b.dataset.cmperiod === '30'));
+  modal.querySelectorAll('[data-cmcompare]').forEach(b =>
+    b.classList.toggle('active', b.dataset.cmcompare === 'none'));
+  modal.querySelectorAll('[data-cmscale]').forEach(b =>
+    b.classList.toggle('active', b.dataset.cmscale === 'auto'));
+
+  modal.style.display = '';
+  document.body.style.overflow = 'hidden';
+  renderCountryDetailModal();
+}
+
+function closeCountryDetailModal() {
+  const modal = document.getElementById('countryModal');
+  if (!modal) return;
+  modal.style.display = 'none';
+  document.body.style.overflow = '';
+  if (countryModalChart) {
+    try { countryModalChart.destroy(); } catch(_) {}
+    countryModalChart = null;
+  }
+}
+
+// Construit la série temporelle (date → rang) pour un pays donné
+function buildCountrySeries(paysEn, periodDays) {
+  const cache = window._paysHistCache || [];
+  const cutoff = new Date(Date.now() - periodDays * 86400000).toISOString().slice(0, 10);
+  const rows = cache
+    .filter(r => r.pays === paysEn && r.date >= cutoff)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  return rows.map(r => ({ date: r.date, rang: r.rang }));
+}
+
+// Rang mondial BANDI (TV Shows non-anglophones) — depuis snapshots30
+function buildGlobalSeries(periodDays) {
+  const snaps = BANDI.snapshots30 || [];
+  const cutoff = new Date(Date.now() - periodDays * 86400000).toISOString().slice(0, 10);
+  return snaps
+    .filter(s => s.date >= cutoff)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(s => ({ date: s.date, rang: s.rang_monde }));
+}
+
+// Moyenne du rang sur les pays d'une région (hors le pays sélectionné)
+function buildRegionAverageSeries(paysEn, region, periodDays) {
+  const cache = window._paysHistCache || [];
+  const cutoff = new Date(Date.now() - periodDays * 86400000).toISOString().slice(0, 10);
+  const all = BANDI.countryAllHistory || [];
+  const peers = new Set(all.filter(c => c.region === region && c.paysEn !== paysEn).map(c => c.paysEn));
+  if (peers.size === 0) return [];
+  const byDate = {};
+  cache.forEach(r => {
+    if (!peers.has(r.pays) || r.date < cutoff) return;
+    if (!byDate[r.date]) byDate[r.date] = [];
+    byDate[r.date].push(r.rang);
+  });
+  return Object.keys(byDate).sort().map(date => ({
+    date,
+    rang: Math.round((byDate[date].reduce((s, x) => s + x, 0) / byDate[date].length) * 10) / 10
+  }));
+}
+
+function renderCountryDetailModal() {
+  const { paysEn, period, compare, scale } = countryModalState;
+  const all = BANDI.countryAllHistory || [];
+  const meta = all.find(c => c.paysEn === paysEn);
+  if (!meta) return;
+
+  // En-tête
+  const flagEl  = document.getElementById('countryModalFlag');
+  const titleEl = document.getElementById('countryModalTitle');
+  const subEl   = document.getElementById('countryModalSub');
+  const statsEl = document.getElementById('countryModalStats');
+  if (flagEl)  flagEl.textContent  = meta.flag;
+  if (titleEl) titleEl.textContent = meta.pays;
+  if (subEl)   subEl.textContent   = `${meta.region} · Évolution du rang BANDI sur ${period} jours`;
+
+  // Stats résumé
+  const series = buildCountrySeries(paysEn, period);
+  if (statsEl) {
+    if (series.length === 0) {
+      statsEl.innerHTML = '<span>Aucune donnée sur cette période</span>';
+    } else {
+      const ranks = series.map(s => s.rang);
+      const best  = Math.min(...ranks);
+      const worst = Math.max(...ranks);
+      const last  = series[series.length - 1].rang;
+      const avg   = Math.round((ranks.reduce((s, r) => s + r, 0) / ranks.length) * 10) / 10;
+      statsEl.innerHTML = `
+        <span class="cm-stat-current">Aujourd'hui : <strong>#${meta.currentRank ?? last}</strong></span>
+        <span class="cm-stat-best">Meilleur : <strong>#${best}</strong></span>
+        <span>Pire : <strong>#${worst}</strong></span>
+        <span>Moyenne : <strong>#${avg}</strong></span>
+        <span>Jours classé : <strong>${series.length}</strong></span>
+      `;
+    }
+  }
+
+  // Canvas + Chart.js
+  const canvas  = document.getElementById('countryModalChart');
+  const emptyEl = document.getElementById('countryModalEmpty');
+  if (countryModalChart) { try { countryModalChart.destroy(); } catch(_) {} countryModalChart = null; }
+
+  if (!series.length) {
+    if (emptyEl)  emptyEl.style.display  = '';
+    if (canvas)   canvas.style.display   = 'none';
+    return;
+  }
+  if (emptyEl)  emptyEl.style.display  = 'none';
+  if (canvas)   canvas.style.display   = '';
+
+  // Construit l'union des dates de toutes les séries pour aligner X
+  const datasets = [];
+  const dateSet = new Set(series.map(s => s.date));
+  let globalSeries = [], regionSeries = [];
+  if (compare === 'global') {
+    globalSeries = buildGlobalSeries(period);
+    globalSeries.forEach(s => dateSet.add(s.date));
+  }
+  if (compare === 'region') {
+    regionSeries = buildRegionAverageSeries(paysEn, meta.region, period);
+    regionSeries.forEach(s => dateSet.add(s.date));
+  }
+  const dates = [...dateSet].sort();
+  const labels = dates.map(d => d.slice(5).replace('-', '/'));
+
+  const align = (arr) => {
+    const m = new Map(arr.map(s => [s.date, s.rang]));
+    return dates.map(d => m.has(d) ? m.get(d) : null);
+  };
+
+  datasets.push({
+    label: meta.pays,
+    data: align(series),
+    borderColor: '#CE1126',
+    backgroundColor: (ctx) => {
+      const { chart } = ctx;
+      const { ctx: c, chartArea } = chart;
+      if (!chartArea) return null;
+      const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+      g.addColorStop(0, 'rgba(206,17,38,0.40)');
+      g.addColorStop(1, 'rgba(206,17,38,0)');
+      return g;
+    },
+    fill: true, tension: 0.35, borderWidth: 2.5, spanGaps: true,
+    pointBackgroundColor: '#CE1126', pointBorderColor: '#fff',
+    pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6
+  });
+
+  if (compare === 'global' && globalSeries.length) {
+    datasets.push({
+      label: 'Rang mondial BANDI',
+      data: align(globalSeries),
+      borderColor: '#009739', backgroundColor: 'transparent',
+      borderWidth: 2, borderDash: [5, 5], tension: 0.3, spanGaps: true,
+      pointBackgroundColor: '#009739', pointBorderColor: '#fff',
+      pointBorderWidth: 1.5, pointRadius: 3, pointHoverRadius: 5
+    });
+  }
+  if (compare === 'region' && regionSeries.length) {
+    datasets.push({
+      label: `Moyenne ${meta.region}`,
+      data: align(regionSeries),
+      borderColor: '#D4A017', backgroundColor: 'transparent',
+      borderWidth: 2, borderDash: [4, 4], tension: 0.3, spanGaps: true,
+      pointBackgroundColor: '#D4A017', pointBorderColor: '#fff',
+      pointBorderWidth: 1.5, pointRadius: 3, pointHoverRadius: 5
+    });
+  }
+
+  // Échelle Y inversée (1 = en haut)
+  const yMin = 1;
+  const yMax = scale === 'top10' ? 10 : scale === 'top30' ? 30 : undefined;
+
+  countryModalChart = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        legend: {
+          display: compare !== 'none',
+          labels: { color: '#B5B5B5', font: { family: 'Inter Tight', size: 11 } }
+        },
+        tooltip: {
+          backgroundColor: '#0D0D0D', borderColor: '#CE1126', borderWidth: 1,
+          titleColor: '#fff', titleFont: { family: 'Inter Tight', weight: '700', size: 13 },
+          bodyColor: '#B5B5B5', bodyFont: { family: 'JetBrains Mono', size: 12 },
+          padding: 12, cornerRadius: 6,
+          callbacks: { label: c => `${c.dataset.label} : ${c.raw == null ? '—' : '#' + c.raw}` }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#8A8A8A', font: { family: 'JetBrains Mono', size: 11 }, maxTicksLimit: 12 },
+          grid: { color: 'rgba(42,42,42,0.5)' }
+        },
+        y: {
+          reverse: true, min: yMin, max: yMax, beginAtZero: false,
+          ticks: {
+            color: '#8A8A8A', font: { family: 'JetBrains Mono', size: 11 },
+            stepSize: yMax && yMax <= 10 ? 1 : undefined,
+            callback: v => '#' + v
+          },
+          grid: { color: 'rgba(42,42,42,0.5)' },
+          title: { display: true, text: 'Rang ↑ (1 = haut)', color: '#CE1126', font: { family: 'Inter Tight', size: 10, weight: '600' } }
+        }
+      }
+    }
+  });
+}
+
+// Init globale modale (binding fermeture + filtres) — appelée une fois au DOMContentLoaded
+function initCountryModal() {
+  const modal     = document.getElementById('countryModal');
+  const closeBtn  = document.getElementById('countryModalClose');
+  const backdrop  = document.getElementById('countryModalBackdrop');
+  if (!modal) return;
+
+  closeBtn?.addEventListener('click', closeCountryDetailModal);
+  backdrop?.addEventListener('click', closeCountryDetailModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.style.display !== 'none') closeCountryDetailModal();
+  });
+
+  const bindToggle = (selector, attr, key, parser) => {
+    modal.querySelectorAll(selector).forEach(btn => {
+      btn.addEventListener('click', () => {
+        modal.querySelectorAll(selector).forEach(b => b.classList.toggle('active', b === btn));
+        countryModalState[key] = parser ? parser(btn.dataset[attr]) : btn.dataset[attr];
+        renderCountryDetailModal();
+      });
+    });
+  };
+  bindToggle('[data-cmperiod]',  'cmperiod',  'period',  v => parseInt(v, 10));
+  bindToggle('[data-cmcompare]', 'cmcompare', 'compare', null);
+  bindToggle('[data-cmscale]',   'cmscale',   'scale',   null);
 }
 
 // ============ CARTE LEAFLET ============
@@ -4129,6 +4399,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Chaque call isolé pour qu'une erreur n'empêche pas les suivants
   try { await loadLiveData(); } catch (e) { console.error('[BANDI] loadLiveData:', e); }
   try { initTabs(); }          catch (e) { console.error('[BANDI] initTabs:', e); }
+  try { initCountryModal(); }  catch (e) { console.error('[BANDI] initCountryModal:', e); }
   try { initLiveClock(); }     catch (e) { console.error('[BANDI] initLiveClock:', e); }
   try { renderOverview(); }    catch (e) { console.error('[BANDI] renderOverview:', e); }
   try { renderChart(); }       catch (e) { console.error('[BANDI] renderChart:', e); }
