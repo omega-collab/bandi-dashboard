@@ -34,9 +34,14 @@ const HASHTAGS = [
   'bandisaison1', 'bandis1', 'bandiep1',
   'netflixmartinique', 'martiniquenetflix', 'seriemartinique',
   'mauientertainment',
+  // FR / élargissement vague mai 2026
+  'bandilaserienetflix', 'bandiseries2026', 'bandistars',
+  'bandicasting', 'bandifamille', 'bandirochant',
+  'serietournee', 'serieantillaise', 'serieantilles',
   // EN / international
   'bandiseries', 'bandishow', 'bandireview', 'bandinetflixshow',
   'watchbandi', 'bandisoundtrack', 'bandiopening',
+  'bandinetflixreview', 'bandinetflixfr',
   // ES
   'bandiserienetflix', 'bandiespanol',
   // PT
@@ -48,6 +53,13 @@ const HASHTAGS = [
 const USERS = [
   // FR / Martinique
   'yoottle', 'netflixfr', 'netflixfrance', 'mauientertainment',
+  // Comptes officiels série + équipe (élargissement mai 2026)
+  'bandi.netflix', 'bandilaserie', 'bandi.lasérie',
+  'jimmylaporaltresor', 'jimmy.laporaltresor',
+  'rudgypajany', 'jonathan_zaccai', 'mathilde.vallet',
+  // Comptes locaux Martinique fréquemment relayeurs
+  'martinique', 'martiniquemag', 'martinique.la1ere',
+  'rcimartinique', 'franceantilles_mq',
   // Global Netflix
   'netflix', 'netflixqueue', 'netflixtudum', 'netflixfilm',
   // Régionaux Netflix
