@@ -1890,6 +1890,17 @@ function renderCountryDetailModal() {
           bodyColor: '#B5B5B5', bodyFont: { family: 'JetBrains Mono', size: 12 },
           padding: 12, cornerRadius: 6,
           callbacks: { label: c => `${c.dataset.label} : ${c.raw == null ? '—' : '#' + c.raw}` }
+        },
+        // Zoom : molette desktop · pinch mobile · drag pour panner · bouton reset
+        zoom: {
+          pan:  { enabled: true, mode: 'xy', threshold: 8 },
+          zoom: {
+            wheel: { enabled: true, speed: 0.08 },
+            pinch: { enabled: true },
+            drag:  { enabled: false },
+            mode:  'xy'
+          },
+          limits: { x: { minRange: 2 }, y: { minRange: 2 } }
         }
       },
       scales: {
@@ -1910,6 +1921,19 @@ function renderCountryDetailModal() {
       }
     }
   });
+
+  // Bouton reset zoom — visible quand un zoom/pan a été appliqué
+  const resetBtn = document.getElementById('countryModalResetZoom');
+  if (resetBtn) {
+    resetBtn.style.display = 'none';
+    if (countryModalChart && typeof countryModalChart.resetZoom === 'function') {
+      // Affiche le bouton dès qu'on zoome ou panne
+      const showReset = () => { resetBtn.style.display = ''; };
+      countryModalChart.options.plugins.zoom.zoom.onZoom = showReset;
+      countryModalChart.options.plugins.zoom.pan.onPan  = showReset;
+      countryModalChart.update('none');
+    }
+  }
 }
 
 // Init globale modale (binding fermeture + filtres) — appelée une fois au DOMContentLoaded
@@ -1923,6 +1947,15 @@ function initCountryModal() {
   backdrop?.addEventListener('click', closeCountryDetailModal);
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && modal.style.display !== 'none') closeCountryDetailModal();
+  });
+
+  // Bouton "Reset zoom" : remet la vue complète et se cache lui-même
+  const resetBtn = document.getElementById('countryModalResetZoom');
+  resetBtn?.addEventListener('click', () => {
+    if (countryModalChart && typeof countryModalChart.resetZoom === 'function') {
+      countryModalChart.resetZoom();
+    }
+    resetBtn.style.display = 'none';
   });
 
   const bindToggle = (selector, attr, key, parser) => {

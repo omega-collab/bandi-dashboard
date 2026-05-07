@@ -25,10 +25,13 @@
 
 <!-- Chart.js pour les graphiques -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Hammer.js + plugin zoom (molette desktop · pinch mobile · double-clic reset) -->
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <!-- Leaflet.js pour la carte choroplèthe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<link rel="stylesheet" href="css/styles.css?v=20260507r" />
+<link rel="stylesheet" href="css/styles.css?v=20260507s" />
 
 <!-- Splash screen (inline pour afficher immédiatement, avant tout chargement) -->
 <style>
@@ -1367,6 +1370,11 @@
 
     <div class="country-modal-chart-wrap">
       <canvas id="countryModalChart"></canvas>
+      <button type="button" class="country-modal-reset-zoom" id="countryModalResetZoom" style="display:none" aria-label="Réinitialiser le zoom">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        Reset zoom
+      </button>
+      <div class="country-modal-zoom-hint" aria-hidden="true">↔ molette · pincer · glisser pour zoomer / panner</div>
     </div>
 
     <div class="country-modal-empty" id="countryModalEmpty" style="display:none">
@@ -1376,12 +1384,12 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/auth.js?v=20260507r"></script>
-<script src="js/data-fallback.js?v=20260507r"></script>
-<script src="js/config.js?v=20260507r"></script>
-<script src="js/monitoring.js?v=20260507r"></script>
-<script src="js/app.js?v=20260507r"></script>
-<script src="js/health-guard.js?v=20260507r"></script>
+<script src="js/auth.js?v=20260507s"></script>
+<script src="js/data-fallback.js?v=20260507s"></script>
+<script src="js/config.js?v=20260507s"></script>
+<script src="js/monitoring.js?v=20260507s"></script>
+<script src="js/app.js?v=20260507s"></script>
+<script src="js/health-guard.js?v=20260507s"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {

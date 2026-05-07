@@ -3687,6 +3687,26 @@ button, .tab, .bnav-item, .region-btn, .country-row, .kpi-card, .highlight, .buz
   padding: 14px 18px 18px;
   height: 280px;
 }
+.country-modal-reset-zoom {
+  position: absolute; top: 18px; right: 22px; z-index: 2;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px;
+  background: var(--surface-3); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-pill);
+  font-family: var(--font-body); font-size: 11px; font-weight: 600;
+  cursor: pointer; letter-spacing: 0.02em;
+  transition: all var(--dur-fast) var(--ease);
+  animation: panelIn 0.2s var(--ease);
+}
+.country-modal-reset-zoom:hover {
+  background: var(--rouge); color: #fff; border-color: var(--rouge);
+}
+.country-modal-zoom-hint {
+  position: absolute; left: 22px; bottom: 6px;
+  font-family: var(--font-mono); font-size: 9.5px; color: var(--muted);
+  opacity: 0.55; pointer-events: none;
+  letter-spacing: 0.02em;
+}
 .country-modal-empty {
   padding: 48px 24px; text-align: center;
   color: var(--muted); font-size: 13px;
@@ -3708,6 +3728,8 @@ button, .tab, .bnav-item, .region-btn, .country-row, .kpi-card, .highlight, .buz
   .cm-filter-label { min-width: 60px; font-size: 9px; }
   .country-modal-chart-wrap { padding: 10px 8px 14px; height: 240px; }
   .country-modal-filters .stoggle { padding: 4px 9px; font-size: 10.5px; }
+  .country-modal-reset-zoom { top: 12px; right: 12px; padding: 4px 8px; font-size: 10.5px; }
+  .country-modal-zoom-hint  { left: 12px; bottom: 4px; font-size: 9px; }
 }
 
 .country-perf-row {
