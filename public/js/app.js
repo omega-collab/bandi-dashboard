@@ -1320,6 +1320,45 @@ function renderSeriesTab() {
   renderCriticReviews();
 }
 
+// ── Synchronisation centrale Réception ──────────────────────────────────────
+// Recalcule BANDI.criticReviews (total/positifs/mitiges/negatifs/scorePct)
+// depuis les sources structurées BANDI_RECEPTION_SOURCES, pour que TOUS les
+// renderers (monitoring, completion score, tooltips, méthodologie…) qui lisent
+// encore BANDI.criticReviews voient les chiffres à jour des 27 sources.
+// Appelée au DOMContentLoaded AVANT le premier render.
+function syncCriticReviewsFromSources() {
+  if (!window.BANDI_RECEPTION_SOURCES || !window.BANDI || !BANDI.criticReviews) return;
+  const scores = computeReceptionScores();
+  const press = scores.press;
+  const aggregator = (window.BANDI_RECEPTION_SOURCES || [])
+    .find(s => s.source_name === 'AlloCiné Presse');
+  const audience = (window.BANDI_RECEPTION_SOURCES || [])
+    .find(s => s.source_name === 'AlloCiné Spectateurs');
+
+  // Override des compteurs hérités avec les valeurs calculées des 27 sources
+  Object.assign(BANDI.criticReviews, {
+    total:    press.count,
+    positifs: press.counts.positive,
+    mitiges:  press.counts.mixed,
+    negatifs: press.counts.negative,
+    scorePct: press.value,                       // 0–100 (note pondérée)
+    notePresseAlloMoy: aggregator
+      ? Math.round((aggregator.normalized_rating_100 / 20) * 10) / 10
+      : BANDI.criticReviews.notePresseAlloMoy,
+    notePresseAlloN:   aggregator?.positive_points?.[0]
+      ? parseInt(String(aggregator.positive_points[0]).match(/\d+/)?.[0] || '8', 10)
+      : BANDI.criticReviews.notePresseAlloN,
+    noteSpectAlloMoy:  audience
+      ? Math.round((audience.normalized_rating_100 / 20) * 10) / 10
+      : BANDI.criticReviews.noteSpectAlloMoy,
+    noteSpectAlloN:    audience?.positive_points?.[0]
+      ? parseInt(String(audience.positive_points[0]).match(/\d+/)?.[0] || '319', 10)
+      : BANDI.criticReviews.noteSpectAlloN,
+    receptionScores: scores,
+  });
+  window.BANDI_RECEPTION_SCORES = scores;
+}
+
 // ── Réception & Impact (3 scores séparés) ──────────────────────────────────
 // Calcule en runtime depuis window.BANDI_RECEPTION_SOURCES :
 //   - score presse critique  (include_in_press_score = true)
@@ -4552,6 +4591,10 @@ function renderSignalsTab() {
 document.addEventListener("DOMContentLoaded", async () => {
   // Chaque call isolé pour qu'une erreur n'empêche pas les suivants
   try { await loadLiveData(); } catch (e) { console.error('[BANDI] loadLiveData:', e); }
+  // Sync centrale : les 27 sources structurées alimentent BANDI.criticReviews
+  // (compteurs, scorePct, AlloCiné Presse/Public). Les renderers existants
+  // (monitoring, completion, méthodologie…) prennent automatiquement les MAJ.
+  try { syncCriticReviewsFromSources(); } catch (e) { console.error('[BANDI] syncCriticReviewsFromSources:', e); }
   try { initTabs(); }          catch (e) { console.error('[BANDI] initTabs:', e); }
   try { initCountryModal(); }  catch (e) { console.error('[BANDI] initCountryModal:', e); }
   try { initReceptionModal(); } catch (e) { console.error('[BANDI] initReceptionModal:', e); }
