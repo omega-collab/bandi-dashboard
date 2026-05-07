@@ -38,5 +38,13 @@ jobs:
         run: bash .github/scripts/run-scraper.sh scripts/scrape-instagram.js
         continue-on-error: true
 
+      - name: Seed Instagram posts manuels (captures Allan)
+        if: always()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: bash .github/scripts/run-scraper.sh scripts/seed-instagram-manual.js
+        continue-on-error: true
+
       - if: always()
         run: echo "Social scrape terminé à $(date -u)"

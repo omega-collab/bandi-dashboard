@@ -87,6 +87,12 @@ jobs:
           APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
         run: bash .github/scripts/run-scraper.sh scripts/scrape-instagram.js
         continue-on-error: true
+      - name: Seed Instagram posts manuels (captures Allan)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: bash .github/scripts/run-scraper.sh scripts/seed-instagram-manual.js
+        continue-on-error: true
 
   ratings:
     name: 8 sources notes + Wikipedia
