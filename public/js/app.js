@@ -3975,7 +3975,12 @@ function initMonitoringTab() {
 function monTimeAgo(dateStr) {
   if (!dateStr) return { label: '—', hours: Infinity };
   const d = new Date(String(dateStr).includes('T') ? dateStr : dateStr + 'T12:00:00Z');
-  const h = (Date.now() - d.getTime()) / 3600000;
+  let h = (Date.now() - d.getTime()) / 3600000;
+  // Garde-fou : si la date en DB est dans le futur (timezone mismatch côté
+  // scraper, horloge mal calée), on n'affiche jamais un nombre négatif.
+  // On clamp à 0 (juste mis à jour) — ce qui reste vrai puisque la donnée
+  // est forcément à l'instant ou avant, jamais après.
+  if (h < 0) h = 0;
   if (h < 1)  return { label: `il y a ${Math.round(h * 60)} min`, hours: h };
   if (h < 24) return { label: `il y a ${Math.round(h)}h`, hours: h };
   return { label: `il y a ${Math.round(h / 24)}j`, hours: h };
@@ -4074,11 +4079,17 @@ async function loadMonFreshness() {
       detail: `${BANDI.rivals?.length ?? '—'} titres scrappés · Bandi #${BANDI.current?.rang ?? '—'}`
     },
     {
+      // Si la table tudum_global_weekly est vide ou inaccessible, on tombe
+      // sur la fraîcheur du résumé hebdo statique (BANDI.cumulTudum.fetchedAt)
+      // qui reste une donnée Tudum officielle valide.
       icon: '✅', label: 'Tudum officiel',    sub: 'Netflix hebdo',
-      date: tudumDate, weekly: true,
+      date: tudumDate || BANDI.cumulTudum?.fetchedAt || null,
+      weekly: true,
       detail: tudumDate
         ? `Semaine du ${monFmtDate(tudumDate)}`
-        : 'En attente · mardi 15h UTC'
+        : (BANDI.cumulTudum?.semainesTop10
+            ? `Cumul ${BANDI.cumulTudum.semainesTop10} semaines · ${BANDI.cumulTudum.heuresMillions} M h`
+            : 'En attente · mardi 15h UTC')
     },
     {
       icon: '📰', label: 'Presse & médias',   sub: `${buzzArtCount} articles`,
@@ -4206,7 +4217,14 @@ function renderMonRatings() {
     const hasScraped = !has && (rawStatus === 'no_rating_yet' || rawStatus === 'not_listed_yet');
     // Un fallback calculé reste considéré frais : on prend la fraîcheur du
     // calcul (criticReviews.fetchedAt) au lieu de la date scraper RT.
-    const cls = has ? monFreshCls(hours) : (hasScraped ? 'mon-warn' : 'mon-stale');
+    // Pour les fallbacks calculés (RT Presse/Public via les 27 sources), on
+    // force le dot vert : la valeur est recalculée à chaque visite à partir
+    // d'une base à jour, donc plus 'fraîche' que n'importe quelle limite d'h.
+    const cls = isRtFallback
+      ? 'mon-ok'
+      : has
+        ? monFreshCls(hours)
+        : (hasScraped ? 'mon-warn' : 'mon-stale');
 
     let votes;
     if (fallbackLabel)         votes = fallbackLabel;
