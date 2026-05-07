@@ -118,9 +118,9 @@ const BANDI = {
     mitiges: 3,
     negatifs: 0,
     scorePct: 75,           // 9/12 = 75 % critiques favorables
-    notePresseAlloMoy: 3.9, // note presse Allociné (sur 5) — 06/05 : 8 critiques (vs 7 le 02/05)
-    notePresseAlloN: 8,     // nb critiques presse Allociné (élargi)
-    noteSpectAlloMoy: 4.0,  // note spectateurs Allociné
+    notePresseAlloMoy: 3.9, // note presse AlloCiné (sur 5) — 06/05 : 8 critiques (vs 7 le 02/05)
+    notePresseAlloN: 8,     // nb critiques presse AlloCiné (élargi)
+    noteSpectAlloMoy: 4.0,  // note spectateurs AlloCiné
     noteSpectAlloN: 319,    // nb notes spectateurs (07/05) — vs 313 le 06/05
     noteSpectAlloCritN: 90, // nb critiques rédigées (07/05) — vs 88 le 06/05
     sources: [

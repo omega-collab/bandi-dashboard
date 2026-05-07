@@ -3310,8 +3310,8 @@ function computeCompletionScore() {
   addNote(BANDI.tmdb,           0.18, 'TMDB',                     'tmdb');
   addNote(BANDI.rtCritics,      0.15, 'Rotten Tomatoes (presse)', 'rtCritics');
   addNote(BANDI.rtAudience,     0.10, 'Rotten Tomatoes (public)', 'rtAudience');
-  addNote(BANDI.allocinePublic, 0.10, 'Allociné Spectateurs',     'allocinePublic');
-  addNote(BANDI.allocinePress,  0.10, 'Allociné Presse',          'allocinePress');
+  addNote(BANDI.allocinePublic, 0.10, 'AlloCiné Spectateurs',     'allocinePublic');
+  addNote(BANDI.allocinePress,  0.10, 'AlloCiné Presse',          'allocinePress');
   addNote(BANDI.senscritique,   0.10, 'SensCritique',             'senscritique');
   addNote(BANDI.filmaffinity,   0.05, 'Filmaffinity',             'filmaffinity');
 
@@ -3377,7 +3377,7 @@ function computeCompletionScore() {
     sources: notesSources.length || NOTES_TOTAL,
     sourceList: notesSources.length ? notesSources
       : ['IMDb', 'TMDB', 'Rotten Tomatoes (presse)', 'Rotten Tomatoes (public)',
-         'Allociné Spectateurs', 'Allociné Presse', 'SensCritique', 'Filmaffinity'],
+         'AlloCiné Spectateurs', 'AlloCiné Presse', 'SensCritique', 'Filmaffinity'],
     dataPoints: notesSources.length,
     dataLabel: notesSources.length ? `${notesSources.length}/${NOTES_TOTAL} sources actives` : `0/${NOTES_TOTAL} — en attente`
   };
@@ -3667,7 +3667,7 @@ function renderCompletionBreakdown() {
       label: 'Qualité perçue',
       icon: '⭐',
       desc: 'Moyenne pondérée de 8 sources de notes (presse & audience, toutes ramenées sur /10).',
-      formula: 'IMDb·0,22 + TMDB·0,18 + RT·0,25 + Allociné·0,20 + SensCritique·0,10 + Filmaffinity·0,05'
+      formula: 'IMDb·0,22 + TMDB·0,18 + RT·0,25 + AlloCiné·0,20 + SensCritique·0,10 + Filmaffinity·0,05'
     },
     {
       key: 'search',
@@ -3699,7 +3699,7 @@ function renderCompletionBreakdown() {
       chip('IMDb', n.imdb);
       chip('TMDB', n.tmdb);
       chip('RT', n.rtCritics);
-      chip('Allociné', n.allocinePublic);
+      chip("AlloCiné", n.allocinePublic);
       chip('SensCritique', n.senscritique);
       chip('Filmaffinity', n.filmaffinity);
       if (parts.length) detailExtra = `<div class="cb-chips">${parts.join('')}</div>`;
@@ -3764,7 +3764,7 @@ function renderCompletionBreakdown() {
 //   1. Intro : comment le dashboard agrège ses données
 //   2. 4 signaux du Completion Score avec leur calcul détaillé
 //   3. Liste exhaustive des 12+ sources externes (FlixPatrol · Tudum · IMDb · TMDB
-//      · Allociné × 2 · SensCritique · Rotten Tomatoes × 2 · Filmaffinity · Wikipedia
+//      · AlloCiné × 2 · SensCritique · Rotten Tomatoes × 2 · Filmaffinity · Wikipedia
 //      · Google Trends · Reddit · YouTube · Bluesky · presse RSS) avec :
 //      - icône + nom + type (API / scraping / RSS)
 //      - lien direct vers la page source Bandi
@@ -3792,7 +3792,7 @@ function renderMethodologySources() {
       sources: [
         { name: 'IMDb',            url: 'https://www.imdb.com/title/tt37024175/' },
         { name: 'TMDB',            url: 'https://www.themoviedb.org/tv/269161-bandi' },
-        { name: 'Allociné',        url: 'https://www.allocine.fr/series/ficheserie_gen_cserie=1000000157.html' },
+        { name: "AlloCiné",        url: 'https://www.allocine.fr/series/ficheserie_gen_cserie=1000000157.html' },
         { name: 'SensCritique',    url: 'https://www.senscritique.com/serie/bandi/133850632' },
         { name: 'Rotten Tomatoes', url: 'https://www.rottentomatoes.com/tv/bandi' },
         { name: 'Filmaffinity',    url: 'https://m.filmaffinity.com/us/film923114.html' },
@@ -3826,7 +3826,7 @@ function renderMethodologySources() {
         { name: 'France-Antilles', url: 'https://www.france-antilles.fr' },
         { name: 'RCI',             url: 'https://www.rci.fm' },
         { name: 'Le Monde',        url: 'https://www.lemonde.fr' },
-        { name: 'Allociné Actu',   url: 'https://www.allocine.fr' },
+        { name: 'AlloCiné Actu',   url: 'https://www.allocine.fr' },
         { name: '+ 13 autres flux', url: '#' },
       ]
     },
@@ -3864,7 +3864,7 @@ function renderMethodologySources() {
     <div class="ms-footer">
       <div class="ms-footer-row">
         <span class="ms-k">Mise à jour</span>
-        <span>Automatique toutes les 6h · ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+        <span>Automatique 1×/jour à 00:00 UTC · ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
       </div>
       <div class="ms-footer-row">
         <span class="ms-k">Total</span>
@@ -4133,7 +4133,7 @@ async function loadMonFreshness() {
     {
       icon: '⭐', label: 'Notes externes',    sub: '8 sources',
       date: ratingsDate, weekly: false,
-      detail: 'IMDb · TMDB · RT · Allociné · SensCritique · Filmaffinity'
+      detail: 'IMDb · TMDB · RT · AlloCiné · SensCritique · Filmaffinity'
     },
     {
       icon: '📖', label: 'Wikipedia',         sub: 'Pageviews FR + EN',
@@ -4175,8 +4175,8 @@ function renderMonRatings() {
     { key: 'tmdb',            label: 'TMDB',            max: 10,  unit: '/10', color: '#01B4E4' },
     { key: 'rt_critics',      label: 'RT Presse',       max: 100, unit: '%',   color: '#FA320A' },
     { key: 'rt_audience',     label: 'RT Public',       max: 100, unit: '%',   color: '#FA320A' },
-    { key: 'allocine_public', label: 'Allociné Public', max: 5,   unit: '/5',  color: '#FECC00' },
-    { key: 'allocine_press',  label: 'Allociné Presse', max: 5,   unit: '/5',  color: '#FECC00' },
+    { key: 'allocine_public', label: 'AlloCiné Public', max: 5,   unit: '/5',  color: '#FECC00' },
+    { key: 'allocine_press',  label: 'AlloCiné Presse', max: 5,   unit: '/5',  color: '#FECC00' },
     { key: 'senscritique',    label: 'SensCritique',    max: 10,  unit: '/10', color: '#FFAD00' },
     { key: 'filmaffinity',    label: 'Filmaffinity',    max: 10,  unit: '/10', color: '#C0392B' },
   ];
@@ -4197,7 +4197,7 @@ function renderMonRatings() {
   // Tomatometer calculé : tant que BANDI n'est pas listé sur Rotten Tomatoes,
   // on reconstruit un équivalent à partir des sources existantes.
   // - rt_critics  ← criticReviews.scorePct (% critiques presse favorables)
-  // - rt_audience ← noteSpectAlloMoy / 5 (note spectateurs Allociné en %)
+  // - rt_audience ← noteSpectAlloMoy / 5 (note spectateurs AlloCiné en %)
   const cr = BANDI.criticReviews;
   const rtCriticsCalc = (cr && cr.total > 0 && typeof cr.scorePct === 'number')
     ? { rating: cr.scorePct, count: cr.total, label: `Calculé sur ${cr.total} critiques presse` }
@@ -4206,7 +4206,7 @@ function renderMonRatings() {
     ? {
         rating: Math.round((cr.noteSpectAlloMoy / 5) * 100),
         count: cr.noteSpectAlloN,
-        label: `Calculé sur ${cr.noteSpectAlloN} avis spectateurs Allociné`
+        label: `Calculé sur ${cr.noteSpectAlloN} avis spectateurs AlloCiné`
       }
     : null;
 
