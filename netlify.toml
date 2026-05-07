@@ -18,12 +18,30 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
+# index.html : pas de cache navigateur — sinon les utilisateurs continuent
+# de pointer vers d'anciens cache-bust ?v=… et ne voient jamais les MAJ.
+# Le HTML est tout petit, le coût d'un fetch frais à chaque visite est négligeable.
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
 [[headers]]
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=86400"
 
+# JS/CSS : cache 1h MAIS on bump le ?v= à chaque MAJ donc l'URL change
+# → le cache n'empêche pas la prise en compte d'un nouveau bump.
 [[headers]]
   for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+[[headers]]
+  for = "/css/*"
   [headers.values]
     Cache-Control = "public, max-age=3600"
