@@ -269,7 +269,11 @@
     const peakHeures  = bpWeek2.hoursViewed  != null ? bpWeek2.hoursViewed / 1_000_000  : null;
     const completion  = bpComp.central                ?? null;
     const semTop10    = (bp.weeklyNetflixTop10 || []).length || (B.cumulTudum?.semainesTop10 ?? null);
-    const presseFav   = bpCrit.scorePct               ?? null;
+    // Source de vérité : score presse calculé depuis BANDI_RECEPTION_SOURCES
+    // (recalculé par computeReceptionScores). Fallback sur l'ancien scorePct
+    // tant que le panneau Réception n'a pas été initialisé.
+    const recScores  = window.BANDI_RECEPTION_SCORES || (typeof computeReceptionScores === 'function' ? computeReceptionScores() : null);
+    const presseFav  = recScores?.press?.value ?? bpCrit.scorePct ?? null;
     const igGain      = bpIg.measuredGain             ?? null;
     const igGainK     = igGain != null ? Math.round(igGain / 1000) : null;
 
@@ -387,13 +391,19 @@
       src: 'Modèle interne · 62/100',  minL: '0%', maxL: '100%',
       tooltip: 'Estimation : heures vues / durée totale + chute hebdo. Netflix ne publie pas le taux réel. Reliability 62/100.'
     });
+    const pressN = recScores?.press?.count ?? null;
+    const pressCounts = recScores?.press?.counts ?? null;
+    const pressTooltip = pressCounts
+      ? `Score presse calculé sur ${pressN} sources structurées (Le Monde, Le Parisien, Télérama, Les Inrocks, Première, 20 Minutes, Decider, What's on Netflix, K-waves, Wonder Channel, Mundo Deportivo, Gizmodo Español). ${pressCounts.positive} positifs / ${pressCounts.mixed} mitigés / ${pressCounts.negative} négatifs. Pondéré par fiabilité A/B/C.`
+      : 'Score presse en attente de calcul.';
     s3.push({
-      id: 'pressefav', label: 'Avis presse favorables',
-      display: presseFav != null ? `${presseFav}%` : '—',  unit: '12 CRITIQUES',
+      id: 'pressefav', label: 'Score presse',
+      display: presseFav != null ? `${presseFav}/100` : '—',
+      unit: pressN ? `${pressN} SOURCES` : 'PRESSE',
       pct: pctPresseFav, color: gradColor(pctPresseFav),
       delta: '',
-      src: 'Agrégation maison',  minL: '0%', maxL: '100%',
-      tooltip: 'Score agrégé sur 12 critiques presse documentées (Le Monde, Le Parisien, Decider, Inrocks, Screen Rant…). 9 positifs / 3 mitigés / 0 négatif.'
+      src: 'Agrégation pondérée',  minL: '0', maxL: '100',
+      tooltip: pressTooltip
     });
     s3.push({
       id: 'iggain',    label: 'Followers Netflix FR',

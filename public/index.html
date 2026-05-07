@@ -31,7 +31,7 @@
 <!-- Leaflet.js pour la carte choroplèthe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<link rel="stylesheet" href="css/styles.css?v=20260507s" />
+<link rel="stylesheet" href="css/styles.css?v=20260507t" />
 
 <!-- Splash screen (inline pour afficher immédiatement, avant tout chargement) -->
 <style>
@@ -1022,30 +1022,64 @@
       </p>
     </div>
 
-    <!-- ── Réception critique presse (alimenté par BANDI.criticReviews) ── -->
-    <div class="panel critic-reviews-panel" id="criticReviewsPanel" style="display:none">
+    <!-- ── Réception & Impact (3 scores séparés) ──────────────────────────
+         Alimenté par window.BANDI_RECEPTION_SOURCES (calcul runtime).
+         Sépare strictement : critique presse / avis public / impact médiatique. -->
+    <div class="panel reception-panel" id="criticReviewsPanel" style="display:none">
       <div class="panel-head">
         <div>
-          <h3 class="panel-title">Réception critique · presse internationale</h3>
-          <p class="panel-sub" id="criticReviewsSub">Agrégation maison · 12 sources documentées · 24/04/2026</p>
+          <h3 class="panel-title">Réception &amp; Impact</h3>
+          <p class="panel-sub" id="criticReviewsSub">Sources structurées · 3 scores séparés</p>
         </div>
-        <div class="critic-score-badge">
-          <span class="critic-score-num" id="criticScorePct">75%</span>
-          <span class="critic-score-label">avis favorables</span>
+        <div class="reception-global-badge">
+          <span class="reception-global-num" id="criticScoreGlobal">—/100</span>
+          <span class="reception-global-label">Score global</span>
         </div>
       </div>
-      <div class="critic-stats-row">
-        <span class="critic-stat critic-stat--pos"><strong id="criticPos">9</strong> positifs</span>
-        <span class="critic-stat critic-stat--mid"><strong id="criticMid">3</strong> mitigés</span>
-        <span class="critic-stat critic-stat--neg"><strong id="criticNeg">0</strong> négatifs</span>
-        <span class="critic-stat critic-stat--allo">Allociné Presse · <strong id="criticAlloNote">3,9 / 5</strong> <small id="criticAlloN">(7 critiques)</small></span>
-        <span class="critic-stat critic-stat--allo">Allociné Public · <strong id="criticSpectNote">4,0 / 5</strong> <small id="criticSpectN">(284 votes)</small></span>
+
+      <div class="reception-scores-grid">
+        <!-- Score Presse Critique -->
+        <div class="reception-score-card reception-score--press">
+          <span class="reception-score-tag">1 · Presse critique</span>
+          <span class="reception-score-num" id="criticScorePress">—/100</span>
+          <span class="reception-score-sub" id="criticScorePressN">— sources vérifiées</span>
+          <div class="reception-score-detail">
+            <span class="critic-stat critic-stat--pos"><strong id="criticPos">—</strong> positifs</span>
+            <span class="critic-stat critic-stat--mid"><strong id="criticMid">—</strong> mitigés</span>
+            <span class="critic-stat critic-stat--neg"><strong id="criticNeg">—</strong> négatifs</span>
+          </div>
+        </div>
+
+        <!-- Score Public -->
+        <div class="reception-score-card reception-score--public">
+          <span class="reception-score-tag">2 · Public</span>
+          <span class="reception-score-num" id="criticScorePublic">—/100</span>
+          <span class="reception-score-sub" id="criticScorePublicN">— agrégateurs</span>
+          <div class="reception-score-detail reception-score-detail--simple">
+            Notes spectateurs cumulées (IMDb, AlloCiné Spectateurs)
+          </div>
+        </div>
+
+        <!-- Score Impact Médiatique -->
+        <div class="reception-score-card reception-score--impact">
+          <span class="reception-score-tag">3 · Impact médiatique</span>
+          <span class="reception-score-num" id="criticScoreImpact">—/100</span>
+          <span class="reception-score-sub" id="criticScoreImpactN">— articles</span>
+          <div class="reception-score-detail reception-score-detail--simple">
+            Visibilité presse / portée internationale (hors critique artistique)
+          </div>
+        </div>
       </div>
-      <div class="critic-reviews-list" id="criticReviewsList" role="list">
-        <!-- alimenté par renderCriticReviews() -->
+
+      <div class="reception-actions">
+        <button type="button" class="reception-sources-btn" id="receptionSourcesBtn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Voir les sources
+        </button>
       </div>
-      <p class="series-stats-source">
-        Compense l'absence de Tomatometer officiel chez Rotten Tomatoes (1 seule critique enregistrée à date — pas assez pour un consensus).
+
+      <p class="reception-method">
+        <strong>Méthode</strong> — les critiques professionnelles, les notes publiques et les articles d'impact médiatique sont séparés pour éviter de mélanger avis critique, réception spectateur et visibilité médiatique. Les scores sont pondérés selon la fiabilité de chaque source (A = 1,00 · B = 0,80 · C = 0,60 · D = 0,35). Score global = 50 % presse + 30 % public + 20 % impact.
       </p>
     </div>
 
@@ -1321,6 +1355,23 @@
   </button>
 </nav>
 
+<!-- ============ MODALE · Sources de réception ============ -->
+<!-- Liste détaillée toutes les sources (presse · public · impact). Ouverte au
+     clic sur le bouton 'Voir les sources' du panel Réception & Impact. -->
+<div class="reception-modal" id="receptionModal" role="dialog" aria-modal="true" aria-labelledby="receptionModalTitle" style="display:none">
+  <div class="reception-modal-backdrop" id="receptionModalBackdrop"></div>
+  <div class="reception-modal-content">
+    <div class="reception-modal-header">
+      <div>
+        <h2 id="receptionModalTitle">Sources documentées</h2>
+        <p class="reception-modal-sub">Presse critique · public · impact médiatique — fiabilité A/B/C indiquée par source</p>
+      </div>
+      <button class="country-modal-close" id="receptionModalClose" type="button" aria-label="Fermer">×</button>
+    </div>
+    <div class="reception-modal-list" id="receptionSourcesList"></div>
+  </div>
+</div>
+
 <!-- ============ MODALE · Détail pays ============ -->
 <!-- Ouverte au clic sur une ligne de "Performance par pays" (onglet Historique).
      Affiche un graphique d'évolution du rang du pays sur la période choisie,
@@ -1384,12 +1435,13 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/auth.js?v=20260507s"></script>
-<script src="js/data-fallback.js?v=20260507s"></script>
-<script src="js/config.js?v=20260507s"></script>
-<script src="js/monitoring.js?v=20260507s"></script>
-<script src="js/app.js?v=20260507s"></script>
-<script src="js/health-guard.js?v=20260507s"></script>
+<script src="js/auth.js?v=20260507t"></script>
+<script src="js/data-fallback.js?v=20260507t"></script>
+<script src="js/bandi-reception-sources.js?v=20260507t"></script>
+<script src="js/config.js?v=20260507t"></script>
+<script src="js/monitoring.js?v=20260507t"></script>
+<script src="js/app.js?v=20260507t"></script>
+<script src="js/health-guard.js?v=20260507t"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {

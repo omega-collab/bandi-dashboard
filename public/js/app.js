@@ -1320,52 +1320,135 @@ function renderSeriesTab() {
   renderCriticReviews();
 }
 
-// Rendu de la liste des critiques presse + score agrégé
+// ── Réception & Impact (3 scores séparés) ──────────────────────────────────
+// Calcule en runtime depuis window.BANDI_RECEPTION_SOURCES :
+//   - score presse critique  (include_in_press_score = true)
+//   - score public            (include_in_public_score = true)
+//   - score impact médiatique (include_in_media_impact_score = true)
+// + un score global pondéré 50/30/20.
+function computeReceptionScores() {
+  const sources = Array.isArray(window.BANDI_RECEPTION_SOURCES)
+    ? window.BANDI_RECEPTION_SOURCES : [];
+  const W = window.BANDI_RECEPTION_WEIGHTS || {
+    reliability: { A: 1.00, B: 0.80, C: 0.60, D: 0.35, E: 0 },
+    sentimentToScore: { positive: 80, mixed: 60, negative: 35, neutral: 50 },
+    globalScore: { press: 0.50, public: 0.30, mediaImpact: 0.20 }
+  };
+
+  const aggregate = (key) => {
+    const subset = sources.filter(s => s[key]);
+    let weightedSum = 0, totalWeight = 0;
+    const counts = { positive: 0, mixed: 0, negative: 0, neutral: 0 };
+    subset.forEach(s => {
+      const score = s.normalized_rating_100 != null
+        ? s.normalized_rating_100
+        : (W.sentimentToScore[s.sentiment] ?? 50);
+      const w = W.reliability[s.reliability] ?? 0;
+      weightedSum += score * w;
+      totalWeight += w;
+      if (counts[s.sentiment] != null) counts[s.sentiment]++;
+    });
+    const value = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : null;
+    return { value, count: subset.length, counts, sources: subset };
+  };
+
+  const press      = aggregate('include_in_press_score');
+  const publicAgg  = aggregate('include_in_public_score');
+  const mediaImpact = aggregate('include_in_media_impact_score');
+
+  // Score global : moyenne pondérée 50% presse / 30% public / 20% impact
+  // (ne tient compte que des scores réellement calculés)
+  const G = W.globalScore;
+  const parts = [];
+  if (press.value      != null) parts.push({ v: press.value,       w: G.press });
+  if (publicAgg.value  != null) parts.push({ v: publicAgg.value,   w: G.public });
+  if (mediaImpact.value != null) parts.push({ v: mediaImpact.value, w: G.mediaImpact });
+  const wSum = parts.reduce((s, p) => s + p.w, 0);
+  const global = wSum > 0
+    ? Math.round(parts.reduce((s, p) => s + p.v * p.w, 0) / wSum)
+    : null;
+
+  return { press, public: publicAgg, mediaImpact, global };
+}
+
+// Rendu du panel "Réception & Impact" : 3 scores séparés + bouton sources
 function renderCriticReviews() {
-  const cr = BANDI.criticReviews;
   const panel = document.getElementById('criticReviewsPanel');
-  if (!cr || !panel || !Array.isArray(cr.sources) || cr.sources.length === 0) {
-    if (panel) panel.style.display = 'none';
-    return;
-  }
+  if (!panel) return;
+  const sources = window.BANDI_RECEPTION_SOURCES || [];
+  if (sources.length === 0) { panel.style.display = 'none'; return; }
   panel.style.display = '';
 
-  const setText = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.textContent = val; };
-  if (cr.scorePct != null) setText('criticScorePct', `${cr.scorePct}%`);
-  if (cr.positifs != null) setText('criticPos', cr.positifs);
-  if (cr.mitiges  != null) setText('criticMid', cr.mitiges);
-  if (cr.negatifs != null) setText('criticNeg', cr.negatifs);
-  if (cr.notePresseAlloMoy != null) {
-    setText('criticAlloNote', `${String(cr.notePresseAlloMoy).replace('.', ',')} / 5`);
-  }
-  if (cr.notePresseAlloN  != null) setText('criticAlloN',  `(${cr.notePresseAlloN} critiques)`);
-  if (cr.noteSpectAlloMoy != null) {
-    setText('criticSpectNote', `${String(cr.noteSpectAlloMoy).replace('.', ',')} / 5`);
-  }
-  if (cr.noteSpectAlloN   != null) setText('criticSpectN',  `(${cr.noteSpectAlloN.toLocaleString('fr-FR')} votes)`);
-  if (cr.total != null && cr.fetchedAt) {
-    const dStr = (cr.fetchedAt || '').slice(0, 10).split('-').reverse().join('/');
-    setText('criticReviewsSub', `Agrégation maison · ${cr.total} sources documentées · MAJ ${dStr}`);
-  }
+  const scores = computeReceptionScores();
+  // Expose pour debug + autres modules (monitoring, etc.)
+  window.BANDI_RECEPTION_SCORES = scores;
 
-  const VERDICT_BADGE = {
-    positif: { lbl: 'Favorable',   cls: 'critic-verdict--pos' },
-    mitige:  { lbl: 'Mitigé',      cls: 'critic-verdict--mid' },
-    negatif: { lbl: 'Défavorable', cls: 'critic-verdict--neg' }
-  };
-  const list = document.getElementById('criticReviewsList');
+  const setText = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.textContent = val; };
+
+  // Score presse + détail sentiments
+  setText('criticScorePress', scores.press.value != null ? `${scores.press.value}/100` : '—');
+  setText('criticScorePressN', `${scores.press.count} sources vérifiées`);
+  setText('criticPos', scores.press.counts.positive);
+  setText('criticMid', scores.press.counts.mixed);
+  setText('criticNeg', scores.press.counts.negative);
+
+  // Score public
+  setText('criticScorePublic',  scores.public.value != null ? `${scores.public.value}/100` : '—');
+  setText('criticScorePublicN', `${scores.public.count} agrégateurs`);
+
+  // Score impact médiatique
+  setText('criticScoreImpact',  scores.mediaImpact.value != null ? `${scores.mediaImpact.value}/100` : '—');
+  setText('criticScoreImpactN', `${scores.mediaImpact.count} articles`);
+
+  // Score global
+  setText('criticScoreGlobal',  scores.global != null ? `${scores.global}/100` : '—');
+
+  // Sous-titre dynamique
+  const total = scores.press.count + scores.public.count + scores.mediaImpact.count;
+  setText('criticReviewsSub', `${total} sources structurées · 3 scores séparés (presse · public · impact)`);
+}
+
+// Liste détaillée pour la modale "Voir les sources"
+function renderReceptionSourcesList() {
+  const list = document.getElementById('receptionSourcesList');
   if (!list) return;
-  list.innerHTML = cr.sources.map(s => {
-    const v = VERDICT_BADGE[s.verdict] || VERDICT_BADGE.mitige;
-    const pays = s.pays || '';
-    const url = escapeHtml(s.url || '#');
-    const media = escapeHtml(s.media || '—');
-    const cit = escapeHtml(s.citation || '');
+  const sources = window.BANDI_RECEPTION_SOURCES || [];
+  if (sources.length === 0) { list.innerHTML = '<p>Aucune source documentée.</p>'; return; }
+
+  const CAT_LABEL = {
+    press_review: 'Presse',
+    aggregator:   'Agrégateur',
+    media_impact: 'Impact médiatique',
+    social_signal: 'Signal social'
+  };
+  const SENT_BADGE = {
+    positive: { lbl: 'Positif', cls: 'rs-sent--pos' },
+    mixed:    { lbl: 'Mitigé',  cls: 'rs-sent--mid' },
+    negative: { lbl: 'Négatif', cls: 'rs-sent--neg' },
+    neutral:  { lbl: 'Neutre',  cls: 'rs-sent--neu' }
+  };
+
+  list.innerHTML = sources.map(s => {
+    const sent = SENT_BADGE[s.sentiment] || SENT_BADGE.neutral;
+    const cat  = CAT_LABEL[s.category]   || s.category;
+    const note = s.numeric_rating ? `<span class="rs-rating">${escapeHtml(s.numeric_rating)}</span>` : '';
+    const includes = [
+      s.include_in_press_score        ? 'presse' : null,
+      s.include_in_public_score       ? 'public' : null,
+      s.include_in_media_impact_score ? 'impact' : null
+    ].filter(Boolean).join(' · ') || 'contrôle';
     return `
-      <a class="critic-review-row" href="${url}" target="_blank" rel="noopener" role="listitem">
-        <span class="critic-review-media">${media}<span class="critic-review-pays">${pays}</span></span>
-        <span class="critic-review-cit">${cit}</span>
-        <span class="critic-verdict-badge ${v.cls}">${v.lbl}</span>
+      <a class="rs-row" href="${escapeHtml(s.url || '#')}" target="_blank" rel="noopener noreferrer">
+        <div class="rs-head">
+          <span class="rs-name">${escapeHtml(s.source_name)}</span>
+          <span class="rs-meta">${escapeHtml(s.country)} · ${escapeHtml(cat)} · Fiabilité ${escapeHtml(s.reliability)}</span>
+        </div>
+        <div class="rs-summary">${escapeHtml(s.summary_fr || '')}</div>
+        <div class="rs-foot">
+          <span class="rs-sent ${sent.cls}">${sent.lbl}</span>
+          ${note}
+          <span class="rs-include">Compté dans : ${includes}</span>
+        </div>
       </a>`;
   }).join('');
 }
@@ -1934,6 +2017,32 @@ function renderCountryDetailModal() {
       countryModalChart.update('none');
     }
   }
+}
+
+// Init modale "Voir les sources" — bind button + close
+function initReceptionModal() {
+  const modal    = document.getElementById('receptionModal');
+  const openBtn  = document.getElementById('receptionSourcesBtn');
+  const closeBtn = document.getElementById('receptionModalClose');
+  const backdrop = document.getElementById('receptionModalBackdrop');
+  if (!modal) return;
+
+  const open = () => {
+    renderReceptionSourcesList();
+    modal.style.display = '';
+    document.body.style.overflow = 'hidden';
+  };
+  const close = () => {
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+  };
+
+  openBtn?.addEventListener('click', open);
+  closeBtn?.addEventListener('click', close);
+  backdrop?.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.style.display !== 'none') close();
+  });
 }
 
 // Init globale modale (binding fermeture + filtres) — appelée une fois au DOMContentLoaded
@@ -4445,6 +4554,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   try { await loadLiveData(); } catch (e) { console.error('[BANDI] loadLiveData:', e); }
   try { initTabs(); }          catch (e) { console.error('[BANDI] initTabs:', e); }
   try { initCountryModal(); }  catch (e) { console.error('[BANDI] initCountryModal:', e); }
+  try { initReceptionModal(); } catch (e) { console.error('[BANDI] initReceptionModal:', e); }
   try { initLiveClock(); }     catch (e) { console.error('[BANDI] initLiveClock:', e); }
   try { renderOverview(); }    catch (e) { console.error('[BANDI] renderOverview:', e); }
   try { renderChart(); }       catch (e) { console.error('[BANDI] renderChart:', e); }

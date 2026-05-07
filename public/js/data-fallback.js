@@ -121,8 +121,8 @@ const BANDI = {
     notePresseAlloMoy: 3.9, // note presse Allociné (sur 5) — 06/05 : 8 critiques (vs 7 le 02/05)
     notePresseAlloN: 8,     // nb critiques presse Allociné (élargi)
     noteSpectAlloMoy: 4.0,  // note spectateurs Allociné
-    noteSpectAlloN: 313,    // nb notes spectateurs (06/05) — vs 284 le 02/05
-    noteSpectAlloCritN: 88, // nb critiques rédigées (06/05) — vs 83 le 02/05
+    noteSpectAlloN: 319,    // nb notes spectateurs (07/05) — vs 313 le 06/05
+    noteSpectAlloCritN: 90, // nb critiques rédigées (07/05) — vs 88 le 06/05
     sources: [
       { media: 'Le Parisien',           pays: 'FR', verdict: 'positif',
         citation: '« Thriller social intense », tensions familiales et sociales brillamment captées.',
