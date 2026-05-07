@@ -18,6 +18,34 @@
 <title>BANDI · Dashboard mondial Netflix</title>
 <meta name="description" content="Suivi temps réel de la performance mondiale de BANDI, première série Netflix tournée en Martinique." />
 
+<!-- Open Graph (Facebook, Instagram, WhatsApp, LinkedIn, Discord, etc.) -->
+<!-- Image : poster officiel BANDI · 1170x1460 portrait. Si remplacée plus tard
+     par un visuel paysage 1200x630 dédié OG, mettre à jour og:image et les
+     dimensions ci-dessous. -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="BANDI Dashboard" />
+<meta property="og:url" content="https://bandi-dashboard.netlify.app/" />
+<meta property="og:title" content="BANDI · Dashboard mondial Netflix" />
+<meta property="og:description" content="Suivi temps réel de la performance mondiale de BANDI, première série Netflix tournée en Martinique." />
+<meta property="og:image" content="https://bandi-dashboard.netlify.app/assets/bandi-poster.jpeg" />
+<meta property="og:image:secure_url" content="https://bandi-dashboard.netlify.app/assets/bandi-poster.jpeg" />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:width" content="1170" />
+<meta property="og:image:height" content="1460" />
+<meta property="og:image:alt" content="BANDI · Première série Netflix tournée en Martinique" />
+<meta property="og:locale" content="fr_FR" />
+
+<!-- Twitter Card (utilise les og:* en fallback mais on les déclare explicitement
+     pour les clients qui ne lisent que les twitter:*). -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="BANDI · Dashboard mondial Netflix" />
+<meta name="twitter:description" content="Suivi temps réel de la performance mondiale de BANDI, première série Netflix tournée en Martinique." />
+<meta name="twitter:image" content="https://bandi-dashboard.netlify.app/assets/bandi-poster.jpeg" />
+<meta name="twitter:image:alt" content="BANDI · Première série Netflix tournée en Martinique" />
+
+<!-- Lien canonique (évite les doublons indexés sur d'autres URLs Netlify) -->
+<link rel="canonical" href="https://bandi-dashboard.netlify.app/" />
+
 <!-- Fonts : Anton (display brutaliste) + Inter Tight (body) + JetBrains Mono (data) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,7 +59,7 @@
 <!-- Leaflet.js pour la carte choroplèthe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<link rel="stylesheet" href="css/styles.css?v=20260508f" />
+<link rel="stylesheet" href="css/styles.css?v=20260508g" />
 
 <!-- Splash screen (inline pour afficher immédiatement, avant tout chargement) -->
 <style>
@@ -1746,13 +1774,13 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/auth.js?v=20260508f"></script>
-<script src="js/data-fallback.js?v=20260508f"></script>
-<script src="js/bandi-reception-sources.js?v=20260508f"></script>
-<script src="js/config.js?v=20260508f"></script>
-<script src="js/monitoring.js?v=20260508f"></script>
-<script src="js/app.js?v=20260508f"></script>
-<script src="js/health-guard.js?v=20260508f"></script>
+<script src="js/auth.js?v=20260508g"></script>
+<script src="js/data-fallback.js?v=20260508g"></script>
+<script src="js/bandi-reception-sources.js?v=20260508g"></script>
+<script src="js/config.js?v=20260508g"></script>
+<script src="js/monitoring.js?v=20260508g"></script>
+<script src="js/app.js?v=20260508g"></script>
+<script src="js/health-guard.js?v=20260508g"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {
