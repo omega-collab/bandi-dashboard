@@ -271,6 +271,23 @@ async function loadLiveData() {
     const historyByCountry = {};
     const datesDesc = [...new Set(paysHist.map(r => r.date))].sort().reverse().slice(0, 4).reverse();
 
+    // Blacklist : noms qui ne sont pas des pays mais des artefacts FlixPatrol
+    // (en-têtes mal extraits par d'anciennes versions du scraper).
+    // Filtrés côté front pour ne plus apparaître même si présents en DB.
+    const NON_COUNTRY_LABELS = [
+      'top position', 'all-time peak', 'all time peak', 'peak position',
+      'average', 'total', 'rank', 'overall', 'worldwide', 'world',
+      'highest rank', 'best rank'
+    ];
+    const isFakeCountry = (name) => {
+      if (!name) return true;
+      const n = name.toLowerCase().trim();
+      return NON_COUNTRY_LABELS.some(l => n.includes(l));
+    };
+    // paysData et paysHist sont des const → on mute le tableau in-place via splice
+    for (let i = paysData.length - 1; i >= 0; i--) if (isFakeCountry(paysData[i].pays)) paysData.splice(i, 1);
+    for (let i = paysHist.length - 1; i >= 0; i--) if (isFakeCountry(paysHist[i].pays)) paysHist.splice(i, 1);
+
     paysData.forEach(p => {
       const hist = datesDesc.map(d => {
         const rec = paysHist.find(r => r.date === d && r.pays === p.pays);
@@ -1724,7 +1741,20 @@ async function initMapTab() {
       <span class="legend-item"><span class="legend-dot" style="background:#8BC34A;"></span>+1</span>
       <span class="legend-item"><span class="legend-dot" style="background:#555;"></span>Stable</span>
       <span class="legend-item"><span class="legend-dot" style="background:#FF9800;"></span>↓ léger</span>
-      <span class="legend-item"><span class="legend-dot" style="background:#CE1126;"></span>↓ fort</span>`
+      <span class="legend-item"><span class="legend-dot" style="background:#CE1126;"></span>↓ fort</span>`,
+    'history-best': `
+      <span class="legend-item"><span class="legend-dot" style="background:#CE1126;"></span>#1 atteint</span>
+      <span class="legend-item"><span class="legend-dot" style="background:rgba(206,17,38,0.75);"></span>#2–3</span>
+      <span class="legend-item"><span class="legend-dot" style="background:rgba(206,17,38,0.55);"></span>#4–5</span>
+      <span class="legend-item"><span class="legend-dot" style="background:rgba(206,17,38,0.35);"></span>#6–10</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#1E1E1E; border:1px solid #444;"></span>Jamais entré</span>`,
+    'history-days': `
+      <span class="legend-item"><span class="legend-dot" style="background:#009739;"></span>15+ jours</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#4CAF50;"></span>10–14</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#8BC34A;"></span>5–9</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#D4A017;"></span>2–4</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#FF9800;"></span>1 jour</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#1E1E1E; border:1px solid #444;"></span>Jamais</span>`
   };
 
   function updateLegend(mode) {
@@ -1732,9 +1762,72 @@ async function initMapTab() {
     if (leg) leg.innerHTML = legends[mode] || legends.rang;
     const sub = document.getElementById('mapSub');
     if (sub) sub.textContent =
-      mode === 'rang'        ? 'Carte choroplèthe · Cliquer sur un pays pour les détails' :
-      mode === 'progression' ? 'Progression vs semaine précédente · Vert = monte · Rouge = recule' :
-                               'Momentum 7 jours · Variation de rang sur 7 jours glissants';
+      mode === 'rang'           ? 'Carte choroplèthe · Cliquer sur un pays pour les détails' :
+      mode === 'progression'    ? 'Progression vs semaine précédente · Vert = monte · Rouge = recule' :
+      mode === 'momentum'       ? 'Momentum 7 jours · Variation de rang sur 7 jours glissants' :
+      mode === 'history-best'   ? 'Meilleur rang atteint sur la fenêtre choisie · 56 pays cumulés' :
+      mode === 'history-days'   ? 'Nombre de jours dans le Top 10 sur la fenêtre choisie' :
+                                  'Carte choroplèthe · Cliquer sur un pays pour les détails';
+  }
+
+  // ── Historique : agrégation par fenêtre temporelle ───────────
+  // Utilise window._paysHistCache (paysHist filtré des faux pays)
+  const HIST_WINDOWS = {
+    all:    { from: '2026-04-09', to: '2099-12-31', label: 'Depuis la sortie' },
+    s1:     { from: '2026-04-09', to: '2026-04-16', label: 'Semaine 1 (09–16/04)' },
+    s2:     { from: '2026-04-17', to: '2026-04-23', label: 'Semaine 2 (17–23/04)' },
+    s3:     { from: '2026-04-24', to: '2026-04-30', label: 'Semaine 3 (24–30/04)' },
+    recent: { from: new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10), to: '2099-12-31', label: '7 derniers jours' }
+  };
+  let histWindow = 'all';
+  let histMetric = 'best';
+
+  function aggregateHistByWindow(winKey) {
+    const win = HIST_WINDOWS[winKey] || HIST_WINDOWS.all;
+    const rows = (window._paysHistCache || []).filter(r =>
+      r && r.pays && r.date >= win.from && r.date <= win.to
+    );
+    const byCountry = {};
+    rows.forEach(r => {
+      if (!byCountry[r.pays]) byCountry[r.pays] = { ranks: [], dates: new Set() };
+      byCountry[r.pays].ranks.push(r.rang);
+      byCountry[r.pays].dates.add(r.date);
+    });
+    const out = {};
+    for (const [k, v] of Object.entries(byCountry)) {
+      out[k] = { bestRank: Math.min(...v.ranks), days: v.dates.size };
+    }
+    return out;
+  }
+
+  function historyBestColor(rank) {
+    if (rank == null) return '#1A1A1A';
+    if (rank === 1)  return '#CE1126';
+    if (rank <= 3)   return 'rgba(206,17,38,0.75)';
+    if (rank <= 5)   return 'rgba(206,17,38,0.55)';
+    if (rank <= 10)  return 'rgba(206,17,38,0.35)';
+    return '#1A1A1A';
+  }
+  function historyDaysColor(days) {
+    if (!days) return '#1A1A1A';
+    if (days >= 15) return '#009739';
+    if (days >= 10) return '#4CAF50';
+    if (days >= 5)  return '#8BC34A';
+    if (days >= 2)  return '#D4A017';
+    return '#FF9800';
+  }
+
+  function applyHistoryStyle() {
+    if (!geojsonLayer) return;
+    const agg = aggregateHistByWindow(histWindow);
+    geojsonLayer.setStyle(feature => {
+      const fpKey = reverseMap[feature.properties.name] || feature.properties.name;
+      const rec = agg[fpKey];
+      const fillColor = histMetric === 'best'
+        ? historyBestColor(rec?.bestRank)
+        : historyDaysColor(rec?.days);
+      return { fillColor, fillOpacity: rec ? 0.85 : 0.2 };
+    });
   }
 
   // ── Init Leaflet ─────────────────────────────────────────────
@@ -1768,24 +1861,54 @@ async function initMapTab() {
       },
       onEachFeature: (feature, layer) => {
         const name  = feature.properties.name;
+        const fpKey = reverseMap[name] || name;
         const data  = getCountryData(name);
-        if (!data) return;
-
-        const histStr = (data.historique || []).map(h => h === null ? '—' : `#${h}`).join(' · ');
-        const delta   = getCountryDelta(name);
-        const deltaStr = delta === null ? '—'
-          : (delta > 0 ? `<span style="color:#009739">↑ +${delta.toFixed(1)}</span>`
-          : delta < 0  ? `<span style="color:#CE1126">↓ ${delta.toFixed(1)}</span>`
-          : '<span style="color:#888">Stable</span>');
-
-        layer.bindPopup(`
-          <div class="map-popup-header">${data.flag || ''} ${data.pays || name}</div>
-          <div class="map-popup-rank">#${data.rang} aujourd'hui</div>
-          <div class="map-popup-hist">7j : ${deltaStr} · 4j : ${histStr}</div>
-        `, { className: 'bandi-popup', maxWidth: 240 });
+        // Lookup pays passés : countryAllHistory peut contenir des pays sortis
+        const histRec = (BANDI.countryAllHistory || []).find(c => c.paysEn === fpKey);
+        if (!data && !histRec) return;
 
         layer.on('mouseover', function() { this.setStyle({ fillOpacity: 1, weight: 1.5 }); });
         layer.on('mouseout',  function() { this.setStyle({ fillOpacity: 0.85, weight: 0.8 }); });
+
+        // Le popup est généré au clic pour refléter le mode courant et la
+        // fenêtre choisie en mode historique.
+        layer.on('click', function() {
+          let html = '';
+          if (mapMode === 'history') {
+            const agg = aggregateHistByWindow(histWindow);
+            const rec = agg[fpKey];
+            const flag = data?.flag || histRec?.flag || '';
+            const paysFr = data?.pays || histRec?.pays || name;
+            const winLbl = HIST_WINDOWS[histWindow]?.label || 'Depuis la sortie';
+            if (rec) {
+              html = `
+                <div class="map-popup-header">${flag} ${paysFr}</div>
+                <div class="map-popup-rank">Meilleur rang : #${rec.bestRank}</div>
+                <div class="map-popup-hist">${rec.days} jour${rec.days > 1 ? 's' : ''} dans le Top 10 · ${winLbl}</div>`;
+            } else {
+              html = `
+                <div class="map-popup-header">${flag} ${paysFr}</div>
+                <div class="map-popup-hist">Pas dans le Top 10 sur la fenêtre choisie</div>`;
+            }
+          } else if (data) {
+            const histStr = (data.historique || []).map(h => h === null ? '—' : `#${h}`).join(' · ');
+            const delta   = getCountryDelta(name);
+            const deltaStr = delta === null ? '—'
+              : (delta > 0 ? `<span style="color:#009739">↑ +${delta.toFixed(1)}</span>`
+              : delta < 0  ? `<span style="color:#CE1126">↓ ${delta.toFixed(1)}</span>`
+              : '<span style="color:#888">Stable</span>');
+            html = `
+              <div class="map-popup-header">${data.flag || ''} ${data.pays || name}</div>
+              <div class="map-popup-rank">#${data.rang} aujourd'hui</div>
+              <div class="map-popup-hist">7j : ${deltaStr} · 4j : ${histStr}</div>`;
+          } else if (histRec) {
+            html = `
+              <div class="map-popup-header">${histRec.flag} ${histRec.pays}</div>
+              <div class="map-popup-rank">Meilleur rang historique : #${histRec.bestRank}</div>
+              <div class="map-popup-hist">${histRec.daysInTop10} jours · sorti du Top 10</div>`;
+          }
+          layer.bindPopup(html, { className: 'bandi-popup', maxWidth: 260 }).openPopup();
+        });
       }
     }).addTo(leafletMap);
 
@@ -1862,6 +1985,8 @@ async function initMapTab() {
     document.getElementById('mtogMomentum')?.classList.add('active');
     document.getElementById('mtogRang')?.classList.remove('active');
     document.getElementById('mtogPerf')?.classList.remove('active');
+    document.getElementById('mtogHistory')?.classList.remove('active');
+    document.getElementById('mapHistFilters').style.display = 'none';
     updateLegend('momentum');
     const momentumData = getMomentumData();
     if (geojsonLayer) {
@@ -1876,6 +2001,49 @@ async function initMapTab() {
         };
       });
     }
+  });
+
+  // ── Mode Historique 56 pays ────────────────────────────────
+  document.getElementById('mtogHistory')?.addEventListener('click', () => {
+    mapMode = 'history';
+    document.getElementById('mtogHistory')?.classList.add('active');
+    document.getElementById('mtogRang')?.classList.remove('active');
+    document.getElementById('mtogPerf')?.classList.remove('active');
+    document.getElementById('mtogMomentum')?.classList.remove('active');
+    const filters = document.getElementById('mapHistFilters');
+    if (filters) filters.style.display = '';
+    updateLegend(histMetric === 'best' ? 'history-best' : 'history-days');
+    applyHistoryStyle();
+  });
+
+  // Reset autres modes : masquer les filtres historiques quand on en sort
+  ['mtogRang', 'mtogPerf'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', () => {
+      const filters = document.getElementById('mapHistFilters');
+      if (filters) filters.style.display = 'none';
+      document.getElementById('mtogHistory')?.classList.remove('active');
+    });
+  });
+
+  // Sélecteur de fenêtre temporelle
+  document.querySelectorAll('#mapHistFilters [data-histwin]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      histWindow = btn.dataset.histwin;
+      document.querySelectorAll('#mapHistFilters [data-histwin]').forEach(b =>
+        b.classList.toggle('active', b.dataset.histwin === histWindow));
+      applyHistoryStyle();
+    });
+  });
+
+  // Sélecteur de métrique (rang / durée)
+  document.querySelectorAll('#mapHistFilters [data-histmetric]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      histMetric = btn.dataset.histmetric;
+      document.querySelectorAll('#mapHistFilters [data-histmetric]').forEach(b =>
+        b.classList.toggle('active', b.dataset.histmetric === histMetric));
+      updateLegend(histMetric === 'best' ? 'history-best' : 'history-days');
+      applyHistoryStyle();
+    });
   });
 }
 
@@ -3523,6 +3691,22 @@ function renderMonRatings() {
     ? Math.round(((imdbEpi.min + imdbEpi.max) / 2) * 10) / 10
     : null;
 
+  // Tomatometer calculé : tant que BANDI n'est pas listé sur Rotten Tomatoes,
+  // on reconstruit un équivalent à partir des sources existantes.
+  // - rt_critics  ← criticReviews.scorePct (% critiques presse favorables)
+  // - rt_audience ← noteSpectAlloMoy / 5 (note spectateurs Allociné en %)
+  const cr = BANDI.criticReviews;
+  const rtCriticsCalc = (cr && cr.total > 0 && typeof cr.scorePct === 'number')
+    ? { rating: cr.scorePct, count: cr.total, label: `Calculé sur ${cr.total} critiques presse` }
+    : null;
+  const rtAudienceCalc = (cr && cr.noteSpectAlloMoy != null && cr.noteSpectAlloN > 0)
+    ? {
+        rating: Math.round((cr.noteSpectAlloMoy / 5) * 100),
+        count: cr.noteSpectAlloN,
+        label: `Calculé sur ${cr.noteSpectAlloN} avis spectateurs Allociné`
+      }
+    : null;
+
   const rows = SOURCES.map(src => {
     const r = R[src.key];
     // La table external_ratings utilise la colonne "rating" (pas "note")
@@ -3537,13 +3721,28 @@ function renderMonRatings() {
         fallbackLabel = `moy. ${String(imdbEpi.min).replace('.', ',')}–${String(imdbEpi.max).replace('.', ',')} par ép.`;
       }
     }
+    // Tomatometer : fallback calculé si la source RT n'est pas listée / vide
+    if (src.key === 'rt_critics' && (val == null || val <= 0) && rtCriticsCalc) {
+      val = rtCriticsCalc.rating;
+      fallbackLabel = rtCriticsCalc.label;
+    }
+    if (src.key === 'rt_audience' && (val == null || val <= 0) && rtAudienceCalc) {
+      val = rtAudienceCalc.rating;
+      fallbackLabel = rtAudienceCalc.label;
+    }
     const has = val != null;
     const pct = has ? Math.round((val / src.max) * 100) : 0;
-    const { label: age, hours } = monTimeAgo(r?.date);
+    // Pour les fallbacks calculés (RT Presse/Public), on s'appuie sur la date
+    // criticReviews.fetchedAt qui reflète la dernière mise à jour du calcul.
+    const isRtFallback = (src.key === 'rt_critics' || src.key === 'rt_audience') && fallbackLabel;
+    const refDate = isRtFallback ? (cr?.fetchedAt || null) : r?.date;
+    const { label: age, hours } = monTimeAgo(refDate);
     // Si la note est absente mais le scraper a tourné (status documenté dans raw),
     // on préfère un dot neutre + un message explicatif plutôt qu'un faux "Hors-ligne".
     const rawStatus = r?.raw?.status || null;
     const hasScraped = !has && (rawStatus === 'no_rating_yet' || rawStatus === 'not_listed_yet');
+    // Un fallback calculé reste considéré frais : on prend la fraîcheur du
+    // calcul (criticReviews.fetchedAt) au lieu de la date scraper RT.
     const cls = has ? monFreshCls(hours) : (hasScraped ? 'mon-warn' : 'mon-stale');
 
     let votes;
@@ -3556,10 +3755,11 @@ function renderMonRatings() {
     else                       votes = '';
 
     const ageLabel = fallbackLabel === 'note série consolidée' ? 'MAJ 02/05'
-                   : fallbackLabel ? 'Rapport 19/04'
-                   : has           ? age
-                   : hasScraped    ? 'Vérifié ' + age
-                                   : 'En attente';
+                   : isRtFallback   ? `Calculé ${age}`
+                   : fallbackLabel  ? 'Rapport 19/04'
+                   : has            ? age
+                   : hasScraped     ? 'Vérifié ' + age
+                                    : 'En attente';
     const valDisplay = has ? val + src.unit : (hasScraped ? '—' : '—');
     return `
       <div class="mon-rating-row">

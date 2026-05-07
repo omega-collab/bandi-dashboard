@@ -28,7 +28,7 @@
 <!-- Leaflet.js pour la carte choroplèthe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<link rel="stylesheet" href="css/styles.css?v=20260507o" />
+<link rel="stylesheet" href="css/styles.css?v=20260507p" />
 
 <!-- Splash screen (inline pour afficher immédiatement, avant tout chargement) -->
 <style>
@@ -796,6 +796,25 @@
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
             Momentum 7j
           </button>
+          <button class="stoggle" data-mapmode="history" id="mtogHistory">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            Historique 56 pays
+          </button>
+        </div>
+      </div>
+      <!-- Filtre fenêtre temporelle (visible seulement en mode Historique) -->
+      <div id="mapHistFilters" class="map-hist-filters" style="display:none">
+        <span class="map-hist-label">Fenêtre :</span>
+        <div class="source-toggle" role="group" aria-label="Fenêtre temporelle">
+          <button class="stoggle active" data-histwin="all">Tout depuis la sortie</button>
+          <button class="stoggle" data-histwin="s1">Semaine 1</button>
+          <button class="stoggle" data-histwin="s2">Semaine 2</button>
+          <button class="stoggle" data-histwin="s3">Semaine 3</button>
+          <button class="stoggle" data-histwin="recent">7 derniers jours</button>
+        </div>
+        <div class="map-hist-metric source-toggle" role="group" aria-label="Métrique">
+          <button class="stoggle active" data-histmetric="best">Meilleur rang</button>
+          <button class="stoggle" data-histmetric="days">Durée Top 10</button>
         </div>
       </div>
       <!-- Légende dynamique -->
@@ -1300,12 +1319,12 @@
 </nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/auth.js?v=20260507o"></script>
-<script src="js/data-fallback.js?v=20260507o"></script>
-<script src="js/config.js?v=20260507o"></script>
-<script src="js/monitoring.js?v=20260507o"></script>
-<script src="js/app.js?v=20260507o"></script>
-<script src="js/health-guard.js?v=20260507o"></script>
+<script src="js/auth.js?v=20260507p"></script>
+<script src="js/data-fallback.js?v=20260507p"></script>
+<script src="js/config.js?v=20260507p"></script>
+<script src="js/monitoring.js?v=20260507p"></script>
+<script src="js/app.js?v=20260507p"></script>
+<script src="js/health-guard.js?v=20260507p"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {

@@ -149,7 +149,15 @@ async function scrapeBandiPage() {
       if (cells.length < 2) return;
 
       const pays = cells[0].split('\n')[0].trim();
-      if (!pays || pays.toLowerCase().includes('average') || pays.toLowerCase().includes('total')) return;
+      // Blacklist : noms qui ne sont pas des pays mais des en-têtes ou agrégats
+      // FlixPatrol (ex. "Top position", "All-time peak", "Average", "Total")
+      const paysLower = pays.toLowerCase();
+      const NON_COUNTRY_LABELS = [
+        'top position', 'all-time peak', 'all time peak', 'peak position',
+        'average', 'total', 'rank', 'overall', 'worldwide', 'world',
+        'highest rank', 'best rank'
+      ];
+      if (!pays || NON_COUNTRY_LABELS.some(l => paysLower.includes(l))) return;
 
       // Dernière colonne avec un nombre = rang d'hier
       const lastCell = cells[cells.length - 1];
