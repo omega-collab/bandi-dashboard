@@ -3280,6 +3280,17 @@ button, .tab, .bnav-item, .region-btn, .country-row, .kpi-card, .highlight, .buz
 .sig-rank-top {
   color: var(--gold, #E4B84D);
 }
+/* Pill 'Hors Top 10' — semaines où BANDI n'apparaît plus dans le Top 10 mondial */
+.sig-rank-out {
+  font-family: var(--font-body);
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: var(--radius-pill);
+  background: rgba(206,17,38,0.12); color: var(--rouge);
+  border: 1px solid rgba(206,17,38,0.35);
+  cursor: help;
+}
+.sig-wk-row--out { opacity: 0.78; }
 .sig-up   { color: var(--vert, #009739); font-family: var(--font-mono); }
 .sig-down { color: var(--rouge, #CE1126); font-family: var(--font-mono); }
 

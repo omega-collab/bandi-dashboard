@@ -4473,9 +4473,15 @@ function renderSignalsTab() {
         : drop > 0
           ? `<span class="sig-up">+${drop} %</span>`
           : `<span class="sig-down">${drop.toString().replace('.', ',')} %</span>`;
-      const rankPill = w.rank === 1 ? `<span class="sig-rank sig-rank-top">#${w.rank}</span>` : `<span class="sig-rank">#${w.rank}</span>`;
+      // Cas spécial : semaine où BANDI est sorti du Top 10.
+      // Affiche un pill 'Hors Top 10' + tooltip avec qui a pris la place.
+      const rankPill = w.outOfTop10
+        ? `<span class="sig-rank sig-rank-out" title="${escapeHtml(w.replacedBy || '')}">Hors Top&nbsp;10</span>`
+        : w.rank === 1
+          ? `<span class="sig-rank sig-rank-top">#${w.rank}</span>`
+          : `<span class="sig-rank">#${w.rank}</span>`;
       return `
-        <div class="sig-wk-row">
+        <div class="sig-wk-row${w.outOfTop10 ? ' sig-wk-row--out' : ''}">
           <div><strong>S${w.weekNumber}</strong></div>
           <div class="sig-wk-period">${escapeHtml(w.weekLabel)}</div>
           <div>${rankPill}</div>

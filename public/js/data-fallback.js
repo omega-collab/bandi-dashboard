@@ -90,8 +90,19 @@ const BANDI = {
       periode: '20–26/04/2026',
       detroneePar: 'Sold Out on You (K-drama, 4.7M vues)'
     },
-    source: 'Netflix Tudum + What\'s on Netflix · cumul 3 semaines',
-    fetchedAt: '2026-05-02'
+    // Semaine 4 (27/04 → 03/05/2026) — BANDI sort du Top 10 mondial non-anglophone.
+    // Source : Netflix Tudum (top-10-april-27-2026). Top 1 = "If Wishes Could Kill"
+    // (K-drama horror, 7,5 M vues). Top 2 = "Flunked" (comédie française avec
+    // Alexandre Kominek, 4 M vues). BANDI absent de la liste publiée.
+    semaine4: {
+      rangNonEnglishEstim: null,  // Hors Top 10
+      outOfTop10: true,
+      periode: '27/04–03/05/2026',
+      top1: { titre: 'If Wishes Could Kill', vuesMillions: 7.5, type: 'K-drama horreur' },
+      top2: { titre: 'Flunked', vuesMillions: 4.0, type: 'Comédie française' }
+    },
+    source: 'Netflix Tudum + What\'s on Netflix · cumul 3 semaines · sortie Top 10 confirmée S4',
+    fetchedAt: '2026-05-07'
   },
 
   // IMDb : note série consolidée (mise à jour 06/05/2026)
@@ -222,6 +233,22 @@ const BANDI = {
         numberOneTerritories: 3,    // Martinique, Guadeloupe, La Réunion
         weekOverWeekDrop: -63.7,
         reliability: { status: 'Official / Calculated', score: 90, explanation: 'Chute calculée à partir des heures vues publiques Netflix.' }
+      },
+      {
+        // Semaine 4 — BANDI sort du Top 10 mondial non-anglophone.
+        // Top 1 = If Wishes Could Kill (K-drama horror, 7,5M vues), Top 2 = Flunked (comédie FR, 4M vues).
+        // Source : Netflix Tudum top-10-april-27-2026
+        weekLabel: '27 avril – 3 mai 2026',
+        weekNumber: 4,
+        rank: null,                  // Hors Top 10
+        outOfTop10: true,
+        hoursViewed: null,
+        viewsCVE: null,
+        territoriesTop10: null,
+        numberOneTerritories: null,
+        weekOverWeekDrop: null,
+        replacedBy: 'If Wishes Could Kill (K-drama, 7,5M vues) · Flunked (FR, 4M vues)',
+        reliability: { status: 'Official', score: 90, explanation: 'Sortie du Top 10 confirmée par Netflix Tudum (semaine du 27/04). BANDI absent de la liste publiée.' }
       }
     ],
     totalsPublicTop10: {
