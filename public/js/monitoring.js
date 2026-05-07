@@ -454,13 +454,18 @@
         ${semTop10 ? `<span>Tudum&nbsp;<strong>${semTop10} sem.</strong></span>` : ''}
       </div>` : '';
 
+    // BANDI étant sorti du Top 10 mondial Tudum (confirmé S4 27/04→03/05),
+    // on masque la SECTION 1 'Classement FlixPatrol (live)' qui suggérait
+    // visuellement que la série est encore au #10 (Rang FlixPatrol composite,
+    // différent du Tudum officiel). Décision Allan 07/05 : retirer toutes les
+    // mentions actuelles qui laissent croire au Top 10.
+    // → Pour réactiver si BANDI revient au Top 10 : retirer le commentaire
+    //   ${section('Classement FlixPatrol (live)', s1)} ci-dessous.
     container.innerHTML = `
       <div class="mg-topbar">
-        <span class="mg-topbar-title">Performance live · FlixPatrol + cumul Tudum</span>
+        <span class="mg-topbar-title">Performance Netflix officielle (cumul Tudum)</span>
         <span class="mg-topbar-sub">↻ collecte automatique · 1×/jour à 00:00 UTC</span>
       </div>
-      ${dataLine}
-      ${section('Classement FlixPatrol (live)', s1)}
       ${section('Performance Netflix officielle (cumul Tudum)', s2)}
       ${section('Engagement &amp; Réception', s3)}
       <div class="mg-sep"></div>
