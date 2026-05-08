@@ -1,0 +1,179 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 560" width="780" height="560">
+  <!--
+    EQUI TOUCH — Logo vectoriel SVG
+    Fond transparent, couleur marine #1B2870
+    Pour impression / flocage : ouvrir dans Inkscape → Texte > Vectoriser
+    afin de convertir les textes en chemins (obligatoire chez l'imprimeur)
+  -->
+
+  <g fill="none" stroke="#1B2870" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- ================================================ -->
+    <!-- ILLUSTRATION CHEVAL                              -->
+    <!-- ================================================ -->
+
+    <!-- Ligne de dos principale : sweepde la croupe (bas-gauche)
+         jusqu'à l'encolure (haut-droite) — élément dominant -->
+    <path stroke-width="2.9"
+      d="M 98,304
+         C 140,274 186,246 236,221
+         C 285,196 330,178 372,163
+         C 413,149 450,138 484,128
+         C 514,120 539,113 559,108
+         C 572,104 582,102 589,102"/>
+
+    <!-- Haut de l'encolure jusqu'au chanfrein -->
+    <path stroke-width="2.9"
+      d="M 589,102
+         C 600,102 613,105 625,112
+         C 638,120 649,132 657,147
+         C 665,161 669,176 667,190
+         C 665,203 659,214 648,221"/>
+
+    <!-- Face avant : profil du nez -->
+    <path stroke-width="2.6"
+      d="M 648,221
+         C 659,216 669,208 676,198
+         C 684,187 688,174 687,161
+         C 686,148 681,137 673,128
+         C 665,120 654,114 642,112
+         C 631,110 620,113 612,120"/>
+
+    <!-- Gorge / arrière de la tête -->
+    <path stroke-width="2.6"
+      d="M 612,120
+         C 605,127 600,137 599,149
+         C 598,161 601,174 608,185
+         C 615,196 624,204 635,210
+         C 643,215 648,217 648,221"/>
+
+    <!-- Oreille pointue -->
+    <path stroke-width="2.1"
+      d="M 573,106
+         C 567,96 564,85 567,75
+         C 570,65 578,60 585,63
+         C 592,66 595,76 592,86
+         C 590,94 584,102 578,106"/>
+
+    <!-- Détail intérieur oreille -->
+    <path stroke-width="1.4"
+      d="M 574,105 C 577,95 579,85 576,76"/>
+
+    <!-- ===== CRINIÈRE : 5 mèches fluides depuis la nuque ===== -->
+
+    <!-- Mèche 1 (près de l'oreille) -->
+    <path stroke-width="2.1"
+      d="M 567,108
+         C 559,125 556,145 561,164
+         C 564,178 573,190 574,204"/>
+
+    <!-- Mèche 2 -->
+    <path stroke-width="1.9"
+      d="M 547,115
+         C 537,134 533,156 539,177
+         C 543,193 553,208 555,224"/>
+
+    <!-- Mèche 3 -->
+    <path stroke-width="1.8"
+      d="M 525,124
+         C 513,145 510,170 518,193
+         C 523,210 535,225 537,242"/>
+
+    <!-- Mèche 4 -->
+    <path stroke-width="1.6"
+      d="M 502,135
+         C 490,158 488,185 497,208
+         C 502,225 514,240 516,258"/>
+
+    <!-- Mèche 5 (arrière-plan) -->
+    <path stroke-width="1.4"
+      d="M 581,103
+         C 578,118 579,136 584,153
+         C 587,165 593,177 592,189"/>
+
+    <!-- ===== ŒIL : amande ===== -->
+    <path stroke-width="2.3"
+      d="M 648,151
+         C 652,145 658,143 664,145
+         C 670,147 673,153 671,159
+         C 669,165 663,168 657,166
+         C 651,164 647,159 648,151 Z"/>
+
+    <!-- Reflet oeil -->
+    <path stroke-width="1.3"
+      d="M 651,153 C 656,149 664,149 668,153"/>
+
+    <!-- ===== NASEAU ===== -->
+    <path stroke-width="2" fill="#1B2870"
+      d="M 680,175
+         C 683,171 687,170 690,172
+         C 693,174 693,179 690,182
+         C 687,184 682,183 680,181
+         C 678,178 678,176 680,175 Z"/>
+
+    <!-- Poitrail / avant de l'encolure (jonction corps → cadre oval) -->
+    <path stroke-width="2.6"
+      d="M 648,221
+         C 634,232 617,239 599,243
+         C 581,247 563,246 546,240"/>
+
+    <!-- ================================================ -->
+    <!-- CADRE OVALE                                      -->
+    <!-- ================================================ -->
+
+    <!-- Extrémité gauche décorative : forme en « C » caractéristique -->
+    <path stroke-width="2.7"
+      d="M 98,304
+         C 80,304 63,313 53,328
+         C 43,343 43,361 52,375
+         C 61,388 76,395 94,396"/>
+
+    <!-- Arc inférieur de l'ovale -->
+    <path stroke-width="2.7"
+      d="M 94,396
+         C 170,410 274,417 390,417
+         C 506,417 612,410 690,396"/>
+
+    <!-- Extrémité droite de l'ovale -->
+    <path stroke-width="2.7"
+      d="M 690,396
+         C 712,392 725,383 729,370
+         C 733,357 729,342 719,332
+         C 710,323 696,319 681,319"/>
+
+    <!-- Ligne supérieure de l'ovale (de droite vers la jonction cheval) -->
+    <path stroke-width="2.7"
+      d="M 681,319
+         C 608,314 506,310 390,310
+         C 274,310 165,314 98,304"/>
+
+  </g>
+
+  <!-- ================================================ -->
+  <!-- TYPOGRAPHIE                                      -->
+  <!-- ================================================ -->
+
+  <!-- EQUI TOUCH : grand serif gras -->
+  <text
+    x="390" y="387"
+    text-anchor="middle"
+    font-family="'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif"
+    font-size="70"
+    font-weight="bold"
+    fill="#1B2870"
+    letter-spacing="5">EQUI TOUCH</text>
+
+  <!-- Filet séparateur -->
+  <line x1="155" y1="398" x2="625" y2="398" stroke="#1B2870" stroke-width="1.9"/>
+
+  <!-- Baseline : italic léger -->
+  <text
+    x="390" y="418"
+    text-anchor="middle"
+    font-family="'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif"
+    font-size="20"
+    font-style="italic"
+    fill="#1B2870"
+    letter-spacing="0.8">Massage. Cohérence. Quintessence.</text>
+
+</svg>
