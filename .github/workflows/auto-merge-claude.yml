@@ -55,8 +55,8 @@ jobs:
           BRANCH="${GITHUB_REF#refs/heads/}"
           echo "Branch: $BRANCH"
 
-          # Cherche une PR ouverte de cette branche vers master
-          PR_NUMBER=$(gh pr list --head "$BRANCH" --base master --state open --json number -q '.[0].number' || true)
+          # Cherche une PR ouverte de cette branche vers main
+          PR_NUMBER=$(gh pr list --head "$BRANCH" --base main --state open --json number -q '.[0].number' || true)
 
           if [ -z "${PR_NUMBER:-}" ] || [ "${PR_NUMBER}" = "null" ]; then
             echo "Création d'une nouvelle PR…"
@@ -64,14 +64,17 @@ jobs:
             COMMIT_TITLE=$(git log -1 --pretty=%s)
             COMMIT_BODY=$(git log -1 --pretty=%b)
             gh pr create \
-              --base master \
+              --base main \
               --head "$BRANCH" \
               --title "$COMMIT_TITLE" \
-              --body "$COMMIT_BODY"$'\n\n_PR auto-générée par .github/workflows/auto-merge-claude.yml_"
-            PR_NUMBER=$(gh pr list --head "$BRANCH" --base master --state open --json number -q '.[0].number')
+              --body "$COMMIT_BODY"$'\n\n_PR auto-générée par .github/workflows/auto-merge-claude.yml_'
+            PR_NUMBER=$(gh pr list --head "$BRANCH" --base main --state open --json number -q '.[0].number')
           else
             echo "PR existante : #$PR_NUMBER"
           fi
+
+          # Passe la PR en ready si elle est en draft (sinon merge échoue)
+          gh pr ready "$PR_NUMBER" 2>/dev/null || true
 
           echo "Activation de l'auto-merge sur PR #$PR_NUMBER (squash, attend les checks)…"
           gh pr merge "$PR_NUMBER" --squash --auto || \
