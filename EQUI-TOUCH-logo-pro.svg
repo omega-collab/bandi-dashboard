@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+╔══════════════════════════════════════════════════════════════════════╗
+║  EQUI TOUCH — Logo vectoriel professionnel                          ║
+║                                                                      ║
+║  COULEUR UNIQUE                                                      ║
+║  · Hex   : #1B2870                                                   ║
+║  · RGB   : R 27  G 40  B 112                                         ║
+║  · CMYK  : C 76  M 64  Y 0  K 56  (approx. — à valider en pré-presse)║
+║  · Pantone: 2766 C  (équivalent le plus proche)                      ║
+║                                                                      ║
+║  FOND     : Transparent (aucun fond)                                 ║
+║  FORMAT   : SVG — infiniment redimensionnable (ultra HD natif)       ║
+║                                                                      ║
+║  ⚠ AVANT ENVOI IMPRIMEUR / FLOCAGE / DÉCOUPE :                      ║
+║    Ouvrir dans Inkscape (gratuit) ou Illustrator                     ║
+║    → Sélectionner tout (Ctrl+A)                                      ║
+║    → Texte › Vectoriser  (ou Type › Create Outlines sur Illustrator) ║
+║    → Sauvegarder                                                     ║
+║    Les textes deviennent des chemins : plus besoin de la police.     ║
+║                                                                      ║
+║  POLICES UTILISÉES                                                   ║
+║  · "EQUI TOUCH"  : Palatino Linotype  Bold                          ║
+║  · Baseline      : Palatino Linotype  Italic                         ║
+║    (Incluses sur Windows/Mac. Alternative libre : EB Garamond)       ║
+╚══════════════════════════════════════════════════════════════════════╝
+-->
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 780 540"
+  width="780"
+  height="540"
+  xml:lang="fr">
+
+  <title>Equi Touch — Logo officiel</title>
+  <desc>Logo vectoriel Equi Touch. Bleu marine #1B2870, fond transparent. Massage. Cohérence. Quintessence.</desc>
+
+  <!-- ═══════════════════════════════════════════════════════
+       ILLUSTRATION — CHEVAL (tracé à la plume, tout en chemins)
+       ═══════════════════════════════════════════════════════ -->
+  <g fill="none" stroke="#1B2870" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- ── Ligne de dos : sweepgracieux de la croupe (bas-gauche)
+            vers la nuque (haut-droite) — trait dominant du logo ── -->
+    <path stroke-width="3"
+      d="M 96,294
+         C 138,264 185,236 234,211
+         C 283,186 328,168 370,154
+         C 411,140 449,129 483,119
+         C 513,111 538,104 558,99
+         C 571,95 582,93 589,93"/>
+
+    <!-- ── Haut de l'encolure → chanfrein (sommet de la tête) ── -->
+    <path stroke-width="3"
+      d="M 589,93
+         C 601,93 614,96 626,103
+         C 639,111 650,124 658,138
+         C 666,152 670,168 668,182
+         C 666,195 660,206 649,214"/>
+
+    <!-- ── Profil de la face (pont du nez) ── -->
+    <path stroke-width="2.6"
+      d="M 649,214
+         C 660,209 670,201 677,191
+         C 685,180 689,167 688,154
+         C 687,141 682,130 674,121
+         C 666,113 655,107 643,105
+         C 631,103 620,107 612,114"/>
+
+    <!-- ── Gorge / arrière de la mâchoire ── -->
+    <path stroke-width="2.6"
+      d="M 612,114
+         C 605,121 600,131 599,143
+         C 598,156 601,169 608,180
+         C 615,192 624,200 635,206
+         C 643,211 648,213 649,214"/>
+
+    <!-- ── Oreille pointue ── -->
+    <path stroke-width="2.1"
+      d="M 572,97
+         C 566,87 563,76 566,66
+         C 569,56 577,51 584,54
+         C 591,57 594,67 591,77
+         C 589,85 583,93 577,97"/>
+
+    <!-- Détail intérieur oreille -->
+    <path stroke-width="1.4"
+      d="M 573,96 C 576,86 578,76 575,67"/>
+
+    <!-- ── CRINIÈRE : 5 mèches fluides depuis la nuque ── -->
+
+    <path stroke-width="2.1"
+      d="M 565,99
+         C 557,116 554,136 559,155
+         C 562,169 571,182 572,196"/>
+
+    <path stroke-width="1.9"
+      d="M 545,106
+         C 535,125 531,148 537,169
+         C 541,185 551,200 553,217"/>
+
+    <path stroke-width="1.7"
+      d="M 523,115
+         C 511,137 508,162 516,185
+         C 521,202 533,218 535,235"/>
+
+    <path stroke-width="1.5"
+      d="M 500,127
+         C 488,150 486,177 495,201
+         C 500,218 512,234 514,251"/>
+
+    <!-- mèche de fond -->
+    <path stroke-width="1.4"
+      d="M 580,94
+         C 577,109 578,127 582,144
+         C 585,157 591,169 591,181"/>
+
+    <!-- ── Œil (amande) ── -->
+    <path stroke-width="2.3"
+      d="M 646,144
+         C 650,138 656,136 662,138
+         C 668,140 671,146 669,152
+         C 667,158 661,161 655,159
+         C 649,157 645,152 646,144 Z"/>
+
+    <!-- reflet -->
+    <path stroke-width="1.3"
+      d="M 649,146 C 654,142 662,142 666,146"/>
+
+    <!-- ── Naseau ── -->
+    <path stroke-width="2" fill="#1B2870"
+      d="M 679,167
+         C 682,163 686,162 689,164
+         C 692,166 692,171 689,174
+         C 686,176 681,175 679,173
+         C 677,170 677,168 679,167 Z"/>
+
+    <!-- ── Poitrail / avant de l'encolure ── -->
+    <path stroke-width="2.6"
+      d="M 649,214
+         C 635,225 618,232 600,236
+         C 582,240 564,239 547,233"/>
+
+    <!-- ═══════════════════════════════════════════════════════
+         CADRE OVALE
+         ═══════════════════════════════════════════════════════ -->
+
+    <!-- Extrémité gauche décorative (forme en « C ») -->
+    <path stroke-width="2.8"
+      d="M 96,294
+         C 78,294 61,303 51,318
+         C 41,333 41,351 50,365
+         C 59,378 74,386 93,387"/>
+
+    <!-- Arc inférieur -->
+    <path stroke-width="2.8"
+      d="M 93,387
+         C 169,401 273,408 390,408
+         C 507,408 613,401 691,387"/>
+
+    <!-- Extrémité droite -->
+    <path stroke-width="2.8"
+      d="M 691,387
+         C 713,383 726,374 730,361
+         C 734,348 730,333 720,323
+         C 711,314 697,310 682,310"/>
+
+    <!-- Ligne supérieure de l'ovale (droite → jonction dos du cheval) -->
+    <path stroke-width="2.8"
+      d="M 682,310
+         C 608,305 507,301 390,301
+         C 273,301 163,305 96,294"/>
+
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════
+       TYPOGRAPHIE
+       ═══════════════════════════════════════════════════════ -->
+
+  <!-- EQUI TOUCH — grand, gras, espacé -->
+  <text
+    x="390" y="376"
+    text-anchor="middle"
+    font-family="'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif"
+    font-size="70"
+    font-weight="bold"
+    fill="#1B2870"
+    letter-spacing="5">EQUI TOUCH</text>
+
+  <!-- Filet séparateur -->
+  <line x1="155" y1="388" x2="625" y2="388" stroke="#1B2870" stroke-width="2"/>
+
+  <!-- Baseline italic -->
+  <text
+    x="390" y="408"
+    text-anchor="middle"
+    font-family="'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif"
+    font-size="20"
+    font-style="italic"
+    fill="#1B2870"
+    letter-spacing="1">Massage. Cohérence. Quintessence.</text>
+
+</svg>
