@@ -40,7 +40,6 @@ const BANDI = {
     "Steeven Mornet",
     "Lucas Pernock",
     "Rodney Dijon",
-    "Patrick Trieste",
     "Cédric Camille",
     "Evil P (Sherkhan)"
   ],

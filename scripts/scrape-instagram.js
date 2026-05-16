@@ -114,7 +114,9 @@ function isRelevantBandi(caption = '', author = '') {
     'rémy laquittant', 'remy laquittant', 'djody grimeau',
     'william paul-joseph', 'evan lienafa', 'ambre bozza',
     'souane rosamont', 'steeven mornet', 'lucas pernock',
-    'rodney dijon', 'patrick trieste', 'cédric camille', 'cedric camille',
+    'rodney dijon', 'cédric camille', 'cedric camille',
+    // Evil P (alias scène = Sherkhan dans la série) — rappeur jouant son propre rôle
+    'evil p', 'evilp', 'evilp.darkside', 'sherkhan',
   ];
   if (STRONG_SIGNALS.some(s => text.includes(s))) return true;
 
