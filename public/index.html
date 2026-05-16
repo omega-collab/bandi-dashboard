@@ -59,7 +59,7 @@
 <!-- Leaflet.js pour la carte choroplèthe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<link rel="stylesheet" href="css/styles.css?v=20260508g" />
+<link rel="stylesheet" href="css/styles.css?v=20260508h" />
 
 <!-- Splash screen (inline pour afficher immédiatement, avant tout chargement) -->
 <style>
@@ -909,6 +909,50 @@
       </p>
     </div>
 
+    <!-- Équipe créative : remontée juste après le Synopsis (avant les chiffres),
+         pour donner immédiatement le contexte humain de la série. -->
+    <div class="panel">
+      <h3 class="panel-title">Équipe créative</h3>
+      <div class="team-grid">
+        <div class="team-col">
+          <span class="team-label">Showrunners</span>
+          <p class="team-names">
+            <span class="creator-name">Éric Rochant</span>
+            <span class="creator-amp">&amp;</span>
+            <span class="creator-name">Capucine Rochant</span>
+          </p>
+          <p class="team-names team-names--sub">
+            <span class="team-role">Adj.</span> Khris Burton
+          </p>
+        </div>
+        <div class="team-col team-col--wide">
+          <span class="team-label">Réalisation</span>
+          <p class="team-names">
+            Éric Rochant · Capucine Rochant · Khris Burton ·
+            Mathilde Vallet · Jimmy Laporal-Trésor
+          </p>
+        </div>
+        <div class="team-col team-col--wide">
+          <span class="team-label">Scénaristes</span>
+          <p class="team-names">
+            <span class="creator-name">Éric Rochant</span>
+            <span class="creator-amp">&amp;</span>
+            <span class="creator-name">Capucine Rochant</span>
+          </p>
+          <ul class="team-credits-list">
+            <li><strong>Jimmy Laporal-Trésor</strong> <span class="team-ep">Senior · Ép. 2</span></li>
+            <li><strong>Khris Burton</strong> <span class="team-ep">Senior · Ép. 3 &amp; 6</span></li>
+            <li><strong>Gwenola Balmelle</strong> <span class="team-ep">Senior · Ép. 7</span></li>
+            <li><strong>Philippe Nijean</strong> <span class="team-ep">Senior · Ép. 8</span></li>
+          </ul>
+        </div>
+        <div class="team-col">
+          <span class="team-label">Production</span>
+          <p class="team-names">Maui Entertainment · Netflix France</p>
+        </div>
+      </div>
+    </div>
+
     <!-- ── Bandi en chiffres (diffusion + production) ── -->
     <div class="panel series-stats-panel">
       <div class="panel-head">
@@ -1160,32 +1204,6 @@
       <div class="gallery-item">
         <img src="assets/bandi-gate.jpeg" alt="Scène portail Bandi" />
         <div class="gallery-caption">La fratrie</div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h3 class="panel-title">Équipe créative</h3>
-      <div class="team-grid">
-        <div class="team-col">
-          <span class="team-label">Créateurs</span>
-          <p class="team-names">
-            <span class="creator-name">Éric Rochant</span>
-            <span class="creator-amp">&amp;</span>
-            <span class="creator-name">Capucine Rochant</span>
-          </p>
-        </div>
-        <div class="team-col">
-          <span class="team-label">Réalisation</span>
-          <p class="team-names">Jimmy Laporal-Trésor · Mathilde Vallet</p>
-        </div>
-        <div class="team-col">
-          <span class="team-label">Scénario local</span>
-          <p class="team-names" id="scenaristesLocaux">Khris Burton</p>
-        </div>
-        <div class="team-col">
-          <span class="team-label">Production</span>
-          <p class="team-names">Maui Entertainment · Netflix France</p>
-        </div>
       </div>
     </div>
 
@@ -1774,13 +1792,13 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="js/auth.js?v=20260508g"></script>
-<script src="js/data-fallback.js?v=20260508g"></script>
-<script src="js/bandi-reception-sources.js?v=20260508g"></script>
-<script src="js/config.js?v=20260508g"></script>
-<script src="js/monitoring.js?v=20260508g"></script>
-<script src="js/app.js?v=20260508g"></script>
-<script src="js/health-guard.js?v=20260508g"></script>
+<script src="js/auth.js?v=20260508h"></script>
+<script src="js/data-fallback.js?v=20260508h"></script>
+<script src="js/bandi-reception-sources.js?v=20260508h"></script>
+<script src="js/config.js?v=20260508h"></script>
+<script src="js/monitoring.js?v=20260508h"></script>
+<script src="js/app.js?v=20260508h"></script>
+<script src="js/health-guard.js?v=20260508h"></script>
 <script>
   // Câblage bouton logout — masqué si auth désactivée
   (function () {
